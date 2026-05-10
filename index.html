@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BriefLift | Agency Reporting Copilot</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3efe5;
+        --panel: rgba(255, 255, 255, 0.82);
+        --ink: #18222c;
+        --muted: #5f6d78;
+        --line: rgba(24, 34, 44, 0.12);
+        --accent: #d95f3b;
+        --accent-dark: #9f3f21;
+        --highlight: #ffd9b3;
+        --shadow: 0 22px 70px rgba(35, 41, 48, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(255, 255, 255, 0.8), transparent 28%),
+          linear-gradient(135deg, #f7f2e7 0%, #efe4d0 48%, #e4d8c9 100%);
+      }
+
+      .shell {
+        min-height: 100vh;
+        padding: 32px 20px 56px;
+      }
+
+      .hero {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+
+      .eyebrow {
+        display: inline-block;
+        margin: 0 0 18px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: #fff4e8;
+        color: var(--accent-dark);
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+        gap: 24px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.8rem, 7vw, 5.5rem);
+        line-height: 0.95;
+        letter-spacing: -0.04em;
+      }
+
+      .lede {
+        max-width: 40rem;
+        margin: 20px 0 0;
+        font-family: "Trebuchet MS", Arial, sans-serif;
+        font-size: 1.08rem;
+        line-height: 1.7;
+        color: var(--muted);
+      }
+
+      .panel {
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: rgba(255, 251, 245, 0.94);
+      }
+
+      .panel h2,
+      .details h2 {
+        margin: 0 0 10px;
+        font-size: 1.1rem;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+
+      .offer-copy,
+      .panel p,
+      li,
+      .fine {
+        font-family: "Trebuchet MS", Arial, sans-serif;
+        line-height: 1.6;
+      }
+
+      .offer-copy {
+        margin: 0 0 14px;
+        color: var(--muted);
+      }
+
+      ul {
+        margin: 18px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      li {
+        display: flex;
+        gap: 12px;
+        padding: 12px 0;
+        border-top: 1px solid var(--line);
+      }
+
+      li:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+
+      .mark {
+        flex: 0 0 auto;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--highlight);
+        color: var(--accent-dark);
+        font-weight: 700;
+      }
+
+      form {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      label {
+        font-family: "Trebuchet MS", Arial, sans-serif;
+        font-size: 0.95rem;
+        font-weight: 700;
+      }
+
+      input {
+        width: 100%;
+        padding: 14px 16px;
+        border: 1px solid rgba(24, 34, 44, 0.18);
+        border-radius: 14px;
+        font: inherit;
+        background: #fff;
+      }
+
+      button {
+        border: 0;
+        border-radius: 14px;
+        padding: 14px 16px;
+        font: inherit;
+        font-weight: 700;
+        color: #fff;
+        background: linear-gradient(135deg, var(--accent) 0%, #b04828 100%);
+        cursor: pointer;
+      }
+
+      button:hover {
+        filter: brightness(1.03);
+      }
+
+      #form-status {
+        min-height: 1.5em;
+        margin: 6px 0 0;
+        color: var(--accent-dark);
+        font-family: "Trebuchet MS", Arial, sans-serif;
+      }
+
+      .details {
+        margin-top: 24px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .fine {
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      @media (max-width: 860px) {
+        .grid,
+        .details {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <span class="eyebrow">BriefLift founding beta</span>
+        <div class="grid">
+          <div>
+            <h1>Client-ready reports without the monthly scramble.</h1>
+            <p class="lede">
+              BriefLift is the agency reporting copilot for small local SEO and paid ads teams.
+              Connect your channel data, generate polished monthly summaries, and send client-ready
+              insights in a fraction of the usual prep time.
+            </p>
+          </div>
+
+          <aside class="panel">
+            <h2>Founding offer</h2>
+            <p class="offer-copy">
+              Join the first beta cohort for concierge onboarding, a locked-in 40% founding
+              discount for your first year, and direct input into the reporting templates we build
+              next.
+            </p>
+
+            <form id="signup-form">
+              <label for="email">Get early access</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                placeholder="agency@yourdomain.com"
+                required
+              />
+              <button type="submit">Join the waitlist</button>
+            </form>
+            <p id="form-status" aria-live="polite"></p>
+            <p class="fine">No external service. Signups are stored locally for MVP testing.</p>
+          </aside>
+        </div>
+
+        <section class="details">
+          <div class="panel">
+            <h2>Why agencies care</h2>
+            <ul>
+              <li><span class="mark">1</span><span>Turn raw SEO and ads metrics into AI-written monthly insights.</span></li>
+              <li><span class="mark">2</span><span>Standardize reporting across every client without losing account context.</span></li>
+              <li><span class="mark">3</span><span>Cut analyst time spent writing summaries, highlights, and next-step recommendations.</span></li>
+            </ul>
+          </div>
+
+          <div class="panel">
+            <h2>What the MVP promises</h2>
+            <ul>
+              <li><span class="mark">4</span><span>Faster client-ready monthly reports for local SEO and paid ads retainers.</span></li>
+              <li><span class="mark">5</span><span>A clean narrative layer on top of spreadsheets and channel exports.</span></li>
+              <li><span class="mark">6</span><span>Founders get hands-on onboarding and influence on the first production workflows.</span></li>
+            </ul>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const form = document.getElementById("signup-form");
+      const emailInput = document.getElementById("email");
+      const statusEl = document.getElementById("form-status");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        statusEl.textContent = "Saving your spot...";
+
+        try {
+          const response = await fetch("/signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: emailInput.value }),
+          });
+
+          const payload = await response.json();
+          statusEl.textContent = payload.message;
+
+          if (response.ok) {
+            form.reset();
+          }
+        } catch (error) {
+          statusEl.textContent = "Local signup failed. Try again.";
+        }
+      });
+    </script>
+  </body>
+</html>
