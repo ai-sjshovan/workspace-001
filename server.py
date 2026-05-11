@@ -315,6 +315,27 @@ PRICING_DATA = {
         },
     ],
 }
+TRUST_DATA = {
+    "app_name": "BriefLift",
+    "sections": [
+        {
+            "title": "Security",
+            "details": "BriefLift uses scoped access controls, encrypted transport, and routine operational review to keep campaign workflows protected.",
+        },
+        {
+            "title": "Data Handling",
+            "details": "Customer inputs stay limited to the workflow needed to generate and review briefs, with clear boundaries around storage and retention.",
+        },
+        {
+            "title": "Reliability",
+            "details": "The product is operated with health monitoring, build visibility, and resilient delivery practices to support dependable team access.",
+        },
+        {
+            "title": "Support",
+            "details": "Teams get a direct path for support and escalation when operational questions, incidents, or rollout needs require fast response.",
+        },
+    ],
+}
 PRICING_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -604,6 +625,276 @@ PRICING_HTML = """<!DOCTYPE html>
 </body>
 </html>
 """
+TRUST_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BriefLift Trust Center</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f4f7f5;
+            --surface: rgba(255, 255, 255, 0.9);
+            --surface-strong: #ffffff;
+            --surface-soft: #e6efe9;
+            --ink: #162126;
+            --muted: #5d6a71;
+            --line: #d4ddd8;
+            --line-strong: #bccbc3;
+            --accent: #1f6b5c;
+            --accent-deep: #0f3f38;
+            --accent-soft: #d9ebe5;
+            --shadow: 0 22px 60px rgba(22, 33, 38, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(31, 107, 92, 0.16), transparent 30%),
+                linear-gradient(180deg, #fafcfb 0%, var(--bg) 100%);
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-image:
+                linear-gradient(rgba(15, 63, 56, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15, 63, 56, 0.03) 1px, transparent 1px);
+            background-size: 42px 42px;
+            mask-image: linear-gradient(to bottom, black, transparent 76%);
+        }
+        a { color: inherit; }
+        h1, h2, h3, p, ul { margin-top: 0; }
+        .page {
+            width: min(1140px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 28px 0 72px;
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 28px;
+        }
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 750;
+            text-decoration: none;
+        }
+        .brand-mark {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            color: var(--surface-strong);
+            background: var(--accent-deep);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+        }
+        .top-link {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.96rem;
+        }
+        .hero, .highlights, .section-card, .faq-card {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            backdrop-filter: blur(8px);
+            box-shadow: var(--shadow);
+        }
+        .hero {
+            display: grid;
+            grid-template-columns: 1.4fr 0.9fr;
+            gap: 20px;
+            border-radius: 30px;
+            padding: 36px;
+        }
+        .eyebrow {
+            display: inline-block;
+            margin-bottom: 14px;
+            color: var(--accent-deep);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .hero h1 {
+            max-width: 13ch;
+            margin-bottom: 16px;
+            font-size: clamp(2.8rem, 7vw, 4.7rem);
+            line-height: 0.98;
+        }
+        .hero p {
+            max-width: 40rem;
+            color: var(--muted);
+            font-size: 1.06rem;
+            line-height: 1.72;
+        }
+        .assurance-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 24px 0 0;
+            padding: 0;
+            list-style: none;
+        }
+        .assurance-list li {
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.78);
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+        .highlights {
+            border-radius: 24px;
+            padding: 24px;
+            background: linear-gradient(180deg, rgba(217, 235, 229, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%);
+        }
+        .highlights strong {
+            display: block;
+            font-size: 2.2rem;
+            line-height: 1;
+            margin: 18px 0 12px;
+        }
+        .highlights p {
+            color: var(--muted);
+            line-height: 1.65;
+        }
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            margin-top: 24px;
+        }
+        .section-card {
+            border-radius: 24px;
+            padding: 24px;
+        }
+        .section-card p {
+            color: var(--muted);
+            line-height: 1.65;
+            margin-bottom: 0;
+        }
+        .faq {
+            margin-top: 24px;
+        }
+        .faq-shell {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+        }
+        .faq-card {
+            border-radius: 20px;
+            padding: 20px;
+            background: var(--surface-strong);
+        }
+        .faq-card p {
+            margin-bottom: 0;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        @media (max-width: 920px) {
+            .hero, .section-grid, .faq-shell {
+                grid-template-columns: 1fr;
+            }
+            .hero {
+                padding: 28px;
+            }
+        }
+        @media (max-width: 640px) {
+            .page {
+                width: min(100% - 24px, 1140px);
+                padding-top: 18px;
+            }
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .hero h1 {
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header class="topbar">
+            <a class="brand" href="/">
+                <span class="brand-mark">B</span>
+                <span>BriefLift</span>
+            </a>
+            <a class="top-link" href="/pricing">View plans</a>
+        </header>
+        <section class="hero" aria-labelledby="trust-heading">
+            <div>
+                <div class="eyebrow">Trust Center</div>
+                <h1 id="trust-heading">Security and reliability practices for teams running BriefLift in production.</h1>
+                <p>BriefLift is designed to give marketing and content teams a dependable workspace for campaign operations. This page outlines how we approach security posture, data handling, reliability, and support when teams rely on the platform day to day.</p>
+                <ul class="assurance-list" aria-label="Trust highlights">
+                    <li>Encrypted in transit</li>
+                    <li>Role-aware operational access</li>
+                    <li>Health visibility for core services</li>
+                </ul>
+            </div>
+            <aside class="highlights" aria-label="Trust summary">
+                <div class="eyebrow">Assurance</div>
+                <strong>Operational clarity</strong>
+                <p>We keep trust communication concise: protect customer data, keep the service stable, and provide direct support when incidents or urgent questions need escalation.</p>
+            </aside>
+        </section>
+        <section class="section-grid" aria-label="Trust sections">
+            <article class="section-card">
+                <div class="eyebrow">Security Posture</div>
+                <h2>Layered controls for everyday platform use</h2>
+                <p>BriefLift uses encrypted transport, scoped access controls, and routine operational review to reduce risk around campaign workflows and internal tooling access.</p>
+            </article>
+            <article class="section-card">
+                <div class="eyebrow">Data Handling</div>
+                <h2>Focused collection with clear workflow boundaries</h2>
+                <p>We handle customer data in support of brief generation and review flows, limit storage to what the product needs to operate, and keep data usage aligned with customer-facing workflow expectations.</p>
+            </article>
+            <article class="section-card">
+                <div class="eyebrow">Uptime And Reliability</div>
+                <h2>Monitored delivery for dependable team access</h2>
+                <p>Health checks, build visibility, and resilient delivery practices support reliable access so teams can review, approve, and ship work without losing operational context.</p>
+            </article>
+            <article class="section-card">
+                <div class="eyebrow">Support And Escalation</div>
+                <h2>Clear paths for operational help</h2>
+                <p>When teams need support, product questions, or incident escalation, BriefLift provides a direct response path so issues can be triaged quickly and communicated clearly.</p>
+            </article>
+        </section>
+        <section class="faq" aria-labelledby="faq-heading">
+            <div class="eyebrow">FAQ</div>
+            <h2 id="faq-heading">Short assurances for procurement and team leads</h2>
+            <div class="faq-shell">
+                <article class="faq-card">
+                    <h3>Is this page a high-level summary or a legal policy?</h3>
+                    <p>This trust page is a concise operational summary. It is intended to explain how BriefLift approaches security, data, reliability, and support at a production SaaS level.</p>
+                </article>
+                <article class="faq-card">
+                    <h3>How should teams handle urgent support needs?</h3>
+                    <p>Escalation should go through the designated BriefLift support channel so incidents, reliability concerns, and rollout blockers can be triaged with the right urgency.</p>
+                </article>
+                <article class="faq-card">
+                    <h3>What matters most in the current assurance model?</h3>
+                    <p>Protecting customer data, maintaining reliability, and keeping support communication direct are the core commitments reflected in this page.</p>
+                </article>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
+"""
 
 
 def ensure_mailing_list_file() -> None:
@@ -676,8 +967,16 @@ class LandingPageHandler(BaseHTTPRequestHandler):
             self.write_html(HTTPStatus.OK, PRICING_HTML)
             return
 
+        if parsed.path == "/trust":
+            self.write_html(HTTPStatus.OK, TRUST_HTML)
+            return
+
         if parsed.path == "/api/pricing":
             self.write_json(HTTPStatus.OK, PRICING_DATA)
+            return
+
+        if parsed.path == "/api/trust":
+            self.write_json(HTTPStatus.OK, TRUST_DATA)
             return
 
         if parsed.path == "/build":
