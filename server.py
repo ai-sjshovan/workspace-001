@@ -79,6 +79,18 @@ class LandingPageHandler(BaseHTTPRequestHandler):
             )
             return
 
+        if parsed.path == "/ready":
+            self.write_json(
+                HTTPStatus.OK,
+                {
+                    "app": "BriefLift",
+                    "status": "ready",
+                    "server_time": datetime.now(timezone.utc).isoformat(),
+                    "health_path": "/health",
+                },
+            )
+            return
+
         self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
     def do_POST(self) -> None:
