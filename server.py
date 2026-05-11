@@ -1,6 +1,7 @@
 import csv
 import json
 import re
+import subprocess
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -47,11 +48,35 @@ def append_email_if_new(email: str) -> bool:
     return True
 
 
+def current_git_commit() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except (subprocess.SubprocessError, OSError):
+        return "unknown"
+
+
 class LandingPageHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         if parsed.path in ("/", "/index.html"):
             self.serve_index()
+            return
+
+        if parsed.path == "/health":
+            self.write_json(
+                HTTPStatus.OK,
+                {
+                    "app": "BriefLift",
+                    "server_time": datetime.now(timezone.utc).isoformat(),
+                    "git_commit": current_git_commit(),
+                    "waitlist_storage_exists": MAILING_LIST_FILE.exists(),
+                },
+            )
             return
 
         self.send_error(HTTPStatus.NOT_FOUND, "Not found")
