@@ -79,6 +79,18 @@ class LandingPageHandler(BaseHTTPRequestHandler):
             )
             return
 
+        if parsed.path == "/build":
+            self.write_json(
+                HTTPStatus.OK,
+                {
+                    "app_name": "BriefLift",
+                    "environment": "development",
+                    "git_commit": current_git_commit(),
+                    "server_time": datetime.now(timezone.utc).isoformat(),
+                },
+            )
+            return
+
         if parsed.path == "/version":
             self.write_json(
                 HTTPStatus.OK,
