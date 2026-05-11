@@ -79,6 +79,18 @@ class LandingPageHandler(BaseHTTPRequestHandler):
             )
             return
 
+        if parsed.path == "/ping":
+            self.write_json(
+                HTTPStatus.OK,
+                {
+                    "ok": True,
+                    "app_name": "BriefLift",
+                    "server_time": datetime.now(timezone.utc).isoformat(),
+                    "health_path": "/health",
+                },
+            )
+            return
+
         if parsed.path == "/ready":
             self.write_json(
                 HTTPStatus.OK,
