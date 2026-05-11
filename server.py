@@ -283,6 +283,328 @@ INSIGHTS_HTML = """<!DOCTYPE html>
 </html>
 """
 
+PRICING_DATA = {
+    "app_name": "BriefLift",
+    "plans": [
+        {
+            "name": "Starter",
+            "price": "$29/mo",
+            "features": [
+                "Weekly brief generation for one brand workspace",
+                "Campaign-ready outlines and angle suggestions",
+                "Export summaries for client review",
+            ],
+        },
+        {
+            "name": "Pro",
+            "price": "$99/mo",
+            "features": [
+                "Unlimited briefs across multiple campaigns",
+                "Collaborative review notes and approval handoffs",
+                "Priority refreshes for fast-moving launch calendars",
+            ],
+        },
+        {
+            "name": "Scale",
+            "price": "Custom",
+            "features": [
+                "Multi-team workflow visibility with shared operating views",
+                "Launch planning support for high-volume content programs",
+                "Dedicated onboarding and rollout guidance",
+            ],
+        },
+    ],
+}
+PRICING_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BriefLift Pricing</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f7f5ef;
+            --surface: rgba(255, 255, 255, 0.88);
+            --surface-strong: #ffffff;
+            --surface-soft: #f0ece2;
+            --ink: #171a1d;
+            --muted: #5d646b;
+            --line: #ded9cd;
+            --line-strong: #c7c0b3;
+            --accent: #285f57;
+            --accent-dark: #153b36;
+            --accent-soft: #dceae4;
+            --shadow: 0 22px 60px rgba(30, 34, 38, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top right, rgba(40, 95, 87, 0.16), transparent 28%),
+                linear-gradient(180deg, #fbfaf7 0%, var(--bg) 100%);
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-image:
+                linear-gradient(rgba(23, 26, 29, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(23, 26, 29, 0.03) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: linear-gradient(to bottom, black, transparent 74%);
+        }
+        a { color: inherit; }
+        h1, h2, h3, p, ul { margin-top: 0; }
+        .page {
+            width: min(1120px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 28px 0 72px;
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 28px;
+        }
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 750;
+            text-decoration: none;
+        }
+        .brand-mark {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            color: var(--surface-strong);
+            background: var(--accent-dark);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+        }
+        .top-link {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.96rem;
+        }
+        .hero, .faq, .card {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            backdrop-filter: blur(8px);
+            box-shadow: var(--shadow);
+        }
+        .hero {
+            border-radius: 28px;
+            padding: 36px;
+        }
+        .eyebrow {
+            display: inline-block;
+            margin-bottom: 14px;
+            color: var(--accent-dark);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .hero h1 {
+            max-width: 12ch;
+            margin-bottom: 16px;
+            font-size: clamp(2.8rem, 7vw, 4.9rem);
+            line-height: 0.96;
+        }
+        .hero p {
+            max-width: 42rem;
+            color: var(--muted);
+            font-size: 1.08rem;
+            line-height: 1.7;
+        }
+        .hero-points {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 24px;
+            padding: 0;
+            list-style: none;
+        }
+        .hero-points li {
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.75);
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+        .pricing-section {
+            margin-top: 26px;
+        }
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+        }
+        .card {
+            border-radius: 24px;
+            padding: 24px;
+        }
+        .card.featured {
+            background: linear-gradient(180deg, rgba(220, 234, 228, 0.88) 0%, rgba(255, 255, 255, 0.96) 100%);
+            border-color: rgba(40, 95, 87, 0.26);
+        }
+        .plan-name {
+            font-size: 1.45rem;
+        }
+        .price {
+            margin: 14px 0 16px;
+            font-size: 2.4rem;
+            font-weight: 780;
+            line-height: 1;
+        }
+        .price span {
+            color: var(--muted);
+            font-size: 0.98rem;
+            font-weight: 500;
+        }
+        .card p {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        .feature-list {
+            margin: 18px 0 0;
+            padding-left: 18px;
+            color: var(--ink);
+        }
+        .feature-list li {
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+        .faq {
+            margin-top: 24px;
+            border-radius: 28px;
+            padding: 30px;
+        }
+        .faq-list {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 18px;
+        }
+        .faq-item {
+            padding: 18px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: var(--surface-strong);
+        }
+        .faq-item p {
+            margin-bottom: 0;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        @media (max-width: 920px) {
+            .pricing-grid, .faq-list {
+                grid-template-columns: 1fr;
+            }
+            .hero {
+                padding: 28px;
+            }
+        }
+        @media (max-width: 640px) {
+            .page {
+                width: min(100% - 24px, 1120px);
+                padding-top: 18px;
+            }
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .hero h1 {
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header class="topbar">
+            <a class="brand" href="/">
+                <span class="brand-mark">B</span>
+                <span>BriefLift</span>
+            </a>
+            <a class="top-link" href="/insights">See product insights</a>
+        </header>
+        <section class="hero" aria-labelledby="pricing-heading">
+            <div class="eyebrow">Pricing</div>
+            <h1 id="pricing-heading">Plans for teams shipping sharper briefs with less drag.</h1>
+            <p>BriefLift gives strategy and content teams one place to move from intake to launch-ready messaging. Start lean, upgrade when review cycles and campaign volume increase.</p>
+            <ul class="hero-points" aria-label="Pricing highlights">
+                <li>No setup fee</li>
+                <li>Built for campaign workflows</li>
+                <li>Shared visibility across content teams</li>
+            </ul>
+        </section>
+        <section class="pricing-section" aria-labelledby="plans-heading">
+            <h2 id="plans-heading">Choose the right operating pace</h2>
+            <div class="pricing-grid">
+                <article class="card">
+                    <h3 class="plan-name">Starter</h3>
+                    <div class="price">$29<span>/month</span></div>
+                    <p>For small teams replacing scattered brief docs with one focused workflow.</p>
+                    <ul class="feature-list">
+                        <li>Weekly brief generation for one brand workspace</li>
+                        <li>Campaign-ready outlines and angle suggestions</li>
+                        <li>Export summaries for client review</li>
+                    </ul>
+                </article>
+                <article class="card featured">
+                    <h3 class="plan-name">Pro</h3>
+                    <div class="price">$99<span>/month</span></div>
+                    <p>For marketing teams managing multiple launches and faster review handoffs.</p>
+                    <ul class="feature-list">
+                        <li>Unlimited briefs across multiple campaigns</li>
+                        <li>Collaborative review notes and approval handoffs</li>
+                        <li>Priority refreshes for fast-moving launch calendars</li>
+                    </ul>
+                </article>
+                <article class="card">
+                    <h3 class="plan-name">Scale</h3>
+                    <div class="price">Custom<span> engagement</span></div>
+                    <p>For organizations coordinating high-volume content programs across teams.</p>
+                    <ul class="feature-list">
+                        <li>Multi-team workflow visibility with shared operating views</li>
+                        <li>Launch planning support for high-volume content programs</li>
+                        <li>Dedicated onboarding and rollout guidance</li>
+                    </ul>
+                </article>
+            </div>
+        </section>
+        <section class="faq" aria-labelledby="faq-heading">
+            <div class="eyebrow">FAQ</div>
+            <h2 id="faq-heading">Short answers before you commit</h2>
+            <div class="faq-list">
+                <article class="faq-item">
+                    <h3>Does every plan include the full BriefLift interface?</h3>
+                    <p>Yes. Each plan keeps the same core workspace experience, with plan limits based on usage and team complexity.</p>
+                </article>
+                <article class="faq-item">
+                    <h3>Can we change plans as our workload grows?</h3>
+                    <p>Yes. Teams can move from Starter to Pro or into Scale support when campaign velocity and review volume increase.</p>
+                </article>
+                <article class="faq-item">
+                    <h3>Is onboarding included for larger teams?</h3>
+                    <p>Yes. Scale includes rollout guidance so multi-team programs can adopt BriefLift without disrupting current launch operations.</p>
+                </article>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
+"""
+
 
 def ensure_mailing_list_file() -> None:
     if MAILING_LIST_FILE.exists():
@@ -348,6 +670,14 @@ class LandingPageHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/insights":
             self.write_html(HTTPStatus.OK, INSIGHTS_HTML)
+            return
+
+        if parsed.path == "/pricing":
+            self.write_html(HTTPStatus.OK, PRICING_HTML)
+            return
+
+        if parsed.path == "/api/pricing":
+            self.write_json(HTTPStatus.OK, PRICING_DATA)
             return
 
         if parsed.path == "/build":
