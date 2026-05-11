@@ -336,6 +336,47 @@ TRUST_DATA = {
         },
     ],
 }
+INTEGRATIONS_DATA = {
+    "app_name": "BriefLift",
+    "integrations": [
+        {
+            "name": "Slack",
+            "category": "Team Communication",
+            "status": "Available",
+            "description": "Send brief approvals, launch reminders, and workflow handoff updates into campaign channels.",
+        },
+        {
+            "name": "Asana",
+            "category": "Project Management",
+            "status": "Available",
+            "description": "Turn approved briefs into tracked launch tasks with owners, due dates, and review checkpoints.",
+        },
+        {
+            "name": "Google Drive",
+            "category": "Document Collaboration",
+            "status": "Available",
+            "description": "Attach shared research docs, source notes, and exported brief summaries to active workflows.",
+        },
+        {
+            "name": "HubSpot",
+            "category": "CRM and Campaign Ops",
+            "status": "Pilot",
+            "description": "Sync campaign context and audience details so briefs reflect the latest lifecycle priorities.",
+        },
+        {
+            "name": "Zapier",
+            "category": "Automation",
+            "status": "Available",
+            "description": "Connect BriefLift to internal tools with trigger-based workflow automation and alert routing.",
+        },
+        {
+            "name": "Figma",
+            "category": "Creative Collaboration",
+            "status": "Beta",
+            "description": "Keep messaging briefs aligned with design exploration by linking creative review artifacts.",
+        },
+    ],
+}
 CUSTOMERS_DATA = {
     "app_name": "BriefLift",
     "customers": [
@@ -365,6 +406,342 @@ CUSTOMERS_DATA = {
         },
     ],
 }
+INTEGRATIONS_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BriefLift Integrations</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f4f7fb;
+            --ink: #132238;
+            --muted: #5b6c84;
+            --panel: rgba(255, 255, 255, 0.94);
+            --panel-strong: #ffffff;
+            --line: #d7e1ef;
+            --line-strong: #b9c9df;
+            --accent: #0f766e;
+            --accent-deep: #134e4a;
+            --accent-soft: #d9f3ef;
+            --accent-warm: #f59e0b;
+            --hero: linear-gradient(135deg, #eff6ff 0%, #ecfeff 52%, #f8fafc 100%);
+            --shadow: 0 22px 50px rgba(19, 34, 56, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top right, rgba(15, 118, 110, 0.12), transparent 28%),
+                linear-gradient(180deg, #fcfdff 0%, var(--bg) 100%);
+        }
+        h1, h2, h3, p, ul { margin: 0; }
+        .page {
+            width: min(1120px, calc(100% - 36px));
+            margin: 0 auto;
+            padding: 28px 0 64px;
+        }
+        .topbar, .hero, .section-card, .tile, .step, .safeguard {
+            border: 1px solid var(--line);
+            background: var(--panel);
+            box-shadow: var(--shadow);
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 18px 22px;
+            border-radius: 24px;
+        }
+        .brand {
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+        .topbar span {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+        .hero {
+            margin-top: 22px;
+            border-radius: 30px;
+            padding: 18px;
+            background: var(--hero);
+        }
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.25fr 0.95fr;
+            gap: 18px;
+        }
+        .hero-copy, .hero-panel {
+            border-radius: 24px;
+            padding: 26px;
+            background: var(--panel-strong);
+            border: 1px solid var(--line);
+        }
+        .eyebrow {
+            display: inline-block;
+            color: var(--accent-deep);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+        h1 {
+            margin-top: 12px;
+            font-size: clamp(2.4rem, 5vw, 4.2rem);
+            line-height: 0.98;
+            max-width: 10ch;
+        }
+        .hero-copy p, .section-card > p, .tile p, .step p, .safeguard p {
+            color: var(--muted);
+            line-height: 1.65;
+        }
+        .hero-copy p {
+            margin-top: 16px;
+            max-width: 48rem;
+        }
+        .hero-notes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 0;
+            list-style: none;
+        }
+        .hero-notes li {
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            color: var(--accent-deep);
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+        .hero-panel {
+            background: linear-gradient(160deg, var(--accent-deep) 0%, var(--accent) 100%);
+            color: #fff;
+        }
+        .hero-panel .eyebrow,
+        .hero-panel p {
+            color: rgba(255, 255, 255, 0.82);
+        }
+        .hero-panel strong {
+            display: block;
+            margin-top: 18px;
+            font-size: 2.6rem;
+        }
+        .section-card {
+            margin-top: 20px;
+            border-radius: 28px;
+            padding: 26px;
+        }
+        .section-card h2 {
+            margin-top: 10px;
+            font-size: 1.8rem;
+        }
+        .grid {
+            display: grid;
+            gap: 16px;
+            margin-top: 18px;
+        }
+        .tools-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .category-grid,
+        .safeguard-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .setup-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .tile, .step, .safeguard {
+            border-radius: 22px;
+            padding: 20px;
+        }
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .status {
+            border-radius: 999px;
+            padding: 7px 11px;
+            font-size: 0.8rem;
+            font-weight: 800;
+        }
+        .status-available {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .status-pilot,
+        .status-beta {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .step-number {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            margin-bottom: 14px;
+            background: var(--accent-soft);
+            color: var(--accent-deep);
+            font-weight: 800;
+        }
+        .safeguard {
+            border-top: 4px solid var(--accent-warm);
+        }
+        @media (max-width: 900px) {
+            .hero-grid,
+            .tools-grid,
+            .category-grid,
+            .setup-grid,
+            .safeguard-grid {
+                grid-template-columns: 1fr;
+            }
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="topbar">
+            <div>
+                <div class="brand">BriefLift</div>
+                <span>Integrations for workflow teams, publishing tools, and operating visibility</span>
+            </div>
+            <span>Connected systems overview</span>
+        </header>
+        <main>
+            <section class="hero" aria-labelledby="integrations-hero-title">
+                <div class="hero-grid">
+                    <div class="hero-copy">
+                        <div class="eyebrow">Integrations</div>
+                        <h1 id="integrations-hero-title">Connect BriefLift to the tools already running your workflow.</h1>
+                        <p>BriefLift integrations help marketing, content, and operations teams move campaign context, review signals, and launch decisions between the systems they use every day without rebuilding their process from scratch.</p>
+                        <ul class="hero-notes" aria-label="Integration highlights">
+                            <li>Workflow-aware setup</li>
+                            <li>Tool-ready handoffs</li>
+                            <li>Operational safeguards</li>
+                        </ul>
+                    </div>
+                    <aside class="hero-panel" aria-label="Integration summary">
+                        <div class="eyebrow">Active Coverage</div>
+                        <strong>6 integrations</strong>
+                        <p>Covering communication, project management, creative collaboration, automation, and campaign operations for cross-functional teams.</p>
+                    </aside>
+                </div>
+            </section>
+            <section class="section-card" aria-labelledby="workflow-tools-title">
+                <div class="eyebrow">Connected Workflow Tools</div>
+                <h2 id="workflow-tools-title">Systems that support intake, review, and launch coordination</h2>
+                <p>Each integration is designed to keep brief details usable in the downstream tool while preserving the review rhythm teams expect.</p>
+                <div class="grid tools-grid">
+                    <article class="tile">
+                        <div class="label-row">
+                            <h3>Slack</h3>
+                            <span class="status status-available">Available</span>
+                        </div>
+                        <p>Post brief approvals, workflow status changes, and launch reminders directly into team channels.</p>
+                    </article>
+                    <article class="tile">
+                        <div class="label-row">
+                            <h3>Asana</h3>
+                            <span class="status status-available">Available</span>
+                        </div>
+                        <p>Create actionable delivery tasks from approved briefs so campaign work keeps moving without manual re-entry.</p>
+                    </article>
+                    <article class="tile">
+                        <div class="label-row">
+                            <h3>Google Drive</h3>
+                            <span class="status status-available">Available</span>
+                        </div>
+                        <p>Keep shared source material, exported summaries, and review references attached to the active setup.</p>
+                    </article>
+                    <article class="tile">
+                        <div class="label-row">
+                            <h3>Zapier</h3>
+                            <span class="status status-available">Available</span>
+                        </div>
+                        <p>Route brief events into internal workflow tools when teams need broader automation coverage.</p>
+                    </article>
+                </div>
+            </section>
+            <section class="section-card" aria-labelledby="categories-title">
+                <div class="eyebrow">Integration Categories</div>
+                <h2 id="categories-title">Support across the key systems behind campaign execution</h2>
+                <p>BriefLift focuses on realistic integration categories that matter for operating cadence, team visibility, and tool handoffs.</p>
+                <div class="grid category-grid">
+                    <article class="tile">
+                        <h3>Communication</h3>
+                        <p>Share review decisions and workflow updates where stakeholders already coordinate daily work.</p>
+                    </article>
+                    <article class="tile">
+                        <h3>Project Management</h3>
+                        <p>Carry approved briefs into planning tools with owners, due dates, and operational context intact.</p>
+                    </article>
+                    <article class="tile">
+                        <h3>Automation and Creative Ops</h3>
+                        <p>Bridge setup tasks, creative references, and downstream delivery steps without expanding manual work.</p>
+                    </article>
+                </div>
+            </section>
+            <section class="section-card" aria-labelledby="setup-title">
+                <div class="eyebrow">Setup Expectations</div>
+                <h2 id="setup-title">A straightforward setup path for customer teams</h2>
+                <p>Integration setup is intentionally narrow: connect the right workspace, confirm the workflow destination, and validate the operating rules before launch.</p>
+                <div class="grid setup-grid">
+                    <article class="step">
+                        <div class="step-number">1</div>
+                        <h3>Authorize access</h3>
+                        <p>Admins connect the target tool with the minimum workspace scope needed for routing brief events.</p>
+                    </article>
+                    <article class="step">
+                        <div class="step-number">2</div>
+                        <h3>Map workflow destinations</h3>
+                        <p>Teams choose the channels, projects, or folders that should receive brief updates and tool outputs.</p>
+                    </article>
+                    <article class="step">
+                        <div class="step-number">3</div>
+                        <h3>Validate launch behavior</h3>
+                        <p>BriefLift confirms the setup sends the right signals before the integration becomes part of live operations.</p>
+                    </article>
+                </div>
+            </section>
+            <section class="section-card" aria-labelledby="safeguards-title">
+                <div class="eyebrow">Operational Safeguards</div>
+                <h2 id="safeguards-title">Controls that keep integrations predictable and supportable</h2>
+                <p>Operational safeguards are built into the integration model so teams can trust the workflow and troubleshoot issues quickly.</p>
+                <div class="grid safeguard-grid">
+                    <article class="safeguard">
+                        <h3>Scoped access</h3>
+                        <p>Connections are limited to the setup required for workflow delivery instead of broad unrestricted access.</p>
+                    </article>
+                    <article class="safeguard">
+                        <h3>Status visibility</h3>
+                        <p>Teams can see which integration is available, in pilot, or in beta before relying on it in production workflow.</p>
+                    </article>
+                    <article class="safeguard">
+                        <h3>Reviewable setup</h3>
+                        <p>BriefLift expects a clear setup review so operational changes do not silently alter customer-facing launch behavior.</p>
+                    </article>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>
+"""
 CUSTOMERS_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1330,6 +1707,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
             self.write_html(HTTPStatus.OK, INSIGHTS_HTML)
             return
 
+        if parsed.path == "/integrations":
+            self.write_html(HTTPStatus.OK, INTEGRATIONS_HTML)
+            return
+
         if parsed.path == "/pricing":
             self.write_html(HTTPStatus.OK, PRICING_HTML)
             return
@@ -1344,6 +1725,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/pricing":
             self.write_json(HTTPStatus.OK, PRICING_DATA)
+            return
+
+        if parsed.path == "/api/integrations":
+            self.write_json(HTTPStatus.OK, INTEGRATIONS_DATA)
             return
 
         if parsed.path == "/api/customers":
