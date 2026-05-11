@@ -336,6 +336,373 @@ TRUST_DATA = {
         },
     ],
 }
+CUSTOMERS_DATA = {
+    "app_name": "BriefLift",
+    "customers": [
+        {
+            "name": "Avery Cole, Content Director at Northstar Health",
+            "company": "Northstar Health",
+            "industry": "Healthcare",
+            "use_case": "Launching patient education campaigns across regional clinics",
+            "outcome": "Standardized campaign briefs and reduced bottlenecks between strategy and review teams.",
+            "metric": "41% faster brief approvals",
+        },
+        {
+            "name": "Mina Patel, Growth Lead at HarborStay",
+            "company": "HarborStay",
+            "industry": "Hospitality",
+            "use_case": "Coordinating seasonal promotion briefs for local property teams",
+            "outcome": "Gave every market a shared planning structure and clearer launch sequencing.",
+            "metric": "22% lift in campaign conversion",
+        },
+        {
+            "name": "Jordan Lee, VP Marketing at FieldSupply",
+            "company": "FieldSupply",
+            "industry": "B2B SaaS",
+            "use_case": "Managing product launch narratives for multiple sales segments",
+            "outcome": "Improved alignment between product marketing, content operations, and field enablement.",
+            "metric": "9 fewer review cycles per launch",
+        },
+    ],
+}
+CUSTOMERS_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BriefLift Customers</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f6f1e8;
+            --ink: #182126;
+            --muted: #5f676e;
+            --panel: rgba(255, 255, 255, 0.9);
+            --panel-strong: #ffffff;
+            --line: #d8d0c3;
+            --line-strong: #bcae98;
+            --accent: #1f6b5f;
+            --accent-deep: #123d37;
+            --accent-soft: #d9ebe6;
+            --sand: #f0e7d8;
+            --shadow: 0 20px 55px rgba(24, 33, 38, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(31, 107, 95, 0.18), transparent 28%),
+                linear-gradient(180deg, #fbf8f1 0%, var(--bg) 100%);
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            opacity: 0.35;
+            background-image:
+                linear-gradient(rgba(24, 33, 38, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(24, 33, 38, 0.04) 1px, transparent 1px);
+            background-size: 48px 48px;
+            mask-image: linear-gradient(to bottom, black, transparent 72%);
+        }
+        h1, h2, h3, p, blockquote { margin: 0; }
+        a { color: inherit; }
+        .page {
+            width: min(1120px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 28px 0 72px;
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 24px;
+        }
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            text-decoration: none;
+        }
+        .brand-mark {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            background: var(--accent-deep);
+            color: #fff;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+        }
+        .top-link {
+            color: var(--muted);
+            text-decoration: none;
+            font-size: 0.96rem;
+        }
+        .hero, .section-card, .story-card, .quote-card, .metric-card {
+            border: 1px solid var(--line);
+            background: var(--panel);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+        }
+        .hero {
+            display: grid;
+            grid-template-columns: 1.35fr 0.95fr;
+            gap: 18px;
+            border-radius: 32px;
+            padding: 18px;
+        }
+        .hero-copy,
+        .hero-side {
+            border-radius: 26px;
+            padding: 28px;
+        }
+        .hero-copy {
+            background: var(--panel-strong);
+            border: 1px solid var(--line);
+        }
+        .hero-side {
+            background: linear-gradient(145deg, var(--accent-deep) 0%, var(--accent) 100%);
+            color: #fff;
+        }
+        .eyebrow {
+            display: inline-block;
+            margin-bottom: 14px;
+            color: var(--accent-deep);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .hero-side .eyebrow {
+            color: rgba(255, 255, 255, 0.74);
+        }
+        .hero h1 {
+            max-width: 11ch;
+            font-size: clamp(2.7rem, 7vw, 5rem);
+            line-height: 0.95;
+        }
+        .hero p {
+            margin-top: 16px;
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 1.04rem;
+        }
+        .hero-side p {
+            color: rgba(255, 255, 255, 0.82);
+        }
+        .hero-stat {
+            display: block;
+            margin-top: 20px;
+            font-size: 2.7rem;
+            font-weight: 800;
+        }
+        .hero-notes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 22px;
+            padding: 0;
+            list-style: none;
+        }
+        .hero-notes li {
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--sand);
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+        .section-card {
+            margin-top: 24px;
+            border-radius: 28px;
+            padding: 28px;
+        }
+        .section-card > p {
+            margin-top: 10px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        .stories-grid,
+        .results-grid,
+        .use-case-grid {
+            display: grid;
+            gap: 18px;
+            margin-top: 20px;
+        }
+        .stories-grid,
+        .results-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .use-case-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .story-card,
+        .quote-card,
+        .metric-card {
+            border-radius: 24px;
+            padding: 22px;
+        }
+        .story-card h3,
+        .metric-card h3 {
+            font-size: 1.2rem;
+        }
+        .story-meta,
+        .metric-label {
+            color: var(--accent-deep);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .story-card p,
+        .metric-card p,
+        .quote-card p,
+        .quote-card footer {
+            margin-top: 12px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        .metric-value {
+            display: block;
+            margin-top: 14px;
+            font-size: 2.3rem;
+            font-weight: 800;
+            color: var(--accent-deep);
+        }
+        .quote-card {
+            margin-top: 20px;
+            background: linear-gradient(180deg, rgba(217, 235, 230, 0.8) 0%, rgba(255, 255, 255, 0.96) 100%);
+            border-color: rgba(31, 107, 95, 0.28);
+        }
+        blockquote {
+            font-size: 1.3rem;
+            line-height: 1.55;
+            color: var(--ink);
+        }
+        footer {
+            font-size: 0.96rem;
+        }
+        @media (max-width: 900px) {
+            .hero,
+            .stories-grid,
+            .results-grid,
+            .use-case-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="topbar">
+            <a class="brand" href="/">
+                <span class="brand-mark">B</span>
+                <span>BriefLift</span>
+            </a>
+            <a class="top-link" href="/pricing">Explore plans</a>
+        </header>
+
+        <main>
+            <section class="hero" aria-labelledby="customers-hero-title">
+                <div class="hero-copy">
+                    <div class="eyebrow">Customer Stories</div>
+                    <h1 id="customers-hero-title">Customers use BriefLift to move from draft chaos to launch-ready momentum.</h1>
+                    <p>BriefLift gives lean marketing teams a calmer operating rhythm for campaign planning, review, and execution. These customer outcomes show how teams use the platform to improve briefing quality, reduce review drag, and reach measurable results faster.</p>
+                    <ul class="hero-notes" aria-label="Customer outcome highlights">
+                        <li>Featured customer outcomes</li>
+                        <li>Use cases across three industries</li>
+                        <li>Measurable results teams can point to</li>
+                    </ul>
+                </div>
+                <div class="hero-side">
+                    <div class="eyebrow">Average Result</div>
+                    <span class="hero-stat">24%</span>
+                    <p>Average improvement across approval speed, conversion performance, and launch efficiency reported by featured BriefLift customers.</p>
+                </div>
+            </section>
+
+            <section class="section-card" aria-labelledby="featured-outcomes-title">
+                <div class="eyebrow">Featured Outcomes</div>
+                <h2 id="featured-outcomes-title">Three customer stories grounded in real operating pain</h2>
+                <p>Each customer adopted BriefLift to solve a different workflow problem, but all three needed clearer planning, faster alignment, and better campaign outcomes.</p>
+                <div class="stories-grid">
+                    <article class="story-card">
+                        <div class="story-meta">Healthcare customer</div>
+                        <h3>Avery Cole at Northstar Health</h3>
+                        <p>Used BriefLift to standardize patient education campaigns across regional clinic teams and reduce friction between intake, drafting, and review.</p>
+                    </article>
+                    <article class="story-card">
+                        <div class="story-meta">Hospitality customer</div>
+                        <h3>Mina Patel at HarborStay</h3>
+                        <p>Created a shared process for seasonal offers so local property teams could launch with consistent messaging and fewer last-minute brief revisions.</p>
+                    </article>
+                    <article class="story-card">
+                        <div class="story-meta">B2B SaaS customer</div>
+                        <h3>Jordan Lee at FieldSupply</h3>
+                        <p>Connected product marketing and field teams with clearer launch narratives, reusable brief structures, and fewer review resets.</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="section-card" aria-labelledby="use-cases-title">
+                <div class="eyebrow">Use Cases</div>
+                <h2 id="use-cases-title">Where customer teams rely on BriefLift</h2>
+                <div class="use-case-grid">
+                    <article class="story-card">
+                        <h3>Campaign operations</h3>
+                        <p>Marketing leaders use BriefLift to centralize brief intake, give reviewers a single operating format, and keep launch schedules visible.</p>
+                    </article>
+                    <article class="story-card">
+                        <h3>Product and lifecycle launches</h3>
+                        <p>Cross-functional teams use BriefLift to align launch messaging, assign reviewers earlier, and cut wasted cycles before release.</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="section-card" aria-labelledby="results-title">
+                <div class="eyebrow">Results</div>
+                <h2 id="results-title">Measurable results customers can report back to leadership</h2>
+                <div class="results-grid">
+                    <article class="metric-card">
+                        <div class="metric-label">Approval outcome</div>
+                        <h3>Northstar Health</h3>
+                        <span class="metric-value">41%</span>
+                        <p>Faster brief approvals after standardizing planning inputs across clinic campaign teams.</p>
+                    </article>
+                    <article class="metric-card">
+                        <div class="metric-label">Growth outcome</div>
+                        <h3>HarborStay</h3>
+                        <span class="metric-value">22%</span>
+                        <p>Lift in campaign conversion after local teams launched seasonal offers from one shared brief workflow.</p>
+                    </article>
+                    <article class="metric-card">
+                        <div class="metric-label">Efficiency outcome</div>
+                        <h3>FieldSupply</h3>
+                        <span class="metric-value">9</span>
+                        <p>Fewer review cycles per launch once product marketing and sales enablement worked from the same source brief.</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="section-card" aria-labelledby="testimonial-title">
+                <div class="eyebrow">Testimonial</div>
+                <h2 id="testimonial-title">A short customer quote from the review process itself</h2>
+                <article class="quote-card">
+                    <blockquote>"BriefLift gave us a usable briefing system instead of another planning document. Our team saw the outcome in the first campaign cycle."</blockquote>
+                    <footer>Jordan Lee, VP Marketing at FieldSupply</footer>
+                </article>
+            </section>
+        </main>
+    </div>
+</body>
+</html>
+"""
 PRICING_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -967,12 +1334,20 @@ class LandingPageHandler(BaseHTTPRequestHandler):
             self.write_html(HTTPStatus.OK, PRICING_HTML)
             return
 
+        if parsed.path == "/customers":
+            self.write_html(HTTPStatus.OK, CUSTOMERS_HTML)
+            return
+
         if parsed.path == "/trust":
             self.write_html(HTTPStatus.OK, TRUST_HTML)
             return
 
         if parsed.path == "/api/pricing":
             self.write_json(HTTPStatus.OK, PRICING_DATA)
+            return
+
+        if parsed.path == "/api/customers":
+            self.write_json(HTTPStatus.OK, CUSTOMERS_DATA)
             return
 
         if parsed.path == "/api/trust":
