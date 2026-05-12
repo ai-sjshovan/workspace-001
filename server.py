@@ -315,6 +315,36 @@ PRICING_DATA = {
         },
     ],
 }
+FAQ_DATA = {
+    "app_name": "BriefLift",
+    "faqs": [
+        {
+            "question": "How do I set up BriefLift for a new team?",
+            "answer": "Start with one workspace, define your brief template, and invite reviewers so new campaigns follow the same setup from day one.",
+            "category": "setup",
+        },
+        {
+            "question": "Which integrations does BriefLift support?",
+            "answer": "BriefLift connects with tools like Slack, Asana, Google Drive, HubSpot, Zapier, and Figma for handoffs and context sharing.",
+            "category": "integrations",
+        },
+        {
+            "question": "How does billing work?",
+            "answer": "Billing is subscription-based with plans for small teams, growing programs, and custom enterprise rollout needs.",
+            "category": "billing",
+        },
+        {
+            "question": "How does BriefLift approach security?",
+            "answer": "BriefLift uses encrypted transport, scoped access, and operational review practices to protect workflow data.",
+            "category": "security",
+        },
+        {
+            "question": "Where can I get support?",
+            "answer": "Customers can contact the BriefLift support team for onboarding help, rollout questions, and issue escalation.",
+            "category": "support",
+        },
+    ],
+}
 TRUST_DATA = {
     "app_name": "BriefLift",
     "sections": [
@@ -453,6 +483,182 @@ RESOURCES_DATA = {
         },
     ],
 }
+FAQ_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BriefLift FAQ</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f5f7fb;
+            --panel: rgba(255, 255, 255, 0.94);
+            --panel-strong: #ffffff;
+            --text: #132238;
+            --muted: #5b6c84;
+            --line: #d7e1ef;
+            --accent: #0f766e;
+            --accent-deep: #134e4a;
+            --accent-soft: #d9f3ef;
+            --shadow: 0 22px 50px rgba(19, 34, 56, 0.10);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top right, rgba(15, 118, 110, 0.10), transparent 32%),
+                linear-gradient(180deg, #fcfdff 0%, var(--bg) 100%);
+        }
+        h1, h2, h3, p { margin: 0; }
+        .page {
+            width: min(980px, calc(100% - 36px));
+            margin: 0 auto;
+            padding: 28px 0 56px;
+        }
+        .topbar, .hero, .faq-item {
+            border: 1px solid var(--line);
+            background: var(--panel);
+            box-shadow: var(--shadow);
+        }
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: center;
+            padding: 18px 22px;
+            border-radius: 24px;
+        }
+        .brand {
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+        .topbar span, .eyebrow, .category {
+            color: var(--muted);
+        }
+        .hero {
+            margin-top: 22px;
+            border-radius: 30px;
+            padding: 32px;
+            background: linear-gradient(135deg, #eff6ff 0%, #ecfeff 54%, #f8fafc 100%);
+        }
+        .eyebrow {
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+        .hero h1 {
+            margin-top: 14px;
+            font-size: clamp(2.2rem, 5vw, 3.7rem);
+            line-height: 0.98;
+        }
+        .hero p {
+            margin-top: 14px;
+            max-width: 42rem;
+            line-height: 1.65;
+        }
+        .faq-list {
+            display: grid;
+            gap: 16px;
+            margin-top: 22px;
+        }
+        .faq-item {
+            border-radius: 24px;
+            padding: 22px;
+            background: var(--panel-strong);
+        }
+        .faq-item h2 {
+            font-size: 1.2rem;
+            line-height: 1.35;
+        }
+        .faq-item p {
+            margin-top: 10px;
+            line-height: 1.65;
+            color: var(--muted);
+        }
+        .category {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            color: var(--accent-deep);
+            font-size: 0.84rem;
+            font-weight: 700;
+            text-transform: capitalize;
+        }
+        .support-note {
+            margin-top: 20px;
+            padding: 18px 20px;
+            border-radius: 20px;
+            background: #10263f;
+            color: #f8fbff;
+        }
+        .support-note p {
+            margin-top: 8px;
+            color: rgba(248, 251, 255, 0.84);
+        }
+        @media (max-width: 720px) {
+            .topbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .hero {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="topbar">
+            <div class="brand">BriefLift</div>
+            <span>FAQ · Setup · Integrations · Billing · Security · Support</span>
+        </header>
+        <section class="hero">
+            <div class="eyebrow">FAQ</div>
+            <h1>Answers for teams launching BriefLift with confidence.</h1>
+            <p>Review the essentials for setup, integrations, billing, security, and support before your team scales campaign planning in BriefLift.</p>
+        </section>
+        <section class="faq-list" aria-label="Frequently asked questions">
+            <article class="faq-item">
+                <h2>How do I set up BriefLift for a new team?</h2>
+                <p>Start with one workspace, define your brief template, and invite reviewers so every new campaign follows the same setup and approval flow.</p>
+                <div class="category">setup</div>
+            </article>
+            <article class="faq-item">
+                <h2>Which integrations does BriefLift support?</h2>
+                <p>BriefLift supports integrations with Slack, Asana, Google Drive, HubSpot, Zapier, and Figma to keep briefs connected to the tools your team already uses.</p>
+                <div class="category">integrations</div>
+            </article>
+            <article class="faq-item">
+                <h2>How does billing work?</h2>
+                <p>Billing is subscription-based, with options for smaller teams, growing campaign programs, and larger organizations that need custom rollout support.</p>
+                <div class="category">billing</div>
+            </article>
+            <article class="faq-item">
+                <h2>What security practices does BriefLift follow?</h2>
+                <p>BriefLift uses encrypted transport, scoped access, and routine operational review to keep workflow data protected as teams collaborate.</p>
+                <div class="category">security</div>
+            </article>
+            <article class="faq-item">
+                <h2>How do I contact support?</h2>
+                <p>The support team helps with onboarding, rollout planning, and issue escalation so customers can keep launch work moving without delay.</p>
+                <div class="category">support</div>
+            </article>
+        </section>
+        <section class="support-note">
+            <strong>Need more help?</strong>
+            <p>BriefLift support can guide implementation details, integration planning, and operational questions for active customers.</p>
+        </section>
+    </div>
+</body>
+</html>
+"""
 INTEGRATIONS_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2015,6 +2221,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
             self.write_html(HTTPStatus.OK, INTEGRATIONS_HTML)
             return
 
+        if parsed.path == "/faq":
+            self.write_html(HTTPStatus.OK, FAQ_HTML)
+            return
+
         if parsed.path == "/pricing":
             self.write_html(HTTPStatus.OK, PRICING_HTML)
             return
@@ -2037,6 +2247,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/integrations":
             self.write_json(HTTPStatus.OK, INTEGRATIONS_DATA)
+            return
+
+        if parsed.path == "/api/faq":
+            self.write_json(HTTPStatus.OK, FAQ_DATA)
             return
 
         if parsed.path == "/api/customers":
