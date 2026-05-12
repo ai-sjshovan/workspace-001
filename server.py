@@ -406,6 +406,53 @@ CUSTOMERS_DATA = {
         },
     ],
 }
+RESOURCES_DATA = {
+    "app_name": "BriefLift",
+    "resources": [
+        {
+            "title": "Quarterly Campaign Planning Playbook",
+            "type": "Playbook",
+            "audience": "Marketing leadership",
+            "summary": "A step-by-step planning structure for aligning campaign goals, owners, and review milestones before work enters production.",
+            "status": "Available",
+        },
+        {
+            "title": "Product Launch Brief Template",
+            "type": "Template",
+            "audience": "Product marketing teams",
+            "summary": "A reusable launch brief format covering audience, positioning, channels, and handoff requirements for release-ready messaging.",
+            "status": "Available",
+        },
+        {
+            "title": "Editorial Workflow Operating Guide",
+            "type": "Guide",
+            "audience": "Content operations",
+            "summary": "Operational guidance for intake, prioritization, approvals, and publishing across recurring editorial programs.",
+            "status": "Available",
+        },
+        {
+            "title": "Regional Campaign Localization Checklist",
+            "type": "Template",
+            "audience": "Field and regional marketers",
+            "summary": "A checklist for adapting central campaign briefs to local audiences without losing message consistency or launch timing.",
+            "status": "Pilot",
+        },
+        {
+            "title": "Stakeholder Review Cadence Playbook",
+            "type": "Playbook",
+            "audience": "Cross-functional launch teams",
+            "summary": "A practical review rhythm for reducing approval churn and keeping strategy, legal, and creative stakeholders aligned.",
+            "status": "Available",
+        },
+        {
+            "title": "Measurement Readiness Guide",
+            "type": "Guide",
+            "audience": "Growth and analytics teams",
+            "summary": "A pre-launch guide for confirming KPIs, reporting views, and ownership before campaign briefs move into execution.",
+            "status": "Beta",
+        },
+    ],
+}
 INTEGRATIONS_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1369,6 +1416,263 @@ PRICING_HTML = """<!DOCTYPE html>
 </body>
 </html>
 """
+RESOURCES_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BriefLift Resources</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f6f4ef;
+            --surface: rgba(255, 255, 255, 0.92);
+            --surface-strong: #ffffff;
+            --text: #172033;
+            --muted: #60708a;
+            --line: #d8dfeb;
+            --accent: #0f766e;
+            --accent-deep: #134e4a;
+            --accent-soft: #d9f3ef;
+            --highlight: #f59e0b;
+            --shadow: 0 24px 52px rgba(23, 32, 51, 0.10);
+            --hero: linear-gradient(135deg, #fff8eb 0%, #effcf7 48%, #eef4ff 100%);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(245, 158, 11, 0.18), transparent 28%),
+                radial-gradient(circle at top right, rgba(15, 118, 110, 0.18), transparent 34%),
+                linear-gradient(180deg, #fcfbf8 0%, var(--bg) 100%);
+        }
+        h1, h2, h3, p, ul { margin: 0; }
+        .page {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 28px 20px 56px;
+        }
+        .hero, .section, .next-steps {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+        }
+        .hero {
+            padding: 28px;
+            background-image: var(--hero);
+        }
+        .eyebrow {
+            color: var(--accent);
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.4fr 0.9fr;
+            gap: 22px;
+            align-items: end;
+            margin-top: 12px;
+        }
+        h1 {
+            font-size: clamp(2.1rem, 5vw, 3.8rem);
+            line-height: 1.03;
+            max-width: 12ch;
+        }
+        .hero p {
+            margin-top: 14px;
+            color: var(--muted);
+            line-height: 1.65;
+            max-width: 46rem;
+        }
+        .hero-card {
+            padding: 20px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid rgba(19, 78, 74, 0.14);
+        }
+        .hero-card strong {
+            display: block;
+            font-size: 2.4rem;
+            margin-top: 8px;
+        }
+        .hero-card span {
+            color: var(--muted);
+            line-height: 1.5;
+        }
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            margin-top: 20px;
+        }
+        .section {
+            padding: 24px;
+        }
+        h2 {
+            margin-top: 10px;
+            font-size: 1.45rem;
+        }
+        .section p {
+            margin-top: 10px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        .resource-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 16px;
+            display: grid;
+            gap: 12px;
+        }
+        .resource-list li {
+            padding: 14px 16px;
+            background: var(--surface-strong);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+        }
+        .resource-list strong {
+            display: block;
+            font-size: 1rem;
+        }
+        .resource-list span {
+            display: block;
+            margin-top: 6px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+        .next-steps {
+            margin-top: 20px;
+            padding: 24px;
+            background: linear-gradient(135deg, #102542 0%, #134e4a 100%);
+            color: #ffffff;
+        }
+        .next-steps .eyebrow,
+        .next-steps p,
+        .next-steps li {
+            color: rgba(255, 255, 255, 0.84);
+        }
+        .next-steps ul {
+            margin-top: 16px;
+            padding-left: 20px;
+            display: grid;
+            gap: 10px;
+            line-height: 1.55;
+        }
+        .pill {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(245, 158, 11, 0.16);
+            color: var(--highlight);
+            font-size: 0.84rem;
+            font-weight: 700;
+        }
+        @media (max-width: 860px) {
+            .hero-grid, .section-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <section class="hero" aria-labelledby="resources-heading">
+            <div class="eyebrow">BriefLift resources</div>
+            <div class="hero-grid">
+                <div>
+                    <h1 id="resources-heading">Operational resources for teams building better briefs.</h1>
+                    <p>Explore BriefLift playbooks, templates, and guides designed to help strategy, content, and launch teams move from intake to execution with less ambiguity and faster approvals.</p>
+                </div>
+                <aside class="hero-card" aria-label="Resource library summary">
+                    <div class="eyebrow">Library snapshot</div>
+                    <strong>6 core resources</strong>
+                    <span>Built for campaign planning, workflow design, stakeholder reviews, and launch readiness.</span>
+                    <div class="pill">Customer-facing resource hub</div>
+                </aside>
+            </div>
+        </section>
+        <section class="section-grid" aria-label="Resource categories">
+            <section class="section" aria-labelledby="featured-playbooks">
+                <div class="eyebrow">Featured</div>
+                <h2 id="featured-playbooks">Playbooks for repeatable campaign operations</h2>
+                <p>These featured playbooks help teams standardize how they plan work, route approvals, and keep cross-functional contributors aligned.</p>
+                <ul class="resource-list">
+                    <li>
+                        <strong>Quarterly Campaign Planning Playbook</strong>
+                        <span>Align campaign priorities, owners, and milestones before work enters production.</span>
+                    </li>
+                    <li>
+                        <strong>Stakeholder Review Cadence Playbook</strong>
+                        <span>Reduce review churn with a clearer sequence for comments, approvals, and sign-off.</span>
+                    </li>
+                </ul>
+            </section>
+            <section class="section" aria-labelledby="templates">
+                <div class="eyebrow">Templates</div>
+                <h2 id="templates">Templates teams can adapt quickly</h2>
+                <p>BriefLift templates give marketers a reliable starting point for launch planning, localization, and message handoffs.</p>
+                <ul class="resource-list">
+                    <li>
+                        <strong>Product Launch Brief Template</strong>
+                        <span>Capture audience, positioning, channels, and dependencies in one reusable structure.</span>
+                    </li>
+                    <li>
+                        <strong>Regional Campaign Localization Checklist</strong>
+                        <span>Adapt central messaging to local teams while preserving timing and campaign intent.</span>
+                    </li>
+                </ul>
+            </section>
+            <section class="section" aria-labelledby="operational-guides">
+                <div class="eyebrow">Operational guides</div>
+                <h2 id="operational-guides">Guides for day-to-day workflow clarity</h2>
+                <p>These guides support the operational details that keep brief production healthy once intake volume and stakeholders expand.</p>
+                <ul class="resource-list">
+                    <li>
+                        <strong>Editorial Workflow Operating Guide</strong>
+                        <span>Define intake, prioritization, approvals, and publishing for recurring editorial programs.</span>
+                    </li>
+                    <li>
+                        <strong>Measurement Readiness Guide</strong>
+                        <span>Confirm KPIs, reporting views, and ownership before campaign execution begins.</span>
+                    </li>
+                </ul>
+            </section>
+            <section class="section" aria-labelledby="recommended-next-steps">
+                <div class="eyebrow">Recommended next steps</div>
+                <h2 id="recommended-next-steps">What to do after browsing the resources</h2>
+                <p>Use the resource hub to identify the operating gap your team needs to solve first, then move into a smaller pilot before scaling process changes.</p>
+                <ul class="resource-list">
+                    <li>
+                        <strong>Choose one planning workflow to standardize</strong>
+                        <span>Start with a single campaign or launch motion to prove the process with lower operational risk.</span>
+                    </li>
+                    <li>
+                        <strong>Pair a template with a review playbook</strong>
+                        <span>Teams move faster when content structure and approval rhythm improve together.</span>
+                    </li>
+                </ul>
+            </section>
+        </section>
+        <section class="next-steps" aria-labelledby="next-steps-heading">
+            <div class="eyebrow">Next steps</div>
+            <h2 id="next-steps-heading">Build a cleaner brief workflow with the right starting materials.</h2>
+            <p>Whether the immediate need is better playbooks, stronger templates, or more reliable operational guides, BriefLift gives teams a practical foundation for improving how work gets planned and approved.</p>
+            <ul>
+                <li>Use featured playbooks to clarify operating expectations across stakeholders.</li>
+                <li>Adopt templates to speed up intake and keep briefs consistent across teams.</li>
+                <li>Follow the guides to strengthen execution, measurement, and next-step decisions.</li>
+            </ul>
+        </section>
+    </main>
+</body>
+</html>
+"""
 TRUST_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1723,6 +2027,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
             self.write_html(HTTPStatus.OK, TRUST_HTML)
             return
 
+        if parsed.path == "/resources":
+            self.write_html(HTTPStatus.OK, RESOURCES_HTML)
+            return
+
         if parsed.path == "/api/pricing":
             self.write_json(HTTPStatus.OK, PRICING_DATA)
             return
@@ -1737,6 +2045,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/trust":
             self.write_json(HTTPStatus.OK, TRUST_DATA)
+            return
+
+        if parsed.path == "/api/resources":
+            self.write_json(HTTPStatus.OK, RESOURCES_DATA)
             return
 
         if parsed.path == "/build":
