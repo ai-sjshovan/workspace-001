@@ -483,6 +483,149 @@ RESOURCES_DATA = {
         },
     ],
 }
+CHANGELOG_DATA = {
+    "app_name": "BriefLift",
+    "releases": [
+        {
+            "version": "1.4.0",
+            "date": "2026-05-10",
+            "title": "Workflow visibility refresh",
+            "notes": "Added the insights dashboard with workflow health, recent activity, and throughput visibility for content teams.",
+        },
+        {
+            "version": "1.3.0",
+            "date": "2026-05-03",
+            "title": "Resource center launch",
+            "notes": "Published a dedicated resources experience and API endpoint for rollout guides, templates, and operating materials.",
+        },
+        {
+            "version": "1.2.0",
+            "date": "2026-04-25",
+            "title": "Trust and customer proof pages",
+            "notes": "Released trust and customer routes to centralize security posture, support expectations, and customer outcomes.",
+        },
+        {
+            "version": "1.1.0",
+            "date": "2026-04-18",
+            "title": "Pricing and FAQ expansion",
+            "notes": "Added public pricing and FAQ endpoints to help teams evaluate plans, billing, setup, and support.",
+        },
+    ],
+}
+CHANGELOG_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BriefLift Changelog</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f7f5ef;
+            --surface: #ffffff;
+            --surface-soft: #f0ece2;
+            --ink: #171a1d;
+            --muted: #5d646b;
+            --line: #ded9cd;
+            --accent: #285f57;
+            --accent-dark: #153b36;
+            --shadow: 0 18px 55px rgba(30, 34, 38, 0.1);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: var(--ink);
+            background: linear-gradient(180deg, #fbfaf7 0%, var(--bg) 100%);
+        }
+        .page {
+            width: min(860px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 48px 0 72px;
+        }
+        h1, h2, p { margin-top: 0; }
+        .eyebrow {
+            margin-bottom: 14px;
+            color: var(--accent-dark);
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .intro {
+            max-width: 42rem;
+            color: var(--muted);
+            font-size: 1.05rem;
+            line-height: 1.65;
+        }
+        .timeline {
+            display: grid;
+            gap: 18px;
+            margin-top: 32px;
+        }
+        .entry {
+            padding: 22px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: var(--surface);
+            box-shadow: var(--shadow);
+        }
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+        .version {
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: var(--surface-soft);
+            color: var(--accent-dark);
+            font-weight: 700;
+        }
+        h2 {
+            margin-bottom: 10px;
+            font-size: 1.4rem;
+        }
+        .notes {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <div class="eyebrow">BriefLift Release Notes</div>
+        <h1>Changelog</h1>
+        <p class="intro">Recent BriefLift product changes, organized as release notes for workflow, visibility, and public product surface updates.</p>
+        <section class="timeline" aria-label="BriefLift changelog entries">
+            <article class="entry">
+                <div class="meta"><span class="version">v1.4.0</span><span>2026-05-10</span></div>
+                <h2>Workflow visibility refresh</h2>
+                <p class="notes">Added the insights dashboard with workflow health, recent activity, and throughput visibility for content teams.</p>
+            </article>
+            <article class="entry">
+                <div class="meta"><span class="version">v1.3.0</span><span>2026-05-03</span></div>
+                <h2>Resource center launch</h2>
+                <p class="notes">Published a dedicated resources experience and API endpoint for rollout guides, templates, and operating materials.</p>
+            </article>
+            <article class="entry">
+                <div class="meta"><span class="version">v1.2.0</span><span>2026-04-25</span></div>
+                <h2>Trust and customer proof pages</h2>
+                <p class="notes">Released trust and customer routes to centralize security posture, support expectations, and customer outcomes.</p>
+            </article>
+            <article class="entry">
+                <div class="meta"><span class="version">v1.1.0</span><span>2026-04-18</span></div>
+                <h2>Pricing and FAQ expansion</h2>
+                <p class="notes">Added public pricing and FAQ endpoints to help teams evaluate plans, billing, setup, and support.</p>
+            </article>
+        </section>
+    </main>
+</body>
+</html>
+"""
 FAQ_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2241,6 +2384,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
             self.write_html(HTTPStatus.OK, RESOURCES_HTML)
             return
 
+        if parsed.path == "/changelog":
+            self.write_html(HTTPStatus.OK, CHANGELOG_HTML)
+            return
+
         if parsed.path == "/api/pricing":
             self.write_json(HTTPStatus.OK, PRICING_DATA)
             return
@@ -2263,6 +2410,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/resources":
             self.write_json(HTTPStatus.OK, RESOURCES_DATA)
+            return
+
+        if parsed.path == "/api/changelog":
+            self.write_json(HTTPStatus.OK, CHANGELOG_DATA)
             return
 
         if parsed.path == "/build":
