@@ -613,6 +613,1066 @@ AI_REVIEW_DATA = {
         },
     ],
 }
+
+
+def build_ai_review_2_html() -> str:
+    metric_cards = "".join(
+        f"""
+        <article class="metric-card reveal">
+            <span>{metric["label"]}</span>
+            <strong>{metric["value"]}</strong>
+            <p>{metric["detail"]}</p>
+        </article>
+        """
+        for metric in AI_REVIEW_DATA["metrics"]
+    )
+
+    feature_cards = "".join(
+        f"""
+        <article class="feature-card reveal">
+            <span>{feature["title"]}</span>
+            <h3>{feature["title"]}</h3>
+            <p>{feature["summary"]}</p>
+        </article>
+        """
+        for feature in AI_REVIEW_DATA["features"]
+    )
+
+    testimonial_cards = "".join(
+        f"""
+        <article class="testimonial-card reveal">
+            <p>"{testimonial["quote"]}"</p>
+            <div class="person">{testimonial["name"]} · {testimonial["role"]}, {testimonial["company"]}</div>
+        </article>
+        """
+        for testimonial in AI_REVIEW_DATA["testimonials"]
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BriefLift AI Review | Visual Pass Two</title>
+    <style>
+        :root {{
+            color-scheme: dark;
+            --bg: #06131c;
+            --bg-alt: #0b1c28;
+            --panel: rgba(10, 24, 35, 0.78);
+            --panel-strong: rgba(14, 31, 44, 0.94);
+            --panel-soft: rgba(244, 201, 93, 0.08);
+            --line: rgba(150, 216, 214, 0.18);
+            --line-strong: rgba(255, 255, 255, 0.16);
+            --text: #f6fbfc;
+            --muted: #9db5bc;
+            --muted-strong: #d8e6e9;
+            --teal: #71e0cf;
+            --teal-deep: #2aa59c;
+            --coral: #ff8e72;
+            --gold: #f4c95d;
+            --sky: #7cc7ff;
+            --shadow: 0 28px 80px rgba(2, 8, 14, 0.42);
+            --radius-xl: 34px;
+            --radius-lg: 24px;
+            --radius-md: 18px;
+            --max: 1180px;
+        }}
+        * {{ box-sizing: border-box; }}
+        html {{ scroll-behavior: smooth; }}
+        body {{
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(113, 224, 207, 0.18), transparent 28%),
+                radial-gradient(circle at top right, rgba(124, 199, 255, 0.18), transparent 26%),
+                radial-gradient(circle at 50% 32%, rgba(255, 142, 114, 0.12), transparent 24%),
+                linear-gradient(180deg, #041018 0%, var(--bg) 52%, #081822 100%);
+        }}
+        body::before {{
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+            background-size: 84px 84px;
+            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.92), transparent 82%);
+        }}
+        a {{ color: inherit; }}
+        h1, h2, h3, p {{ margin: 0; }}
+        .page {{ padding-bottom: 56px; overflow: clip; }}
+        .shell, .band-inner {{
+            width: min(var(--max), calc(100% - 32px));
+            margin: 0 auto;
+        }}
+        .topbar {{
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            backdrop-filter: blur(20px);
+            background: rgba(4, 14, 22, 0.72);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }}
+        .nav {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 18px 0;
+        }}
+        .brand {{
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }}
+        .brand-mark {{
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            color: #07222b;
+            background: linear-gradient(135deg, var(--gold), var(--teal));
+            box-shadow: 0 14px 28px rgba(42, 165, 156, 0.35);
+        }}
+        .nav-links {{
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }}
+        .nav-links a {{
+            text-decoration: none;
+            transition: color 180ms ease;
+        }}
+        .nav-links a:hover {{ color: var(--muted-strong); }}
+        .nav-cta, .hero-actions a, .cta-panel a {{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 50px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: 800;
+            transition:
+                transform 220ms ease,
+                box-shadow 220ms ease,
+                background 220ms ease,
+                border-color 220ms ease;
+        }}
+        .nav-cta, .hero-actions .primary, .cta-panel a {{
+            padding: 0 20px;
+            color: #08202a;
+            background: linear-gradient(135deg, var(--gold), var(--teal));
+            box-shadow: 0 18px 40px rgba(42, 165, 156, 0.26);
+        }}
+        .hero-actions .secondary {{
+            padding: 0 20px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.04);
+        }}
+        .nav-cta:hover,
+        .hero-actions a:hover,
+        .cta-panel a:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 22px 44px rgba(42, 165, 156, 0.24);
+        }}
+        a:focus-visible {{
+            outline: 3px solid var(--gold);
+            outline-offset: 3px;
+        }}
+        .hero {{
+            display: grid;
+            grid-template-columns: minmax(0, 1.04fr) minmax(360px, 0.96fr);
+            gap: 34px;
+            padding: 72px 0 38px;
+            align-items: center;
+        }}
+        .hero-copy,
+        .hero-visual {{
+            position: relative;
+        }}
+        .eyebrow {{
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 22px;
+            color: var(--muted-strong);
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+        }}
+        .eyebrow::before {{
+            content: "";
+            width: 9px;
+            height: 9px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--gold), var(--coral));
+            box-shadow: 0 0 18px rgba(244, 201, 93, 0.55);
+            animation: pulse 2.8s ease-in-out infinite;
+        }}
+        h1 {{
+            max-width: 11ch;
+            font-size: clamp(3.2rem, 7vw, 5.85rem);
+            line-height: 0.93;
+            letter-spacing: -0.04em;
+        }}
+        .hero-copy > p {{
+            max-width: 44rem;
+            margin-top: 20px;
+            color: var(--muted);
+            font-size: 1.08rem;
+            line-height: 1.72;
+        }}
+        .hero-actions {{
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 26px;
+        }}
+        .micro-proof {{
+            margin-top: 18px;
+            color: var(--muted);
+            font-size: 0.96rem;
+            line-height: 1.7;
+        }}
+        .hero-copy.reveal.is-visible {{
+            animation: heroRise 820ms cubic-bezier(.2, .9, .2, 1) both;
+        }}
+        .hero-visual.reveal.is-visible {{
+            animation: heroFloat 980ms cubic-bezier(.2, .9, .2, 1) both;
+        }}
+        .hero-visual::before {{
+            content: "";
+            position: absolute;
+            inset: auto 8% -12% auto;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 142, 114, 0.28), transparent 70%);
+            filter: blur(10px);
+            z-index: -1;
+        }}
+        .mockup {{
+            position: relative;
+            border: 1px solid var(--line-strong);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            background:
+                linear-gradient(180deg, rgba(10, 25, 36, 0.94), rgba(8, 20, 30, 0.98)),
+                rgba(8, 20, 30, 0.98);
+            box-shadow: var(--shadow);
+        }}
+        .mockup-top {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 18px 22px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(90deg, rgba(124, 199, 255, 0.12), rgba(255, 142, 114, 0.12));
+        }}
+        .mockup-title {{
+            font-size: 1.08rem;
+            font-weight: 760;
+        }}
+        .status-pill {{
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border: 1px solid rgba(113, 224, 207, 0.24);
+            border-radius: 999px;
+            color: var(--muted-strong);
+            font-size: 0.82rem;
+            font-weight: 700;
+            background: rgba(10, 25, 36, 0.72);
+        }}
+        .status-pill::before {{
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--teal);
+            box-shadow: 0 0 0 0 rgba(113, 224, 207, 0.55);
+            animation: ping 2.2s ease-out infinite;
+        }}
+        .mockup-body {{
+            display: grid;
+            gap: 18px;
+            padding: 22px;
+        }}
+        .signal-grid {{
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }}
+        .signal-card,
+        .review-column,
+        .timeline-card,
+        .context-card,
+        .audience-card,
+        .feature-card,
+        .trust-card,
+        .testimonial-card,
+        .cta-panel {{
+            border: 1px solid var(--line);
+            border-radius: var(--radius-lg);
+            background: var(--panel);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            transition:
+                transform 220ms ease,
+                border-color 220ms ease,
+                box-shadow 220ms ease;
+        }}
+        .signal-card:hover,
+        .review-column:hover,
+        .timeline-card:hover,
+        .context-card:hover,
+        .audience-card:hover,
+        .feature-card:hover,
+        .trust-card:hover,
+        .testimonial-card:hover {{
+            transform: translateY(-4px);
+            border-color: rgba(244, 201, 93, 0.42);
+            box-shadow: 0 28px 62px rgba(2, 8, 14, 0.46);
+        }}
+        .signal-card {{
+            padding: 18px;
+            background:
+                linear-gradient(180deg, rgba(124, 199, 255, 0.08), rgba(0, 0, 0, 0)),
+                var(--panel);
+        }}
+        .label {{
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }}
+        .signal-card strong {{
+            display: block;
+            margin-top: 10px;
+            font-size: 2rem;
+            line-height: 1;
+        }}
+        .signal-card p {{
+            margin-top: 10px;
+            color: var(--muted);
+            line-height: 1.6;
+        }}
+        .review-columns {{
+            display: grid;
+            grid-template-columns: 1.2fr 0.95fr;
+            gap: 14px;
+        }}
+        .review-column {{
+            padding: 18px;
+        }}
+        .signal-row {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 12px 0;
+            color: var(--muted-strong);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }}
+        .signal-row:last-child {{ border-bottom: 0; }}
+        .signal-row span:last-child {{
+            color: var(--gold);
+            font-weight: 700;
+        }}
+        .progress-track {{
+            height: 10px;
+            margin-top: 16px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.08);
+        }}
+        .progress-bar {{
+            height: 100%;
+            width: 0;
+            border-radius: inherit;
+            background: linear-gradient(90deg, var(--coral), var(--gold), var(--teal));
+            animation: growBar 1200ms cubic-bezier(.18, .86, .32, 1) 260ms forwards;
+        }}
+        .mini-note {{
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }}
+        .mini-note::before {{
+            content: "";
+            width: 28px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.2);
+        }}
+        .band {{
+            padding: 18px 0 0;
+        }}
+        .proof-band {{
+            border: 1px solid rgba(244, 201, 93, 0.2);
+            border-radius: 30px;
+            overflow: hidden;
+            background:
+                linear-gradient(135deg, rgba(255, 142, 114, 0.08), rgba(113, 224, 207, 0.06)),
+                rgba(8, 23, 33, 0.82);
+            box-shadow: var(--shadow);
+        }}
+        .proof-grid {{
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1px;
+            background: rgba(255, 255, 255, 0.08);
+        }}
+        .metric-card {{
+            min-height: 188px;
+            padding: 24px;
+            background:
+                linear-gradient(180deg, rgba(124, 199, 255, 0.05), rgba(255, 255, 255, 0)),
+                rgba(7, 19, 28, 0.94);
+        }}
+        .metric-card span {{
+            display: block;
+            color: var(--muted);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }}
+        .metric-card strong {{
+            display: block;
+            margin-top: 18px;
+            font-size: clamp(2.1rem, 4vw, 3rem);
+            color: var(--gold);
+        }}
+        .metric-card p {{
+            margin-top: 12px;
+            color: var(--muted-strong);
+            line-height: 1.62;
+        }}
+        .section {{
+            padding: 86px 0 0;
+        }}
+        .section-head {{
+            max-width: 760px;
+            margin-bottom: 30px;
+        }}
+        h2 {{
+            margin-bottom: 14px;
+            font-size: clamp(2rem, 4vw, 3.25rem);
+            line-height: 1.04;
+            letter-spacing: -0.03em;
+        }}
+        .section-head p,
+        .context-copy p,
+        .trust-card p,
+        .testimonial-card p,
+        .audience-card p,
+        .feature-card p,
+        .timeline-card p {{
+            color: var(--muted);
+            line-height: 1.72;
+        }}
+        .audience-grid {{
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+        }}
+        .audience-card,
+        .feature-card,
+        .trust-card,
+        .testimonial-card {{
+            padding: 24px;
+        }}
+        .proof-chip {{
+            display: inline-flex;
+            padding: 8px 12px;
+            border-radius: 999px;
+            color: #08202a;
+            background: linear-gradient(135deg, rgba(244, 201, 93, 0.98), rgba(255, 142, 114, 0.92));
+            font-size: 0.78rem;
+            font-weight: 800;
+        }}
+        .audience-card strong {{
+            display: block;
+            margin: 18px 0 10px;
+            font-size: 1.15rem;
+            line-height: 1.35;
+        }}
+        .split-grid {{
+            display: grid;
+            grid-template-columns: 1.04fr 0.96fr;
+            gap: 18px;
+        }}
+        .timeline-card,
+        .context-card {{
+            padding: 26px;
+        }}
+        .timeline-list {{
+            display: grid;
+            gap: 16px;
+            margin-top: 22px;
+        }}
+        .timeline-item {{
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 16px;
+            align-items: start;
+        }}
+        .timeline-item span {{
+            color: var(--gold);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }}
+        .timeline-item strong {{
+            display: block;
+            margin-bottom: 6px;
+            font-size: 1rem;
+        }}
+        .context-stack {{
+            display: grid;
+            gap: 14px;
+            margin-top: 20px;
+        }}
+        .context-pill {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.03);
+        }}
+        .context-pill strong {{
+            font-size: 0.98rem;
+        }}
+        .context-pill span {{
+            color: var(--teal);
+            font-size: 0.82rem;
+            font-weight: 800;
+        }}
+        .feature-grid,
+        .trust-grid,
+        .testimonial-grid {{
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+        }}
+        .feature-card {{
+            min-height: 220px;
+            background:
+                linear-gradient(180deg, rgba(124, 199, 255, 0.08), rgba(255, 255, 255, 0)),
+                var(--panel);
+        }}
+        .feature-card span,
+        .trust-kicker {{
+            display: inline-flex;
+            margin-bottom: 14px;
+            color: var(--muted-strong);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }}
+        .feature-card h3,
+        .trust-card h3 {{
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            line-height: 1.34;
+        }}
+        .review-band {{
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 18px;
+            padding: 26px;
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            background:
+                linear-gradient(135deg, rgba(113, 224, 207, 0.08), rgba(255, 142, 114, 0.08)),
+                rgba(8, 22, 32, 0.8);
+            box-shadow: var(--shadow);
+        }}
+        .review-band h3 {{
+            margin: 10px 0 12px;
+            font-size: 1.5rem;
+            line-height: 1.28;
+        }}
+        .review-band p {{
+            color: var(--muted);
+            line-height: 1.72;
+        }}
+        .status-rail {{
+            display: grid;
+            gap: 12px;
+        }}
+        .rail-item {{
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.04);
+        }}
+        .rail-item strong {{
+            display: block;
+            margin-bottom: 6px;
+            font-size: 1rem;
+        }}
+        .rail-item p {{
+            color: var(--muted);
+            font-size: 0.95rem;
+        }}
+        .testimonial-card {{
+            background:
+                linear-gradient(180deg, rgba(244, 201, 93, 0.06), rgba(255, 255, 255, 0)),
+                var(--panel);
+        }}
+        .person {{
+            margin-top: 18px;
+            color: var(--muted-strong);
+            font-size: 0.92rem;
+        }}
+        .cta-panel {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 28px;
+            margin-top: 86px;
+            padding: 28px;
+            background:
+                linear-gradient(135deg, rgba(124, 199, 255, 0.12), rgba(255, 142, 114, 0.12)),
+                rgba(8, 22, 32, 0.88);
+        }}
+        .cta-panel p {{
+            margin-top: 12px;
+            color: var(--muted);
+            line-height: 1.7;
+            max-width: 40rem;
+        }}
+        .footer {{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 28px 0 0;
+            color: var(--muted);
+            font-size: 0.94rem;
+        }}
+        .footer-links {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }}
+        .footer-links a {{
+            text-decoration: none;
+        }}
+        .reveal {{
+            opacity: 0;
+            transform: translateY(30px);
+            transition:
+                opacity 640ms ease,
+                transform 640ms ease;
+        }}
+        .reveal.is-visible {{
+            opacity: 1;
+            transform: translateY(0);
+        }}
+        @keyframes heroRise {{
+            from {{
+                opacity: 1;
+                transform: translateY(36px);
+            }}
+            to {{
+                opacity: 1;
+                transform: translateY(0);
+            }}
+        }}
+        @keyframes heroFloat {{
+            0% {{
+                opacity: 1;
+                transform: translateY(34px) scale(0.98);
+            }}
+            100% {{
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }}
+        }}
+        @keyframes growBar {{
+            from {{ width: 0; }}
+            to {{ width: 86%; }}
+        }}
+        @keyframes ping {{
+            0% {{ box-shadow: 0 0 0 0 rgba(113, 224, 207, 0.52); }}
+            75% {{ box-shadow: 0 0 0 14px rgba(113, 224, 207, 0); }}
+            100% {{ box-shadow: 0 0 0 0 rgba(113, 224, 207, 0); }}
+        }}
+        @keyframes pulse {{
+            0%, 100% {{ transform: scale(1); }}
+            50% {{ transform: scale(1.18); }}
+        }}
+        @media (max-width: 980px) {{
+            .nav,
+            .cta-panel,
+            .footer {{
+                flex-direction: column;
+                align-items: flex-start;
+            }}
+            .nav-links {{
+                flex-wrap: wrap;
+            }}
+            .hero,
+            .split-grid,
+            .review-band,
+            .review-columns,
+            .feature-grid,
+            .trust-grid,
+            .testimonial-grid,
+            .audience-grid,
+            .proof-grid,
+            .signal-grid {{
+                grid-template-columns: 1fr;
+            }}
+            .timeline-item {{
+                grid-template-columns: 1fr;
+            }}
+        }}
+        @media (max-width: 720px) {{
+            .shell, .band-inner {{
+                width: min(var(--max), calc(100% - 20px));
+            }}
+            .hero {{
+                padding-top: 46px;
+            }}
+            .mockup-top,
+            .cta-panel,
+            .timeline-card,
+            .context-card,
+            .audience-card,
+            .feature-card,
+            .trust-card,
+            .testimonial-card {{
+                padding: 20px;
+            }}
+            .review-column,
+            .signal-card,
+            .metric-card {{
+                padding: 18px;
+            }}
+            h1 {{
+                max-width: none;
+            }}
+        }}
+        @media (prefers-reduced-motion: reduce) {{
+            html {{ scroll-behavior: auto; }}
+            *, *::before, *::after {{
+                animation: none !important;
+                transition: none !important;
+            }}
+            .reveal,
+            .reveal.is-visible {{
+                opacity: 1;
+                transform: none;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="topbar">
+            <nav class="nav shell" aria-label="BriefLift AI Review navigation">
+                <div class="brand">
+                    <div class="brand-mark">BL</div>
+                    <span>BriefLift AI Review</span>
+                </div>
+                <div class="nav-links">
+                    <a href="#results">Results</a>
+                    <a href="#workflow">Workflow</a>
+                    <a href="#capabilities">Capabilities</a>
+                    <a href="#trust">Trust</a>
+                    <a href="/#waitlist" class="nav-cta">Join the waitlist</a>
+                </div>
+            </nav>
+        </div>
+        <main class="shell">
+            <section class="hero">
+                <div class="hero-copy reveal is-visible">
+                    <div class="eyebrow">Campaign briefs with operational intelligence</div>
+                    <h1>Launch work with fewer review loops and cleaner handoffs.</h1>
+                    <p>BriefLift turns scattered intake requests, stakeholder feedback, and launch history into AI-assisted campaign briefs your team can actually ship from. Operators get structure, reviewers get clarity, and every launch leaves behind reusable knowledge for the next one.</p>
+                    <div class="hero-actions">
+                        <a href="/#waitlist" class="primary">Get early access</a>
+                        <a href="/api/ai-review" class="secondary">View page data</a>
+                    </div>
+                    <div class="micro-proof">No new workflow to learn. Bring your intake, review rhythm, and launch context into one operating surface.</div>
+                </div>
+                <div class="hero-visual reveal is-visible" aria-label="BriefLift workflow preview">
+                    <div class="mockup">
+                        <div class="mockup-top">
+                            <div>
+                                <div class="label">AI Review Workspace</div>
+                                <div class="mockup-title">Campaign launch board for message, review, and handoff readiness.</div>
+                            </div>
+                            <div class="status-pill">Review system live</div>
+                        </div>
+                        <div class="mockup-body">
+                            <div class="signal-grid">
+                                <article class="signal-card">
+                                    <div class="label">Review compression</div>
+                                    <strong>2.3 cycles</strong>
+                                    <p>Average approval path after aligning intake details, goals, and owner feedback up front.</p>
+                                </article>
+                                <article class="signal-card">
+                                    <div class="label">Handoff clarity</div>
+                                    <strong>92%</strong>
+                                    <p>Stakeholders report fewer clarification requests when briefs reach downstream teams.</p>
+                                </article>
+                            </div>
+                            <div class="review-columns">
+                                <div class="review-column">
+                                    <div class="label">Live workflow signals</div>
+                                    <div class="signal-row"><span>Audience context synced</span><span>Complete</span></div>
+                                    <div class="signal-row"><span>Channel assumptions verified</span><span>6 checks</span></div>
+                                    <div class="signal-row"><span>Creative handoff summary</span><span>Generated</span></div>
+                                    <div class="mini-note">Every brief carries its review state forward.</div>
+                                </div>
+                                <div class="review-column">
+                                    <div class="label">Launch readiness</div>
+                                    <strong style="display:block; margin-top: 12px; font-size: 2.1rem;">86%</strong>
+                                    <p style="margin-top: 10px;">Progress toward a complete campaign brief, with gaps surfaced before the next stakeholder pass.</p>
+                                    <div class="progress-track" aria-hidden="true">
+                                        <div class="progress-bar"></div>
+                                    </div>
+                                    <div class="mini-note">Status detail updates animate on load.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <section class="band" id="results">
+            <div class="band-inner">
+                <div class="proof-band">
+                    <div class="proof-grid">
+                        {metric_cards}
+                    </div>
+                </div>
+            </div>
+        </section>
+        <main class="shell">
+            <section class="section">
+                <div class="section-head reveal">
+                    <h2>Built for teams that ship through coordination, not guesswork.</h2>
+                    <p>BriefLift is designed for dense marketing workflows where launch quality depends on clear context, predictable reviews, and shared operating memory across functions.</p>
+                </div>
+                <div class="audience-grid">
+                    <article class="audience-card reveal">
+                        <span class="proof-chip">Product marketing</span>
+                        <strong>Standardize launch requests before they create downstream churn.</strong>
+                        <p>Operators capture goals, channels, constraints, and stakeholder requirements in one repeatable intake structure.</p>
+                    </article>
+                    <article class="audience-card reveal">
+                        <span class="proof-chip">Content operations</span>
+                        <strong>Reduce avoidable review loops across campaign production.</strong>
+                        <p>Teams move forward with summaries, decision trails, and AI-assisted fixes instead of fragmented follow-up threads.</p>
+                    </article>
+                    <article class="audience-card reveal">
+                        <span class="proof-chip">Growth and lifecycle</span>
+                        <strong>Make each launch reusable instead of starting from zero.</strong>
+                        <p>Completed briefs become searchable knowledge for future campaigns, variants, and regional handoffs.</p>
+                    </article>
+                </div>
+            </section>
+            <section class="section" id="workflow">
+                <div class="split-grid">
+                    <article class="timeline-card reveal">
+                        <div class="eyebrow">The problem and approach</div>
+                        <h2>One AI-assisted operating layer for brief quality, review health, and launch memory.</h2>
+                        <p>Requests arrive incomplete, reviewers ask for different things, and launch knowledge stays trapped in chat, docs, and memory. BriefLift turns every campaign into a structured workflow: intake, validation, summary, handoff, and reporting.</p>
+                        <div class="timeline-list">
+                            <div class="timeline-item">
+                                <span>Intake</span>
+                                <div>
+                                    <strong>Normalize scattered campaign requests.</strong>
+                                    <p>Pull goals, channels, constraints, and launch dependencies into one structured brief.</p>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <span>Review</span>
+                                <div>
+                                    <strong>Catch missing inputs before stakeholders do.</strong>
+                                    <p>Surface unresolved assumptions, approval gaps, and conflicting goals while fixes are still cheap.</p>
+                                </div>
+                            </div>
+                            <div class="timeline-item">
+                                <span>Handoff</span>
+                                <div>
+                                    <strong>Generate summaries and downstream clarity.</strong>
+                                    <p>Give creative, legal, and lifecycle teams the context they need without another clarification round.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                    <article class="context-card reveal">
+                        <div class="eyebrow">Context intelligence</div>
+                        <h3>Bring prior launches, review history, and reusable patterns into every new brief.</h3>
+                        <div class="context-copy" style="margin-top: 14px;">
+                            <p>BriefLift does not treat each campaign as an isolated prompt. It connects the why behind past decisions, the language that performed, and the review patterns that slowed teams down, then applies that context to the next launch.</p>
+                        </div>
+                        <div class="context-stack">
+                            <div class="context-pill">
+                                <strong>Past launch playbooks</strong>
+                                <span>Reusable</span>
+                            </div>
+                            <div class="context-pill">
+                                <strong>Decision trails and summaries</strong>
+                                <span>Traceable</span>
+                            </div>
+                            <div class="context-pill">
+                                <strong>Channel-specific recommendations</strong>
+                                <span>Adaptive</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+            <section class="section" id="capabilities">
+                <div class="section-head reveal">
+                    <h2>Dense capability coverage without adding operational drag.</h2>
+                    <p>Every section of the workflow is designed to remove review friction, preserve context, and keep campaign owners aligned from request to release.</p>
+                </div>
+                <div class="feature-grid">
+                    {feature_cards}
+                </div>
+            </section>
+            <section class="section">
+                <div class="review-band reveal">
+                    <div>
+                        <div class="eyebrow">Workflow coverage</div>
+                        <h3>Move from request intake to launch handoff without losing the thread.</h3>
+                        <p>BriefLift helps teams work across their real campaign rhythm: intake quality, stakeholder alignment, executive summary, production readiness, and reusable launch knowledge once the campaign closes.</p>
+                    </div>
+                    <div class="status-rail" aria-label="Workflow coverage details">
+                        <div class="rail-item">
+                            <strong>Campaign request arrives</strong>
+                            <p>Normalize inputs and resolve missing context early.</p>
+                        </div>
+                        <div class="rail-item">
+                            <strong>Stakeholders review intent</strong>
+                            <p>Summarize decisions and reveal approval gaps quickly.</p>
+                        </div>
+                        <div class="rail-item">
+                            <strong>Creative and channel owners align</strong>
+                            <p>Generate handoff notes and store reusable launch memory.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="section" id="trust">
+                <div class="section-head reveal">
+                    <h2>Trust, security, and operational discipline built into the workflow.</h2>
+                    <p>BriefLift is positioned for teams that need visibility and control when campaign planning touches sensitive launches, legal review, or cross-functional approvals.</p>
+                </div>
+                <div class="trust-grid">
+                    <article class="trust-card reveal">
+                        <div class="trust-kicker">Scoped access</div>
+                        <h3>Keep campaign context limited to the right operators and reviewers.</h3>
+                        <p>Access controls are designed around workspaces, responsibilities, and clear review boundaries.</p>
+                    </article>
+                    <article class="trust-card reveal">
+                        <div class="trust-kicker">Auditability</div>
+                        <h3>Preserve decision trails across changing drafts and approvals.</h3>
+                        <p>Teams can understand what changed, why it changed, and who needed to weigh in before launch.</p>
+                    </article>
+                    <article class="trust-card reveal">
+                        <div class="trust-kicker">Operational resilience</div>
+                        <h3>Support repeatable launches with health visibility and dependable delivery patterns.</h3>
+                        <p>Marketing operations get a clearer view of workflow state, response expectations, and process reliability.</p>
+                    </article>
+                </div>
+            </section>
+            <section class="section">
+                <div class="section-head reveal">
+                    <h2>Proof from teams running high-context campaign work.</h2>
+                    <p>These are fictional examples created for this page, designed to show the kinds of outcomes BriefLift targets without using external customer assets or claims.</p>
+                </div>
+                <div class="testimonial-grid">
+                    {testimonial_cards}
+                </div>
+            </section>
+            <section class="cta-panel reveal">
+                <div>
+                    <div class="eyebrow">Final call</div>
+                    <h2>Bring order to campaign briefs before launch complexity compounds.</h2>
+                    <p>BriefLift helps teams move faster by making intake cleaner, reviews shorter, and launch knowledge reusable across every campaign that follows.</p>
+                </div>
+                <a href="/#waitlist">Request access</a>
+            </section>
+            <footer class="footer">
+                <div class="brand">
+                    <div class="brand-mark">BL</div>
+                    <span>BriefLift</span>
+                </div>
+                <div class="footer-links">
+                    <a href="#results">Results</a>
+                    <a href="#capabilities">Capabilities</a>
+                    <a href="#trust">Trust</a>
+                    <a href="/api/ai-review">API</a>
+                    <a href="/">Homepage</a>
+                </div>
+            </footer>
+        </main>
+    </div>
+    <script>
+        (() => {{
+            const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            const revealNodes = document.querySelectorAll(".reveal");
+
+            if (reducedMotion) {{
+                revealNodes.forEach((node) => node.classList.add("is-visible"));
+                return;
+            }}
+
+            const observer = new IntersectionObserver((entries) => {{
+                entries.forEach((entry) => {{
+                    if (entry.isIntersecting) {{
+                        entry.target.classList.add("is-visible");
+                        observer.unobserve(entry.target);
+                    }}
+                }});
+            }}, {{
+                threshold: 0.18,
+                rootMargin: "0px 0px -40px 0px",
+            }});
+
+            revealNodes.forEach((node) => {{
+                if (!node.classList.contains("is-visible")) {{
+                    observer.observe(node);
+                }}
+            }});
+        }})();
+    </script>
+</body>
+</html>
+"""
+
+
+AI_REVIEW_2_HTML = build_ai_review_2_html()
 AI_REVIEW_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3479,6 +4539,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/ai-review":
             self.write_html(HTTPStatus.OK, AI_REVIEW_HTML)
+            return
+
+        if parsed.path == "/ai-review-2":
+            self.write_html(HTTPStatus.OK, AI_REVIEW_2_HTML)
             return
 
         if parsed.path == "/api/pricing":
