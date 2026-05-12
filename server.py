@@ -483,6 +483,35 @@ RESOURCES_DATA = {
         },
     ],
 }
+ROADMAP_DATA = {
+    "app_name": "BriefLift",
+    "items": [
+        {
+            "title": "Live performance scorecards",
+            "timeframe": "Q3 2026",
+            "status": "Planned",
+            "summary": "Give teams a shared scorecard view for campaign throughput, approval speed, and publish readiness.",
+        },
+        {
+            "title": "Approval SLA alerts",
+            "timeframe": "Q3 2026",
+            "status": "In Design",
+            "summary": "Notify stakeholders when reviews stall so launch-critical briefs do not sit unnoticed in approval queues.",
+        },
+        {
+            "title": "Reusable brief templates",
+            "timeframe": "Q4 2026",
+            "status": "Planned",
+            "summary": "Let operators create repeatable campaign brief templates for launches, editorial work, and localization handoffs.",
+        },
+        {
+            "title": "CRM context sync",
+            "timeframe": "Q4 2026",
+            "status": "Research",
+            "summary": "Pull audience, segment, and campaign context into BriefLift so new briefs start from current customer data.",
+        },
+    ],
+}
 CHANGELOG_DATA = {
     "app_name": "BriefLift",
     "releases": [
@@ -512,6 +541,153 @@ CHANGELOG_DATA = {
         },
     ],
 }
+ROADMAP_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BriefLift Roadmap</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f7f5ef;
+            --surface: #ffffff;
+            --surface-soft: #f0ece2;
+            --ink: #171a1d;
+            --muted: #5d646b;
+            --line: #ded9cd;
+            --accent: #285f57;
+            --accent-dark: #153b36;
+            --accent-soft: #dceae4;
+            --shadow: 0 18px 55px rgba(30, 34, 38, 0.1);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top right, rgba(40, 95, 87, 0.14), transparent 28%),
+                linear-gradient(180deg, #fbfaf7 0%, var(--bg) 100%);
+        }
+        .page {
+            width: min(1040px, calc(100% - 40px));
+            margin: 0 auto;
+            padding: 36px 0 72px;
+        }
+        .hero, .item {
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            background: var(--surface);
+            box-shadow: var(--shadow);
+        }
+        .hero {
+            padding: 32px;
+        }
+        .eyebrow {
+            color: var(--accent-dark);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        h1, h2, h3, p {
+            margin: 0;
+        }
+        h1 {
+            margin-top: 14px;
+            font-size: clamp(2.3rem, 5vw, 4rem);
+            line-height: 1.02;
+        }
+        .hero p {
+            margin-top: 16px;
+            max-width: 46rem;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+        .list {
+            display: grid;
+            gap: 18px;
+            margin-top: 24px;
+        }
+        .item {
+            padding: 24px;
+        }
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .pill {
+            padding: 7px 12px;
+            border-radius: 999px;
+            background: var(--surface-soft);
+            color: var(--accent-dark);
+            font-size: 0.84rem;
+            font-weight: 700;
+        }
+        .item p {
+            margin-top: 10px;
+            color: var(--muted);
+            line-height: 1.65;
+        }
+        @media (max-width: 720px) {
+            .page {
+                width: min(100%, calc(100% - 24px));
+                padding-top: 24px;
+            }
+            .hero, .item {
+                border-radius: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <section class="hero">
+            <div class="eyebrow">BriefLift Roadmap</div>
+            <h1>What the team is building next.</h1>
+            <p>Upcoming roadmap work focuses on clearer campaign visibility, faster approvals, and stronger reuse for recurring launch workflows.</p>
+        </section>
+        <section class="list" aria-label="Upcoming roadmap items">
+            <article class="item">
+                <div class="meta">
+                    <span class="pill">Q3 2026</span>
+                    <span class="pill">Planned</span>
+                </div>
+                <h2>Live performance scorecards</h2>
+                <p>Give teams a shared scorecard view for campaign throughput, approval speed, and publish readiness.</p>
+            </article>
+            <article class="item">
+                <div class="meta">
+                    <span class="pill">Q3 2026</span>
+                    <span class="pill">In Design</span>
+                </div>
+                <h2>Approval SLA alerts</h2>
+                <p>Notify stakeholders when reviews stall so launch-critical briefs do not sit unnoticed in approval queues.</p>
+            </article>
+            <article class="item">
+                <div class="meta">
+                    <span class="pill">Q4 2026</span>
+                    <span class="pill">Planned</span>
+                </div>
+                <h2>Reusable brief templates</h2>
+                <p>Let operators create repeatable campaign brief templates for launches, editorial work, and localization handoffs.</p>
+            </article>
+            <article class="item">
+                <div class="meta">
+                    <span class="pill">Q4 2026</span>
+                    <span class="pill">Research</span>
+                </div>
+                <h2>CRM context sync</h2>
+                <p>Pull audience, segment, and campaign context into BriefLift so new briefs start from current customer data.</p>
+            </article>
+        </section>
+    </main>
+</body>
+</html>
+"""
 CHANGELOG_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2388,6 +2564,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
             self.write_html(HTTPStatus.OK, CHANGELOG_HTML)
             return
 
+        if parsed.path == "/roadmap":
+            self.write_html(HTTPStatus.OK, ROADMAP_HTML)
+            return
+
         if parsed.path == "/api/pricing":
             self.write_json(HTTPStatus.OK, PRICING_DATA)
             return
@@ -2414,6 +2594,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/changelog":
             self.write_json(HTTPStatus.OK, CHANGELOG_DATA)
+            return
+
+        if parsed.path == "/api/roadmap":
+            self.write_json(HTTPStatus.OK, ROADMAP_DATA)
             return
 
         if parsed.path == "/build":
