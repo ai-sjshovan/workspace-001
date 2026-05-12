@@ -541,6 +541,915 @@ CHANGELOG_DATA = {
         },
     ],
 }
+AI_REVIEW_DATA = {
+    "app_name": "BriefLift",
+    "page": "ai-review",
+    "metrics": [
+        {
+            "value": "68%",
+            "label": "faster campaign intake",
+            "detail": "Teams move from request to usable brief in hours instead of days.",
+        },
+        {
+            "value": "34%",
+            "label": "fewer review cycles",
+            "detail": "Stakeholders get aligned briefs before content production begins.",
+        },
+        {
+            "value": "4.6x",
+            "label": "more reusable launch knowledge",
+            "detail": "Past launches become searchable operating context for the next one.",
+        },
+        {
+            "value": "92%",
+            "label": "clearer handoffs",
+            "detail": "Teams report stronger downstream clarity across creative, legal, and lifecycle.",
+        },
+    ],
+    "features": [
+        {
+            "title": "Briefs that start with context",
+            "summary": "Turn fragmented requests, research, and channel notes into structured launch briefs.",
+        },
+        {
+            "title": "Fixes before review churn",
+            "summary": "Surface missing inputs, conflicting goals, and approval gaps before a campaign stalls.",
+        },
+        {
+            "title": "Executive-ready summaries",
+            "summary": "Generate concise recaps for approvals, handoffs, and cross-functional visibility.",
+        },
+        {
+            "title": "Agentic campaign assistance",
+            "summary": "Draft follow-ups, next steps, and reusable launch recommendations from existing work.",
+        },
+        {
+            "title": "Custom review playbooks",
+            "summary": "Adapt workflows for product launches, editorial calendars, field marketing, and retention.",
+        },
+        {
+            "title": "Operational reporting",
+            "summary": "Track intake speed, review health, and launch readiness across active campaigns.",
+        },
+    ],
+    "testimonials": [
+        {
+            "quote": "BriefLift gave our launch team one source of truth before the first draft ever hit review.",
+            "name": "Naomi Park",
+            "role": "Head of Campaign Operations",
+            "company": "Lattice Harbor",
+        },
+        {
+            "quote": "We cut stakeholder back-and-forth because every brief arrived with the context legal and creative needed.",
+            "name": "Rafael Soto",
+            "role": "Director of Brand Systems",
+            "company": "Northline Studio",
+        },
+        {
+            "quote": "The reporting layer helped us see which handoffs were slowing launches, not just which assets were late.",
+            "name": "Imani Brooks",
+            "role": "VP, Growth Programs",
+            "company": "Signal Forge",
+        },
+    ],
+}
+AI_REVIEW_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BriefLift AI Review</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #08111f;
+            --bg-soft: #0d1728;
+            --panel: rgba(13, 23, 40, 0.86);
+            --panel-strong: #0f1b2f;
+            --panel-glow: rgba(70, 127, 255, 0.16);
+            --line: rgba(165, 190, 255, 0.14);
+            --line-strong: rgba(165, 190, 255, 0.24);
+            --text: #f5f7fb;
+            --muted: #9aa8c7;
+            --muted-strong: #c5d0ea;
+            --blue: #6b8cff;
+            --cyan: #69e3ff;
+            --mint: #67f5c0;
+            --amber: #ffd166;
+            --shadow: 0 26px 80px rgba(1, 7, 18, 0.48);
+            --radius-xl: 32px;
+            --radius-lg: 24px;
+            --radius-md: 18px;
+            --max: 1180px;
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(107, 140, 255, 0.18), transparent 28%),
+                radial-gradient(circle at top right, rgba(105, 227, 255, 0.12), transparent 26%),
+                radial-gradient(circle at 50% 20%, rgba(103, 245, 192, 0.08), transparent 24%),
+                linear-gradient(180deg, #060d18 0%, var(--bg) 42%, #091321 100%);
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+            background-size: 72px 72px;
+            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent 78%);
+        }
+        a { color: inherit; }
+        h1, h2, h3, p { margin: 0; }
+        .page { padding-bottom: 48px; }
+        .shell, .band-inner {
+            width: min(var(--max), calc(100% - 32px));
+            margin: 0 auto;
+        }
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(18px);
+            background: rgba(6, 13, 24, 0.72);
+            border-bottom: 1px solid rgba(165, 190, 255, 0.08);
+        }
+        .nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 18px 0;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+        .brand-mark {
+            width: 36px;
+            height: 36px;
+            border-radius: 11px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, var(--blue), var(--cyan));
+            color: #08111f;
+            font-size: 0.84rem;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+        .nav-links a {
+            text-decoration: none;
+        }
+        .nav-cta, .hero-actions a, .final-cta a {
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: 800;
+        }
+        .nav-cta {
+            padding: 12px 18px;
+            color: #06111f;
+            background: linear-gradient(135deg, var(--mint), var(--cyan));
+        }
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+            gap: 34px;
+            padding: 72px 0 34px;
+            align-items: center;
+        }
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 22px;
+            color: var(--muted-strong);
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+        }
+        .eyebrow::before {
+            content: "";
+            width: 9px;
+            height: 9px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--mint), var(--cyan));
+            box-shadow: 0 0 16px rgba(103, 245, 192, 0.65);
+        }
+        h1 {
+            max-width: 12ch;
+            font-size: clamp(3rem, 7vw, 5.6rem);
+            line-height: 0.94;
+            letter-spacing: -0.04em;
+        }
+        .hero-copy p {
+            max-width: 44rem;
+            margin-top: 22px;
+            color: var(--muted);
+            font-size: 1.08rem;
+            line-height: 1.72;
+        }
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 28px;
+        }
+        .hero-actions a {
+            min-height: 50px;
+            padding: 0 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .hero-actions .primary,
+        .final-cta a {
+            color: #06111f;
+            background: linear-gradient(135deg, var(--mint), var(--cyan));
+        }
+        .hero-actions .secondary {
+            border: 1px solid var(--line-strong);
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .micro-proof {
+            margin-top: 16px;
+            color: var(--muted);
+            font-size: 0.94rem;
+        }
+        .hero-visual,
+        .card,
+        .proof-band,
+        .testimonial,
+        .cta-panel,
+        .footer {
+            border: 1px solid var(--line);
+            background: var(--panel);
+            box-shadow: var(--shadow);
+        }
+        .hero-visual {
+            position: relative;
+            overflow: hidden;
+            border-radius: var(--radius-xl);
+            padding: 24px;
+            background:
+                radial-gradient(circle at top right, rgba(105, 227, 255, 0.24), transparent 28%),
+                linear-gradient(160deg, rgba(12, 24, 43, 0.96), rgba(9, 18, 33, 0.9));
+        }
+        .hero-visual::after {
+            content: "";
+            position: absolute;
+            inset: 20px;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            pointer-events: none;
+        }
+        .visual-header,
+        .workflow-row,
+        .signal-row,
+        .mini-card,
+        .proof-items,
+        .final-cta,
+        .footer-grid {
+            display: grid;
+        }
+        .visual-header {
+            grid-template-columns: 1fr auto;
+            gap: 16px;
+            align-items: start;
+        }
+        .label {
+            color: var(--muted);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .visual-title {
+            margin-top: 10px;
+            font-size: 1.4rem;
+            line-height: 1.2;
+        }
+        .pill {
+            padding: 10px 14px;
+            border-radius: 999px;
+            color: #08111f;
+            background: linear-gradient(135deg, var(--amber), #fff0b2);
+            font-size: 0.85rem;
+            font-weight: 800;
+        }
+        .workflow-board {
+            display: grid;
+            gap: 14px;
+            margin-top: 24px;
+        }
+        .workflow-row {
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 14px;
+        }
+        .mini-card {
+            gap: 10px;
+            min-height: 138px;
+            padding: 18px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(165, 190, 255, 0.12);
+        }
+        .mini-card strong {
+            font-size: 2rem;
+            line-height: 1;
+        }
+        .mini-card p,
+        .capability p,
+        .quote p,
+        .footer p,
+        .footer a,
+        .signal-copy p,
+        .trust-note,
+        .proof-text,
+        .section-head p {
+            color: var(--muted);
+            line-height: 1.65;
+        }
+        .signal-stack {
+            display: grid;
+            gap: 12px;
+            margin-top: 14px;
+        }
+        .signal-row {
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(107, 140, 255, 0.08);
+            border: 1px solid rgba(107, 140, 255, 0.14);
+        }
+        .signal-row span:last-child {
+            color: var(--muted-strong);
+            font-weight: 700;
+        }
+        .band {
+            padding: 28px 0 0;
+        }
+        .proof-band {
+            border-radius: var(--radius-lg);
+            padding: 24px;
+        }
+        .proof-items {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+        }
+        .proof-item {
+            padding: 8px 0;
+        }
+        .proof-item strong {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text);
+            font-size: 1.9rem;
+        }
+        .section {
+            padding: 76px 0 0;
+        }
+        .section-head {
+            max-width: 44rem;
+            margin-bottom: 28px;
+        }
+        .section-head h2 {
+            margin-bottom: 12px;
+            font-size: clamp(2rem, 4vw, 3rem);
+            line-height: 1.04;
+            letter-spacing: -0.03em;
+        }
+        .customer-grid,
+        .problem-grid,
+        .feature-grid,
+        .workflow-grid,
+        .security-grid,
+        .testimonial-grid,
+        .footer-grid {
+            display: grid;
+            gap: 18px;
+        }
+        .customer-grid,
+        .feature-grid,
+        .security-grid,
+        .testimonial-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .problem-grid,
+        .workflow-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .card,
+        .testimonial,
+        .cta-panel,
+        .footer {
+            border-radius: var(--radius-lg);
+        }
+        .card {
+            padding: 24px;
+        }
+        .quote {
+            display: grid;
+            gap: 16px;
+        }
+        .quote strong,
+        .capability h3,
+        .workflow-panel h3,
+        .security-grid h3 {
+            font-size: 1.15rem;
+        }
+        .proof-chip {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(103, 245, 192, 0.1);
+            color: var(--mint);
+            font-size: 0.84rem;
+            font-weight: 800;
+        }
+        .problem-card {
+            min-height: 100%;
+            padding: 30px;
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--line);
+            background: linear-gradient(180deg, rgba(14, 25, 43, 0.94), rgba(9, 18, 32, 0.9));
+            box-shadow: var(--shadow);
+        }
+        .problem-card h3 {
+            margin-bottom: 14px;
+            font-size: 1.6rem;
+        }
+        .problem-list {
+            display: grid;
+            gap: 14px;
+            margin-top: 22px;
+        }
+        .problem-list div {
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--muted-strong);
+        }
+        .feature-grid .card:nth-child(1),
+        .feature-grid .card:nth-child(4) {
+            background:
+                linear-gradient(180deg, rgba(15, 27, 47, 0.96), rgba(11, 20, 36, 0.9)),
+                var(--panel);
+        }
+        .capability span,
+        .security-kicker {
+            display: inline-block;
+            margin-bottom: 12px;
+            color: var(--cyan);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .workflow-panel {
+            padding: 28px;
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--line);
+            background:
+                radial-gradient(circle at top right, rgba(107, 140, 255, 0.18), transparent 24%),
+                linear-gradient(180deg, rgba(13, 23, 40, 0.96), rgba(8, 17, 31, 0.92));
+            box-shadow: var(--shadow);
+        }
+        .workflow-steps {
+            display: grid;
+            gap: 12px;
+            margin-top: 22px;
+        }
+        .workflow-steps div {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .workflow-steps strong {
+            color: var(--muted-strong);
+            font-size: 0.95rem;
+        }
+        .trust-note {
+            margin-top: 14px;
+        }
+        .testimonial {
+            padding: 24px;
+        }
+        .testimonial p {
+            font-size: 1rem;
+        }
+        .person {
+            margin-top: 18px;
+            color: var(--muted-strong);
+            font-size: 0.94rem;
+            font-weight: 700;
+        }
+        .cta-panel {
+            margin-top: 76px;
+            padding: 34px;
+            background:
+                radial-gradient(circle at top left, rgba(103, 245, 192, 0.14), transparent 22%),
+                linear-gradient(135deg, rgba(13, 23, 40, 0.96), rgba(9, 18, 33, 0.96));
+        }
+        .final-cta {
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 18px;
+            align-items: center;
+        }
+        .final-cta h2 {
+            margin-bottom: 10px;
+            font-size: clamp(2rem, 4vw, 3.2rem);
+            line-height: 1.02;
+        }
+        .final-cta a {
+            min-height: 54px;
+            padding: 0 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .footer {
+            margin-top: 18px;
+            padding: 22px 24px;
+        }
+        .footer-grid {
+            grid-template-columns: 1.2fr repeat(3, 1fr);
+            align-items: start;
+        }
+        .footer-title {
+            margin-bottom: 8px;
+            color: var(--muted-strong);
+            font-size: 0.9rem;
+            font-weight: 800;
+        }
+        .footer-links {
+            display: grid;
+            gap: 8px;
+        }
+        .footer a {
+            text-decoration: none;
+        }
+        @media (max-width: 1040px) {
+            .hero,
+            .problem-grid,
+            .workflow-grid,
+            .final-cta,
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+            .customer-grid,
+            .feature-grid,
+            .security-grid,
+            .testimonial-grid,
+            .proof-items {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 720px) {
+            .nav {
+                flex-wrap: wrap;
+            }
+            .nav-links {
+                width: 100%;
+                justify-content: space-between;
+                overflow-x: auto;
+                padding-bottom: 4px;
+            }
+            .hero {
+                padding-top: 48px;
+            }
+            .workflow-row,
+            .customer-grid,
+            .feature-grid,
+            .security-grid,
+            .testimonial-grid,
+            .proof-items {
+                grid-template-columns: 1fr;
+            }
+            .shell, .band-inner {
+                width: min(100%, calc(100% - 24px));
+            }
+            .hero-visual,
+            .problem-card,
+            .workflow-panel,
+            .cta-panel {
+                border-radius: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="topbar">
+            <nav class="nav shell" aria-label="BriefLift AI Review navigation">
+                <div class="brand">
+                    <div class="brand-mark">BL</div>
+                    <span>BriefLift AI Review</span>
+                </div>
+                <div class="nav-links">
+                    <a href="#metrics">Results</a>
+                    <a href="#proof">Proof</a>
+                    <a href="#features">Capabilities</a>
+                    <a href="#security">Trust</a>
+                    <a href="/#waitlist" class="nav-cta">Join the waitlist</a>
+                </div>
+            </nav>
+        </div>
+        <main class="shell">
+            <section class="hero">
+                <div class="hero-copy">
+                    <div class="eyebrow">Campaign briefs with operational intelligence</div>
+                    <h1>Launch work with fewer review loops and cleaner handoffs.</h1>
+                    <p>BriefLift turns scattered intake requests, stakeholder feedback, and launch history into AI-assisted campaign briefs your team can actually ship from. Operators get structure, reviewers get clarity, and every launch leaves behind reusable knowledge for the next one.</p>
+                    <div class="hero-actions">
+                        <a href="/#waitlist" class="primary">Get early access</a>
+                        <a href="/api/ai-review" class="secondary">View page data</a>
+                    </div>
+                    <div class="micro-proof">No new workflow to learn. Bring your intake, review rhythm, and launch context into one operating surface.</div>
+                </div>
+                <div class="hero-visual" aria-label="BriefLift workflow preview">
+                    <div class="visual-header">
+                        <div>
+                            <div class="label">AI Review Workspace</div>
+                            <div class="visual-title">Campaign launch board for message, review, and handoff readiness.</div>
+                        </div>
+                        <div class="pill">Ready for launch</div>
+                    </div>
+                    <div class="workflow-board">
+                        <div class="workflow-row">
+                            <div class="mini-card">
+                                <div class="label">Review compression</div>
+                                <strong>2.3 cycles</strong>
+                                <p>Average approval path after aligning intake details, goals, and owner feedback up front.</p>
+                            </div>
+                            <div class="mini-card">
+                                <div class="label">Handoff clarity</div>
+                                <strong>92%</strong>
+                                <p>Stakeholders report fewer clarification requests when briefs reach downstream teams.</p>
+                            </div>
+                        </div>
+                        <div class="mini-card">
+                            <div class="label">Live workflow signals</div>
+                            <div class="signal-stack">
+                                <div class="signal-row"><span>Audience context synced</span><span>Complete</span></div>
+                                <div class="signal-row"><span>Channel assumptions verified</span><span>6 checks</span></div>
+                                <div class="signal-row"><span>Creative handoff summary</span><span>Generated</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <section class="band" id="metrics">
+            <div class="band-inner">
+                <div class="proof-band">
+                    <div class="proof-items">
+                        <div class="proof-item">
+                            <strong>68%</strong>
+                            <div class="proof-text">Faster campaign intake for teams replacing scattered briefs and email chains.</div>
+                        </div>
+                        <div class="proof-item">
+                            <strong>34%</strong>
+                            <div class="proof-text">Fewer review cycles before launch content reaches production.</div>
+                        </div>
+                        <div class="proof-item">
+                            <strong>4.6x</strong>
+                            <div class="proof-text">More reusable launch knowledge captured from each completed workflow.</div>
+                        </div>
+                        <div class="proof-item">
+                            <strong>92%</strong>
+                            <div class="proof-text">Clearer handoffs across strategy, creative, legal, and lifecycle teams.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <main class="shell">
+            <section class="section" id="proof">
+                <div class="section-head">
+                    <h2>Built for teams that ship through coordination, not guesswork.</h2>
+                    <p>BriefLift is designed for dense marketing workflows where launch quality depends on clear context, predictable reviews, and shared operating memory across functions.</p>
+                </div>
+                <div class="customer-grid">
+                    <article class="card quote">
+                        <span class="proof-chip">Product marketing</span>
+                        <strong>Standardize launch requests before they create downstream churn.</strong>
+                        <p>Operators capture goals, channels, constraints, and stakeholder requirements in one repeatable intake structure.</p>
+                    </article>
+                    <article class="card quote">
+                        <span class="proof-chip">Content operations</span>
+                        <strong>Reduce avoidable review loops across campaign production.</strong>
+                        <p>Teams move forward with summaries, decision trails, and AI-assisted fixes instead of fragmented follow-up threads.</p>
+                    </article>
+                    <article class="card quote">
+                        <span class="proof-chip">Growth and lifecycle</span>
+                        <strong>Make each launch reusable instead of starting from zero.</strong>
+                        <p>Completed briefs become searchable knowledge for future campaigns, variants, and regional handoffs.</p>
+                    </article>
+                </div>
+            </section>
+            <section class="section">
+                <div class="problem-grid">
+                    <article class="problem-card">
+                        <div class="eyebrow">The problem</div>
+                        <h3>Campaign work slows down when the brief is the weakest link.</h3>
+                        <p class="trust-note">Requests arrive incomplete, reviewers ask for different things, and launch knowledge stays trapped in chat, docs, and memory. Teams spend their time reconciling context instead of moving work forward.</p>
+                        <div class="problem-list">
+                            <div>Scattered intake from forms, docs, and direct messages</div>
+                            <div>Repeated stakeholder clarifications before production starts</div>
+                            <div>No durable trail of why a launch brief changed</div>
+                        </div>
+                    </article>
+                    <article class="problem-card">
+                        <div class="eyebrow">The BriefLift approach</div>
+                        <h3>One AI-assisted operating layer for brief quality, review health, and launch memory.</h3>
+                        <p class="trust-note">BriefLift turns every campaign into a structured workflow: intake, validation, summary, handoff, and reporting. Teams gain speed without losing the detail needed for high-stakes launches.</p>
+                        <div class="problem-list">
+                            <div>Intelligent intake that identifies missing context early</div>
+                            <div>Summaries and recommendations tailored to each review stage</div>
+                            <div>Reusable launch knowledge linked to future campaigns</div>
+                        </div>
+                    </article>
+                </div>
+            </section>
+            <section class="section" id="features">
+                <div class="section-head">
+                    <h2>Dense capability coverage without adding operational drag.</h2>
+                    <p>Every section of the workflow is designed to remove review friction, preserve context, and keep campaign owners aligned from request to release.</p>
+                </div>
+                <div class="feature-grid">
+                    <article class="card capability">
+                        <span>Structured intake</span>
+                        <h3>Briefs that start with complete context</h3>
+                        <p>Collect goals, audience, offer, channels, launch risks, and dependencies before work enters production.</p>
+                    </article>
+                    <article class="card capability">
+                        <span>Fast fixes</span>
+                        <h3>Catch missing inputs before stakeholders do</h3>
+                        <p>Flag unresolved assumptions, missing approvals, and unclear handoffs while the brief is still easy to correct.</p>
+                    </article>
+                    <article class="card capability">
+                        <span>Summaries</span>
+                        <h3>Generate executive-ready recaps instantly</h3>
+                        <p>Share campaign intent, critical decisions, and launch status in a concise format for approvals and updates.</p>
+                    </article>
+                    <article class="card capability">
+                        <span>Agentic assistance</span>
+                        <h3>Ask for next steps, rewrites, and follow-up actions</h3>
+                        <p>Use AI to draft clarifications, synthesize past launches, and recommend workflow moves that unblock teams.</p>
+                    </article>
+                    <article class="card capability">
+                        <span>Customization</span>
+                        <h3>Adapt review logic to your operating model</h3>
+                        <p>Support different launch templates for editorial, product marketing, field campaigns, and lifecycle programs.</p>
+                    </article>
+                    <article class="card capability">
+                        <span>Reporting</span>
+                        <h3>See intake speed, review health, and launch readiness</h3>
+                        <p>Measure where campaigns stall and where process improvements actually shorten time to market.</p>
+                    </article>
+                </div>
+            </section>
+            <section class="section">
+                <div class="section-head">
+                    <h2>Operate across planning, review, and execution environments.</h2>
+                    <p>BriefLift helps teams work across their real campaign rhythm: not just content generation, but intake quality, stakeholder alignment, and production readiness.</p>
+                </div>
+                <div class="workflow-grid">
+                    <article class="workflow-panel">
+                        <div class="eyebrow">Workflow coverage</div>
+                        <h3>Move from request intake to launch handoff without losing the thread.</h3>
+                        <div class="workflow-steps">
+                            <div><span>Campaign request arrives</span><strong>Normalize inputs</strong></div>
+                            <div><span>Stakeholders review intent</span><strong>Summarize decisions</strong></div>
+                            <div><span>Creative and channel owners align</span><strong>Generate handoff notes</strong></div>
+                            <div><span>Launch closes out</span><strong>Store reusable knowledge</strong></div>
+                        </div>
+                    </article>
+                    <article class="workflow-panel">
+                        <div class="eyebrow">Context intelligence</div>
+                        <h3>Bring prior launches, review history, and reusable patterns into every new brief.</h3>
+                        <div class="signal-copy">
+                            <p>BriefLift doesn’t treat each campaign as an isolated prompt. It connects the why behind past decisions, the language that performed, and the review patterns that slowed teams down, then applies that context to the next launch.</p>
+                            <p class="trust-note">That means fewer repeated mistakes, better campaign consistency, and stronger adaptation for channels, segments, and stakeholders.</p>
+                        </div>
+                    </article>
+                </div>
+            </section>
+            <section class="section" id="security">
+                <div class="section-head">
+                    <h2>Trust, security, and operational discipline built into the workflow.</h2>
+                    <p>BriefLift is positioned for teams that need visibility and control when campaign planning touches sensitive launches, legal review, or cross-functional approvals.</p>
+                </div>
+                <div class="security-grid">
+                    <article class="card">
+                        <div class="security-kicker">Scoped access</div>
+                        <h3>Keep campaign context limited to the right operators and reviewers.</h3>
+                        <p>Access controls are designed around workspaces, responsibilities, and clear review boundaries.</p>
+                    </article>
+                    <article class="card">
+                        <div class="security-kicker">Auditability</div>
+                        <h3>Preserve decision trails across changing drafts and approvals.</h3>
+                        <p>Teams can understand what changed, why it changed, and who needed to weigh in before launch.</p>
+                    </article>
+                    <article class="card">
+                        <div class="security-kicker">Operational resilience</div>
+                        <h3>Support repeatable launches with health visibility and dependable delivery patterns.</h3>
+                        <p>Marketing operations get a clearer view of workflow state, response expectations, and process reliability.</p>
+                    </article>
+                </div>
+            </section>
+            <section class="section">
+                <div class="section-head">
+                    <h2>Proof from teams running high-context campaign work.</h2>
+                    <p>These are fictional examples created for this page, designed to show the kinds of outcomes BriefLift targets without using external customer assets or claims.</p>
+                </div>
+                <div class="testimonial-grid">
+                    <article class="testimonial">
+                        <p>"BriefLift gave our launch team one source of truth before the first draft ever hit review."</p>
+                        <div class="person">Naomi Park · Head of Campaign Operations, Lattice Harbor</div>
+                    </article>
+                    <article class="testimonial">
+                        <p>"We cut stakeholder back-and-forth because every brief arrived with the context legal and creative needed."</p>
+                        <div class="person">Rafael Soto · Director of Brand Systems, Northline Studio</div>
+                    </article>
+                    <article class="testimonial">
+                        <p>"The reporting layer helped us see which handoffs were slowing launches, not just which assets were late."</p>
+                        <div class="person">Imani Brooks · VP, Growth Programs, Signal Forge</div>
+                    </article>
+                </div>
+            </section>
+            <section class="cta-panel">
+                <div class="final-cta">
+                    <div>
+                        <div class="eyebrow">Final call</div>
+                        <h2>Bring order to campaign briefs before launch complexity compounds.</h2>
+                        <p>BriefLift helps teams move faster by making intake cleaner, reviews shorter, and launch knowledge reusable across every campaign that follows.</p>
+                    </div>
+                    <a href="/#waitlist">Request access</a>
+                </div>
+            </section>
+            <footer class="footer">
+                <div class="footer-grid">
+                    <div>
+                        <div class="brand">
+                            <div class="brand-mark">BL</div>
+                            <span>BriefLift</span>
+                        </div>
+                        <p style="margin-top: 12px;">AI campaign brief and content operations software for teams that need better launch coordination.</p>
+                    </div>
+                    <div>
+                        <div class="footer-title">Product</div>
+                        <div class="footer-links">
+                            <a href="#features">Capabilities</a>
+                            <a href="#metrics">Results</a>
+                            <a href="#security">Trust</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="footer-title">Explore</div>
+                        <div class="footer-links">
+                            <a href="/roadmap">Roadmap</a>
+                            <a href="/changelog">Changelog</a>
+                            <a href="/faq">FAQ</a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="footer-title">Start</div>
+                        <div class="footer-links">
+                            <a href="/">Homepage</a>
+                            <a href="/#waitlist">Waitlist</a>
+                            <a href="/api/ai-review">API</a>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </main>
+    </div>
+</body>
+</html>
+"""
 ROADMAP_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2568,6 +3477,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
             self.write_html(HTTPStatus.OK, ROADMAP_HTML)
             return
 
+        if parsed.path == "/ai-review":
+            self.write_html(HTTPStatus.OK, AI_REVIEW_HTML)
+            return
+
         if parsed.path == "/api/pricing":
             self.write_json(HTTPStatus.OK, PRICING_DATA)
             return
@@ -2598,6 +3511,10 @@ class LandingPageHandler(BaseHTTPRequestHandler):
 
         if parsed.path == "/api/roadmap":
             self.write_json(HTTPStatus.OK, ROADMAP_DATA)
+            return
+
+        if parsed.path == "/api/ai-review":
+            self.write_json(HTTPStatus.OK, AI_REVIEW_DATA)
             return
 
         if parsed.path == "/build":
