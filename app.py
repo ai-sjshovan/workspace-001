@@ -3,8 +3,8 @@ import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 
-def render_client_pulse() -> str:
-    clients = [
+def get_client_pulse_clients() -> list[dict[str, str]]:
+    return [
         {
             "name": "Northstar Advisory",
             "owner": "Mina Chen",
@@ -51,6 +51,32 @@ def render_client_pulse() -> str:
             "next_action": "Pitch expanded onboarding support for new practice area.",
         },
     ]
+
+
+def get_client_pulse_summary(clients: list[dict[str, str]]) -> dict[str, int]:
+    return {
+        "total_clients": len(clients),
+        "stable_clients": sum(client["health"] == "Stable" for client in clients),
+        "watch_clients": sum(client["health"] == "Watch" for client in clients),
+        "risk_clients": sum(client["health"] == "At Risk" for client in clients),
+        "growth_clients": sum(client["health"] == "Growth" for client in clients),
+    }
+
+
+def get_client_pulse_payload() -> dict[str, object]:
+    clients = get_client_pulse_clients()
+    return {
+        "app": "Client Pulse",
+        "status": "ok",
+        "summary": get_client_pulse_summary(clients),
+        "clients": clients,
+    }
+
+
+def render_client_pulse() -> str:
+    payload = get_client_pulse_payload()
+    clients = payload["clients"]
+    summary = payload["summary"]
 
     cards = []
     for client in clients:
@@ -316,9 +342,9 @@ def render_client_pulse() -> str:
       <aside class="panel summary" aria-label="Client summary">
         <h2>Portfolio summary</h2>
         <div class="metric-grid">
-          <div class="metric"><span>Total clients</span><strong>5</strong></div>
-          <div class="metric"><span>Healthy or growing</span><strong>4</strong></div>
-          <div class="metric"><span>Needs attention</span><strong>1</strong></div>
+          <div class="metric"><span>Total clients</span><strong>{summary["total_clients"]}</strong></div>
+          <div class="metric"><span>Healthy or growing</span><strong>{summary["stable_clients"] + summary["growth_clients"]}</strong></div>
+          <div class="metric"><span>Needs attention</span><strong>{summary["watch_clients"] + summary["risk_clients"]}</strong></div>
           <div class="metric"><span>Renewals this month</span><strong>2</strong></div>
         </div>
         <p class="summary-note">
@@ -359,6 +385,11 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         if self.path == "/health":
             body = json.dumps({"status": "ok"}).encode("utf-8")
+            self._send(200, body, "application/json; charset=utf-8")
+            return
+
+        if self.path == "/api/client-pulse":
+            body = json.dumps(get_client_pulse_payload()).encode("utf-8")
             self._send(200, body, "application/json; charset=utf-8")
             return
 
