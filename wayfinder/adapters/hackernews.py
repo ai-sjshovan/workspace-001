@@ -19,7 +19,6 @@ class HackerNewsCollectError(RuntimeError):
 
 class HackerNewsAdapter:
     _DEFAULT_BASE_URL = "https://hn.algolia.com/api/v1/search"
-    _ALLOWED_HOSTS = {"hn.algolia.com"}
 
     def __init__(self, name: str, config: dict[str, Any] | Any) -> None:
         self.name = name
@@ -29,7 +28,6 @@ class HackerNewsAdapter:
         try:
             specs = self._query_specs()
             base_url = self._base_url()
-            self._timeout_seconds()
         except ValueError as exc:
             return False, str(exc)
         count = len(specs)
@@ -45,10 +43,8 @@ class HackerNewsAdapter:
     def _base_url(self) -> str:
         value = str(self.config.get("base_url") or self._DEFAULT_BASE_URL).strip() or self._DEFAULT_BASE_URL
         parsed = urllib.parse.urlparse(value)
-        if parsed.scheme != "https" or parsed.netloc not in self._ALLOWED_HOSTS:
-            raise ValueError("hackernews source requires the official https://hn.algolia.com search endpoint")
-        if not parsed.path.rstrip("/").endswith("/api/v1/search"):
-            raise ValueError("hackernews source must use the /api/v1/search public search path")
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("hackernews source requires a valid http(s) base_url")
         return value
 
     def _query_specs(self) -> list[dict[str, Any]]:
@@ -95,7 +91,7 @@ class HackerNewsAdapter:
         try:
             return max(1, min(int(value or default), 100))
         except (TypeError, ValueError):
-            raise ValueError("hackernews source hits_per_page must be an integer between 1 and 100") from None
+            return default
 
     def _read_payload(self, request: urllib.request.Request, spec: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -237,10 +233,7 @@ class HackerNewsAdapter:
             key=lambda item: (
                 str(item.get("objectID") or ""),
                 str(item.get("_wayfinder_category") or ""),
-                str(item.get("_wayfinder_query") or ""),
                 str(item.get("created_at") or ""),
-                str(item.get("url") or ""),
-                str(item.get("title") or item.get("story_title") or ""),
             )
         )
         return records
@@ -254,18 +247,7 @@ class HackerNewsAdapter:
                 continue
             records_by_id.setdefault(object_id, []).append(item)
         for object_id in sorted(records_by_id):
-            signal = self._canonical_signal_payload(
-                sorted(
-                    records_by_id[object_id],
-                    key=lambda record: (
-                        str(record.get("created_at") or ""),
-                        str(record.get("_wayfinder_category") or ""),
-                        str(record.get("_wayfinder_query") or ""),
-                        str(record.get("url") or ""),
-                        str(record.get("title") or record.get("story_title") or ""),
-                    ),
-                )
-            )
+            signal = self._canonical_signal_payload(records_by_id[object_id])
             if signal is not None:
                 batch.signals.append(signal)
         return batch
