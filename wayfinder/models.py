@@ -65,6 +65,8 @@ class ProductIntel:
 @dataclass(slots=True)
 class Opportunity:
     title: str
+    source: str = ""
+    category: str = ""
     target_user: str = ""
     problem: str = ""
     evidence_count: int = 0
