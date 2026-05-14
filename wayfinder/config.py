@@ -5,6 +5,8 @@ from typing import Any
 
 import yaml
 
+from .models import SourceReviewPolicy, SourceRiskReview
+
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "wayfinder.yaml"
@@ -58,3 +60,23 @@ def source_configs(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
         if isinstance(value, dict):
             resolved[str(name)] = {**value, "_config_dir": config_dir}
     return resolved
+
+
+def source_policy(config: dict[str, Any]) -> SourceReviewPolicy:
+    status = str(config.get("status") or ("enabled" if config.get("enabled", True) else "disabled")).strip().lower()
+    if status not in {"enabled", "dry-run-only", "needs-review", "disabled"}:
+        status = "needs-review"
+    risk_data = config.get("risk")
+    risk_map = risk_data if isinstance(risk_data, dict) else {}
+    return SourceReviewPolicy(
+        status=status,
+        notes=str(config.get("notes") or "").strip(),
+        risk=SourceRiskReview(
+            credentials=str(risk_map.get("credentials") or "none"),
+            terms=str(risk_map.get("terms") or "review-required"),
+            rate_limits=str(risk_map.get("rate_limits") or "unknown"),
+            scraping=str(risk_map.get("scraping") or "none"),
+            pii_user_generated_content=str(risk_map.get("pii_user_generated_content") or "none"),
+            hosted_dependencies=str(risk_map.get("hosted_dependencies") or "none"),
+        ),
+    )

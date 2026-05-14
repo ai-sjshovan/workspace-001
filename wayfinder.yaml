@@ -5,12 +5,28 @@ wayfinder:
 
 sources:
   oss-ledger:
-    enabled: true
+    status: enabled
     kind: static_ledger
     path: research/open-source-intel-ledger.yaml
+    notes: Curated local ledger with explicit repository inputs and no unattended network dependency.
+    risk:
+      credentials: none
+      terms: reviewed-public-data
+      rate_limits: none-local-file
+      scraping: none
+      pii_user_generated_content: low-curated-public-metadata
+      hosted_dependencies: none
   hackernews:
-    enabled: true
+    status: needs-review
     kind: hackernews
+    notes: Public Algolia results are useful, but unattended ingest still needs review for UGC handling and query-rate expectations.
+    risk:
+      credentials: none
+      terms: review-required
+      rate_limits: review-required
+      scraping: api-search
+      pii_user_generated_content: medium-user-generated-content
+      hosted_dependencies: algolia-hn-api
     queries:
       - label: founder-pain
         query: "SaaS pain points"
@@ -26,8 +42,16 @@ sources:
         hits_per_page: 10
     hits_per_query: 10
   github:
-    enabled: true
+    status: dry-run-only
     kind: github
+    notes: Manual dry runs are acceptable, but unattended GitHub API use still needs rate-limit and dependency review.
+    risk:
+      credentials: optional-token
+      terms: review-required
+      rate_limits: api-rate-review
+      scraping: official-api
+      pii_user_generated_content: low-public-repo-metadata
+      hosted_dependencies: github-api
     queries:
       - "startup ideas pain points"
       - "market research SaaS ideas"

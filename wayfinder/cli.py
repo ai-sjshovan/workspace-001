@@ -11,7 +11,7 @@ from .adapters import build_adapter
 from .adapters.github import GitHubCollectError
 from .adapters.hackernews import HackerNewsCollectError
 from .audit import write_event
-from .config import audit_log_path, load_config, source_configs, storage_path
+from .config import audit_log_path, load_config, source_configs, source_policy, storage_path
 from .db import (
     connect,
     counts,
@@ -54,8 +54,13 @@ def print_rows(rows: list[sqlite3.Row], fields: list[str], no_color: bool = Fals
                 print(f"   {color(field + ':', DIM, not no_color)} {value}")
 
 
-def enabled_sources(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    return {name: cfg for name, cfg in source_configs(config).items() if cfg.get("enabled", True)}
+def runnable_sources(config: dict[str, Any], dry_run: bool = False) -> dict[str, dict[str, Any]]:
+    allowed_statuses = {"enabled", "dry-run-only"} if dry_run else {"enabled"}
+    return {
+        name: cfg
+        for name, cfg in source_configs(config).items()
+        if source_policy(cfg).status in allowed_statuses
+    }
 
 
 def score_summary(row: sqlite3.Row) -> str:
@@ -100,11 +105,25 @@ def cmd_sources(args: argparse.Namespace) -> int:
         print(json.dumps(sources, indent=2, sort_keys=True))
         return 0
     for name, cfg in sources.items():
-        enabled = bool(cfg.get("enabled", True))
-        status = color("enabled", GREEN, not args.no_color) if enabled else color("disabled", YELLOW, not args.no_color)
+        policy = source_policy(cfg)
+        status_color = {
+            "enabled": GREEN,
+            "dry-run-only": YELLOW,
+            "needs-review": YELLOW,
+            "disabled": RED,
+        }.get(policy.status, YELLOW)
+        status = color(policy.status, status_color, not args.no_color)
         kind = str(cfg.get("kind") or name)
-        print(f"{color(name, BOLD, not args.no_color)} {status} kind={kind}")
-        if args.health and enabled:
+        risk = policy.risk
+        print(
+            f"{color(name, BOLD, not args.no_color)} status={status} kind={kind} "
+            f"credentials={risk.credentials} terms={risk.terms} rate_limits={risk.rate_limits} "
+            f"scraping={risk.scraping} pii_ugc={risk.pii_user_generated_content} "
+            f"hosted_dependencies={risk.hosted_dependencies}"
+        )
+        if policy.notes:
+            print(f"  notes={policy.notes}")
+        if args.health and policy.status != "disabled":
             try:
                 ok, message = build_adapter(name, cfg).healthcheck()
                 state = color("ok", GREEN, not args.no_color) if ok else color("fail", RED, not args.no_color)
@@ -187,13 +206,23 @@ def ingest_source(name: str, cfg: dict[str, Any], args: argparse.Namespace, conf
 
 def cmd_ingest(args: argparse.Namespace) -> int:
     config = load_config(args.config)
-    sources = enabled_sources(config)
+    sources = runnable_sources(config, dry_run=args.dry_run)
+    all_sources = source_configs(config)
     selected = list(sources) if args.all else [args.source or "oss-ledger"]
     rc = 0
     for name in selected:
         cfg = sources.get(name)
         if cfg is None:
-            print(color(f"Unknown or disabled source: {name}", RED, not args.no_color), file=sys.stderr)
+            configured = all_sources.get(name)
+            if configured is None:
+                message = f"Unknown source: {name}"
+            else:
+                status = source_policy(configured).status
+                if status == "dry-run-only" and not args.dry_run:
+                    message = f"Source requires --dry-run before ingest: {name}"
+                else:
+                    message = f"Source not runnable for this ingest mode: {name} status={status}"
+            print(color(message, RED, not args.no_color), file=sys.stderr)
             rc = 1
             continue
         try:

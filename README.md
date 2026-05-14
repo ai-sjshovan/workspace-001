@@ -43,7 +43,27 @@ Each adapter implements three methods:
 - `collect()` fetches raw records without using tokens.
 - `normalize()` converts raw records into `Signal`, `ProductIntel`, and `Opportunity` records.
 
-New sources should start as dry-run adapters before being enabled in recurring cron. Sources that require credentials, scrape pages, or collect user-generated content need an explicit safety review before unattended collection.
+New sources should start as `dry-run-only` adapters before being enabled in recurring cron. Sources that require credentials, scrape pages, or collect user-generated content need an explicit safety review before unattended collection.
+
+## Source Safety
+
+Each source carries a review status in `wayfinder.yaml`:
+
+- `enabled`: approved for unattended ingest and eligible for cron once the broader cron switch is enabled.
+- `dry-run-only`: safe to test manually, but must not write unattended data without a follow-up review.
+- `needs-review`: visible in source health output but excluded from `ingest --all`.
+- `disabled`: intentionally off and excluded from `ingest --all`.
+
+Each source should also document these risk fields before promotion to cron:
+
+- `credentials`
+- `terms`
+- `rate_limits`
+- `scraping`
+- `pii_user_generated_content`
+- `hosted_dependencies`
+
+A source can move to `enabled` for cron only after its terms, rate limits, collection method, hosted dependencies, and user-data exposure are reviewed and the unattended behavior is considered acceptable.
 
 ## Opportunity Scoring
 
@@ -59,9 +79,9 @@ Wayfinder ranks opportunities with a deterministic weighted model configured und
 
 ## Current Sources
 
-- `oss-ledger`: curated open-source source/tool ledger, safe for offline ingest.
-- `hackernews`: public HN Algolia search, useful for market and founder-problem chatter.
-- `github`: public GitHub repository search, useful for open-source leverage and competitor/tool discovery.
+- `oss-ledger`: `enabled`, curated open-source source/tool ledger, safe for offline ingest.
+- `hackernews`: `needs-review`, public HN Algolia search with user-generated content and external rate-limit considerations.
+- `github`: `dry-run-only`, public GitHub repository search with hosted dependency and API-rate review still required before unattended ingest.
 
 Reddit, app-store reviews, Product Hunt, and broader crawl/search sources are deferred until safety and terms review.
 
