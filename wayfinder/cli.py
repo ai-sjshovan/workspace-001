@@ -73,6 +73,7 @@ def ingest_source(name: str, cfg: dict[str, Any], args: argparse.Namespace, conf
     adapter = build_adapter(name, cfg)
     raw = adapter.collect()
     batch = adapter.normalize(raw)
+    query_count = len(cfg.get("queries", [])) if isinstance(cfg.get("queries"), list) else 0
     normalized_signals = len(batch.signals)
     normalized_products = len(batch.products)
     normalized_opportunities = len(batch.opportunities)
@@ -89,7 +90,7 @@ def ingest_source(name: str, cfg: dict[str, Any], args: argparse.Namespace, conf
             normalized_opportunities=normalized_opportunities,
         )
         return 0, (
-            f"{name}: dry-run collected={len(raw)} normalized={collected} "
+            f"{name}: dry-run queries={query_count} collected={len(raw)} normalized={collected} "
             f"signals={normalized_signals} products={normalized_products} "
             f"opportunities={normalized_opportunities}"
         )

@@ -20,13 +20,26 @@ class HackerNewsAdapter:
         self.config = config
 
     def healthcheck(self) -> tuple[bool, str]:
-        return True, "HN Algolia API configured"
+        try:
+            count = len(self._query_specs())
+        except ValueError as exc:
+            return False, str(exc)
+        return count > 0, f"HN Algolia API configured with {count} quer{'y' if count == 1 else 'ies'}"
+
+    def _timeout_seconds(self) -> float:
+        value = self.config.get("timeout_seconds", 15)
+        return max(float(value), 1.0)
+
+    def _base_url(self) -> str:
+        value = str(self.config.get("base_url") or "https://hn.algolia.com/api/v1/search").strip()
+        return value or "https://hn.algolia.com/api/v1/search"
 
     def _query_specs(self) -> list[dict[str, Any]]:
         configured = self.config.get("queries")
         if not isinstance(configured, list):
-            return []
+            raise ValueError("hackernews source requires a non-empty queries list")
         default_hits = int(self.config.get("hits_per_query") or 10)
+        default_tags = str(self.config.get("default_tags") or "story").strip() or "story"
         specs: list[dict[str, Any]] = []
         for item in configured:
             if isinstance(item, str):
@@ -36,7 +49,7 @@ class HackerNewsAdapter:
                         {
                             "query": query,
                             "label": query,
-                            "tags": "story",
+                            "tags": default_tags,
                             "hits_per_page": default_hits,
                         }
                     )
@@ -47,7 +60,7 @@ class HackerNewsAdapter:
             if not query:
                 continue
             label = str(item.get("label") or item.get("category") or query).strip() or query
-            tags = str(item.get("tags") or "story").strip() or "story"
+            tags = str(item.get("tags") or default_tags).strip() or default_tags
             hits_value = item.get("hits_per_page", item.get("hitsPerPage", item.get("hits_per_query", default_hits)))
             specs.append(
                 {
@@ -57,6 +70,8 @@ class HackerNewsAdapter:
                     "hits_per_page": int(hits_value or default_hits),
                 }
             )
+        if not specs:
+            raise ValueError("hackernews source requires at least one valid query")
         return specs
 
     def collect(self) -> list[dict[str, Any]]:
@@ -69,16 +84,28 @@ class HackerNewsAdapter:
                     "hitsPerPage": spec["hits_per_page"],
                 }
             )
-            url = f"https://hn.algolia.com/api/v1/search?{params}"
+            url = f"{self._base_url()}?{params}"
+            request = urllib.request.Request(
+                url,
+                headers={"User-Agent": "wayfinder/0 hn-ingest"},
+            )
             try:
-                with urllib.request.urlopen(url, timeout=15) as response:
+                with urllib.request.urlopen(request, timeout=self._timeout_seconds()) as response:
                     data = response.read().decode("utf-8")
             except urllib.error.HTTPError as exc:
                 raise HackerNewsCollectError(f"HTTP {exc.code} for query '{spec['query']}'") from exc
             except urllib.error.URLError as exc:
                 raise HackerNewsCollectError(f"network error for query '{spec['query']}': {exc.reason}") from exc
-            payload = json.loads(data)
-            for hit in payload.get("hits", []):
+            except TimeoutError as exc:
+                raise HackerNewsCollectError(f"timeout for query '{spec['query']}' after {self._timeout_seconds():g}s") from exc
+            try:
+                payload = json.loads(data)
+            except json.JSONDecodeError as exc:
+                raise HackerNewsCollectError(f"invalid JSON for query '{spec['query']}'") from exc
+            hits = payload.get("hits")
+            if not isinstance(hits, list):
+                raise HackerNewsCollectError(f"invalid payload for query '{spec['query']}': missing hits list")
+            for hit in hits:
                 if isinstance(hit, dict):
                     hit["_wayfinder_query"] = spec["query"]
                     hit["_wayfinder_category"] = spec["label"]
@@ -88,11 +115,15 @@ class HackerNewsAdapter:
 
     def normalize(self, raw_records: list[dict[str, Any]]) -> NormalizedBatch:
         batch = NormalizedBatch()
+        seen_ids: set[str] = set()
         for item in raw_records:
             object_id = str(item.get("objectID") or "")
             title = str(item.get("title") or item.get("story_title") or "").strip()
             if not object_id or not title:
                 continue
+            if object_id in seen_ids:
+                continue
+            seen_ids.add(object_id)
             hn_url = f"https://news.ycombinator.com/item?id={object_id}"
             article_url = str(item.get("url") or "").strip()
             body_parts = [
