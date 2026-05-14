@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import socket
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -19,24 +21,47 @@ class GitHubAdapter:
     _DEFAULT_BASE_URL = "https://api.github.com/search/repositories"
     _ALLOWED_HOSTS = {"api.github.com"}
 
-    def __init__(self, name: str, config: dict[str, Any]) -> None:
+    def __init__(self, name: str, config: dict[str, Any] | Any) -> None:
         self.name = name
-        self.config = config
+        self.config = config if isinstance(config, dict) else {}
 
     def healthcheck(self) -> tuple[bool, str]:
         try:
             count = len(self._query_specs())
             base_url = self._base_url()
+            self._timeout_seconds()
+            auth_mode = self._auth_mode()
         except ValueError as exc:
             return False, str(exc)
         return count > 0, (
             f"GitHub public search configured with {count} quer{'y' if count == 1 else 'ies'} "
-            f"via {base_url} (anonymous only)"
+            f"via {base_url} ({auth_mode})"
         )
 
     def _timeout_seconds(self) -> float:
         value = self.config.get("timeout_seconds", 20)
-        return max(float(value), 1.0)
+        try:
+            return max(float(value), 1.0)
+        except (TypeError, ValueError):
+            raise ValueError("github source timeout_seconds must be a positive number") from None
+
+    def _per_page(self, value: Any, default: int) -> int:
+        try:
+            return max(1, min(int(value or default), 100))
+        except (TypeError, ValueError):
+            raise ValueError("github source per_page must be an integer between 1 and 100") from None
+
+    def _token(self) -> str:
+        direct = str(self.config.get("token") or "").strip()
+        if direct:
+            return direct
+        env_name = str(self.config.get("token_env") or "GITHUB_TOKEN").strip()
+        if not env_name:
+            return ""
+        return str(os.environ.get(env_name) or "").strip()
+
+    def _auth_mode(self) -> str:
+        return "token optional" if self._token() else "anonymous fallback"
 
     def _base_url(self) -> str:
         value = str(self.config.get("base_url") or self._DEFAULT_BASE_URL).strip() or self._DEFAULT_BASE_URL
@@ -51,7 +76,7 @@ class GitHubAdapter:
         configured = self.config.get("queries")
         if not isinstance(configured, list):
             raise ValueError("github source requires a non-empty queries list")
-        default_per_page = max(1, min(int(self.config.get("per_page") or 10), 100))
+        default_per_page = self._per_page(self.config.get("per_page"), 10)
         default_sort = str(self.config.get("sort") or "updated").strip() or "updated"
         default_order = str(self.config.get("order") or "desc").strip() or "desc"
         specs: list[dict[str, Any]] = []
@@ -80,7 +105,7 @@ class GitHubAdapter:
                 {
                     "query": query,
                     "label": label,
-                    "per_page": max(1, min(int(per_page_value or default_per_page), 100)),
+                    "per_page": self._per_page(per_page_value, default_per_page),
                     "sort": str(item.get("sort") or default_sort).strip() or default_sort,
                     "order": str(item.get("order") or default_order).strip() or default_order,
                 }
@@ -90,10 +115,14 @@ class GitHubAdapter:
         return specs
 
     def _headers(self) -> dict[str, str]:
-        return {
+        headers = {
             "Accept": "application/vnd.github+json",
             "User-Agent": "codex-foundry-wayfinder",
         }
+        token = self._token()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        return headers
 
     def _read_payload(self, request: urllib.request.Request, spec: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -105,10 +134,12 @@ class GitHubAdapter:
             raise GitHubCollectError(f"GitHub API error for query '{spec['query']}': {message}") from exc
         except urllib.error.URLError as exc:
             raise GitHubCollectError(f"GitHub network error for query '{spec['query']}': {exc.reason}") from exc
-        except TimeoutError as exc:
+        except (TimeoutError, socket.timeout) as exc:
             raise GitHubCollectError(
                 f"GitHub timeout for query '{spec['query']}' after {self._timeout_seconds():g}s"
             ) from exc
+        except OSError as exc:
+            raise GitHubCollectError(f"GitHub I/O error for query '{spec['query']}': {exc.strerror or str(exc)}") from exc
         except json.JSONDecodeError as exc:
             raise GitHubCollectError(f"GitHub returned invalid JSON for query '{spec['query']}'") from exc
         if not isinstance(payload, dict):
