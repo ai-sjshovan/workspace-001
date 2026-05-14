@@ -19,7 +19,7 @@ sources:
   hackernews:
     status: dry-run-only
     kind: hackernews
-    notes: Public Algolia results are useful, but unattended ingest still needs review for UGC handling and query-rate expectations.
+    notes: Deterministic fixture-backed dry runs are allowed; unattended live Algolia ingest still needs review for UGC handling and query-rate expectations.
     risk:
       credentials: none
       terms: review-required
@@ -27,6 +27,7 @@ sources:
       scraping: api-search
       pii_user_generated_content: medium-user-generated-content
       hosted_dependencies: algolia-hn-api
+    fixture_path: research/hackernews-sample.json
     queries:
       - label: founder-pain
         query: "SaaS pain points"

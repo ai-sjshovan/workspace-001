@@ -1,0 +1,74 @@
+{
+  "results": [
+    {
+      "query": "SaaS pain points",
+      "hits": [
+        {
+          "objectID": "4001",
+          "title": "Founders keep paying for SaaS pain twice",
+          "story_title": "Founders keep paying for SaaS pain twice",
+          "story_text": "B2B teams still glue together point solutions instead of one reporting workflow.",
+          "comment_text": "",
+          "url": "https://example.com/founders-paying-for-saas-pain",
+          "author": "atlas",
+          "points": 84,
+          "created_at": "2026-05-10T12:00:00Z"
+        },
+        {
+          "objectID": "4002",
+          "title": "Agencies want better lead-quality reporting",
+          "story_title": "Agencies want better lead-quality reporting",
+          "story_text": "Local SEO agencies need more than rank trackers when clients ask what leads turned into revenue.",
+          "comment_text": "",
+          "url": "https://example.com/agencies-lead-quality-reporting",
+          "author": "ember",
+          "points": 63,
+          "created_at": "2026-05-11T09:30:00Z"
+        }
+      ]
+    },
+    {
+      "query": "startup idea validation",
+      "hits": [
+        {
+          "objectID": "4001",
+          "title": "Founders keep paying for SaaS pain twice",
+          "story_title": "Founders keep paying for SaaS pain twice",
+          "story_text": "Teams validate pain by stitching analytics screenshots into investor decks.",
+          "comment_text": "",
+          "url": "https://example.com/founders-paying-for-saas-pain",
+          "author": "atlas",
+          "points": 84,
+          "created_at": "2026-05-10T12:00:00Z"
+        },
+        {
+          "objectID": "4003",
+          "title": "What startup idea validation misses",
+          "story_title": "What startup idea validation misses",
+          "story_text": "People collect wish lists but not operational proof from public discussions.",
+          "comment_text": "",
+          "url": "https://example.com/startup-idea-validation-misses",
+          "author": "rowan",
+          "points": 57,
+          "created_at": "2026-05-12T08:15:00Z"
+        }
+      ]
+    },
+    {
+      "query": "competitor analysis tool",
+      "hits": [
+        {
+          "objectID": "4004",
+          "title": "Competitor analysis tools rarely capture distribution lessons",
+          "story_title": "Competitor analysis tools rarely capture distribution lessons",
+          "story_text": "Operators want to compare category moves without relying on token-heavy workflows.",
+          "comment_text": "",
+          "url": "https://example.com/competitor-analysis-distribution-lessons",
+          "author": "sage",
+          "points": 49,
+          "created_at": "2026-05-13T07:45:00Z"
+        }
+      ]
+    }
+  ]
+}
