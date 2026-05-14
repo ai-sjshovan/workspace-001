@@ -152,15 +152,33 @@ def product_rows(rows: list[Any]) -> str:
 def opportunity_rows(rows: list[Any]) -> str:
     if not rows:
         return "<p>No opportunities found yet.</p>"
-    return "\n".join(
-        f"""<article class="row">
+    chunks = []
+    for row in rows:
+        try:
+            score_data = json.loads(row["score_components_json"] or "{}")
+        except json.JSONDecodeError:
+            score_data = {}
+        components = score_data.get("components") if isinstance(score_data, dict) else {}
+        chips = " ".join(
+            f'<span class="tag">{esc(label)} {esc(components.get(key, 0))}</span>'
+            for key, label in (
+                ("evidence_count", "evidence"),
+                ("freshness", "freshness"),
+                ("monetization_signal", "monetization"),
+                ("source_quality", "source"),
+                ("build_fit", "fit"),
+            )
+        )
+        chunks.append(
+            f"""<article class="row">
   <div class="signal-head">
     <div>
       <h2>{esc(row['title'])}</h2>
       <div class="meta"><span class="tag">{esc(row['target_user'])}</span> evidence={esc(row['evidence_count'])}</div>
     </div>
-    <div class="subtle">{esc(row['build_difficulty'])}</div>
+    <div class="score">score {esc(row['opportunity_score'])}</div>
   </div>
+  <p class="meta">{chips}</p>
   <div class="scan-grid">
     <div>
       <p class="list-head">Problem</p>
@@ -176,8 +194,8 @@ def opportunity_rows(rows: list[Any]) -> str:
     </div>
   </div>
 </article>"""
-        for row in rows
-    )
+        )
+    return "\n".join(chunks)
 
 
 class WayfinderHandler(BaseHTTPRequestHandler):

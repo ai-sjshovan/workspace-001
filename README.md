@@ -21,6 +21,7 @@ python3 -m wayfinder ingest --source hackernews --dry-run
 python3 -m wayfinder search "reddit pain"
 python3 -m wayfinder products --limit 20
 python3 -m wayfinder opportunities --limit 20
+python3 -m wayfinder score --limit 10
 python3 -m wayfinder stats
 python3 -m wayfinder serve --port 8766
 ```
@@ -43,6 +44,18 @@ Each adapter implements three methods:
 - `normalize()` converts raw records into `Signal`, `ProductIntel`, and `Opportunity` records.
 
 New sources should start as dry-run adapters before being enabled in recurring cron. Sources that require credentials, scrape pages, or collect user-generated content need an explicit safety review before unattended collection.
+
+## Opportunity Scoring
+
+Wayfinder ranks opportunities with a deterministic weighted model configured under `scoring:` in `wayfinder.yaml`. The current score is a weighted blend of:
+
+- `evidence_count`: normalizes direct evidence volume.
+- `freshness`: favors recently collected opportunities.
+- `monetization_signal`: scores monetization-oriented keywords and penalizes dependency-heavy language.
+- `source_quality`: rewards clearer licensing, useful outputs, and lower risk.
+- `build_fit`: rewards lower complexity plus better reuse/code-fit signals.
+
+`python3 -m wayfinder score` rescales existing rows in place and prints ranked opportunities with per-component contributions. Re-running ingest updates the existing opportunity row by fingerprint and refreshes the deterministic score instead of inserting a duplicate.
 
 ## Current Sources
 

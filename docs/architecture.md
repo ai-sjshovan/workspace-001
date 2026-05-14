@@ -14,8 +14,8 @@ Wayfinder is a local-first product intelligence pipeline for Codex Foundry. Its 
 
 1. Source adapters collect raw public records.
 2. Records normalize into `signals`, `products`, or `opportunities`.
-3. Fingerprints deduplicate inserts.
-4. Search and dashboard read from SQLite.
+3. Fingerprints deduplicate inserts, and opportunity upserts refresh deterministic scores in place.
+4. Search, ranking, and dashboard read from SQLite.
 5. LLM-generated briefs are interactive/user-triggered, not cron defaults.
 
 ## Adapter Contract
@@ -36,8 +36,21 @@ SQLite database:
 - `signals`: public evidence from forums, repos, issues, reviews, and pages.
 - `products`: product/app/SaaS records.
 - `opportunities`: promoted ideas or imported opportunity records.
+- `opportunities.opportunity_score`, `score_components_json`, and `scored_at`: persisted deterministic ranking state.
 - `ingest_runs`: audit of adapter runs.
 - `signals_fts`: full-text search over signal title/body/source URL.
+
+## Ranking
+
+Opportunity ranking is deterministic and local-only. A score is computed from configurable weights in `wayfinder.yaml` across five components:
+
+- evidence count
+- freshness
+- monetization signal
+- source quality
+- build fit
+
+The ingest path computes the score on insert/update, and the CLI `score` command can rescore the existing `opportunities` table without creating duplicate rows.
 
 ## UI
 
