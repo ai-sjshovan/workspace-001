@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -71,6 +73,18 @@ def get_client_pulse_payload() -> dict[str, object]:
         "summary": get_client_pulse_summary(clients),
         "clients": clients,
     }
+
+
+def render_client_pulse_csv() -> str:
+    output = io.StringIO()
+    writer = csv.DictWriter(
+        output,
+        fieldnames=["name", "owner", "health", "arr", "last_touch", "next_action"],
+    )
+    writer.writeheader()
+    for client in get_client_pulse_clients():
+        writer.writerow({field: client[field] for field in writer.fieldnames})
+    return output.getvalue()
 
 
 def render_client_pulse() -> str:
@@ -391,6 +405,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path == "/api/client-pulse":
             body = json.dumps(get_client_pulse_payload()).encode("utf-8")
             self._send(200, body, "application/json; charset=utf-8")
+            return
+
+        if self.path == "/api/client-pulse.csv":
+            body = render_client_pulse_csv().encode("utf-8")
+            self._send(200, body, "text/csv; charset=utf-8")
             return
 
         if self.path == "/client-pulse":
