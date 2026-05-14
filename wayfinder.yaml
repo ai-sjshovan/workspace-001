@@ -12,9 +12,18 @@ sources:
     enabled: true
     kind: hackernews
     queries:
-      - "SaaS pain points"
-      - "startup idea validation"
-      - "competitor analysis tool"
+      - label: founder-pain
+        query: "SaaS pain points"
+        tags: story
+        hits_per_page: 10
+      - label: idea-validation
+        query: "startup idea validation"
+        tags: story
+        hits_per_page: 10
+      - label: competitor-research
+        query: "competitor analysis tool"
+        tags: story
+        hits_per_page: 10
     hits_per_query: 10
   github:
     enabled: true

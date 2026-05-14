@@ -8,6 +8,7 @@ from typing import Any
 
 from . import __version__
 from .adapters import build_adapter
+from .adapters.hackernews import HackerNewsCollectError
 from .audit import write_event
 from .config import audit_log_path, load_config, source_configs, storage_path
 from .db import connect, counts, insert_opportunities, insert_products, insert_signals, list_rows, search_signals
@@ -72,7 +73,10 @@ def ingest_source(name: str, cfg: dict[str, Any], args: argparse.Namespace, conf
     adapter = build_adapter(name, cfg)
     raw = adapter.collect()
     batch = adapter.normalize(raw)
-    collected = len(batch.signals) + len(batch.products) + len(batch.opportunities)
+    normalized_signals = len(batch.signals)
+    normalized_products = len(batch.products)
+    normalized_opportunities = len(batch.opportunities)
+    collected = normalized_signals + normalized_products + normalized_opportunities
     if args.dry_run:
         write_event(
             audit_log_path(config),
@@ -80,8 +84,15 @@ def ingest_source(name: str, cfg: dict[str, Any], args: argparse.Namespace, conf
             source=name,
             raw_records=len(raw),
             normalized=collected,
+            normalized_signals=normalized_signals,
+            normalized_products=normalized_products,
+            normalized_opportunities=normalized_opportunities,
         )
-        return 0, f"{name}: dry-run raw={len(raw)} normalized={collected}"
+        return 0, (
+            f"{name}: dry-run collected={len(raw)} normalized={collected} "
+            f"signals={normalized_signals} products={normalized_products} "
+            f"opportunities={normalized_opportunities}"
+        )
 
     conn = connect(storage_path(config))
     try:
@@ -141,6 +152,10 @@ def cmd_ingest(args: argparse.Namespace) -> int:
         try:
             _, message = ingest_source(name, cfg, args, config)
             print(color(message, GREEN, not args.no_color))
+        except HackerNewsCollectError as exc:
+            write_event(audit_log_path(config), "wayfinder_ingest_error", source=name, error=str(exc))
+            print(color(f"{name}: network failure: {exc}", RED, not args.no_color), file=sys.stderr)
+            rc = 1
         except Exception as exc:  # noqa: BLE001
             write_event(audit_log_path(config), "wayfinder_ingest_error", source=name, error=str(exc))
             print(color(f"{name}: failed: {exc}", RED, not args.no_color), file=sys.stderr)
