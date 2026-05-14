@@ -55,7 +55,7 @@ The sample `search "reddit pain"` command is still a valid CLI smoke check, but 
 Each adapter implements three methods:
 
 - `healthcheck()` reports whether the source is configured.
-- `collect()` fetches raw records without using tokens.
+- `collect()` fetches raw records without using tokens or authenticated API access.
 - `normalize()` converts raw records into `Signal`, `ProductIntel`, and `Opportunity` records.
 
 New sources should start as `dry-run-only` adapters before being enabled in recurring cron. Sources that require credentials, scrape pages, or collect user-generated content need an explicit safety review before unattended collection.
@@ -130,7 +130,7 @@ The export is intentionally read-only: it prints editable Markdown, does not aut
 
 - `oss-ledger`: `enabled`, curated open-source source/tool ledger, safe for offline ingest.
 - `hackernews`: `needs-review`, public HN Algolia search with user-generated content and external rate-limit considerations.
-- `github`: `dry-run-only`, public GitHub repository search with hosted dependency and API-rate review still required before unattended ingest.
+- `github`: `dry-run-only`, anonymous public GitHub repository search with hosted dependency and API-rate review still required before unattended ingest.
 
 Reddit, app-store reviews, Product Hunt, and broader crawl/search sources are deferred until safety and terms review.
 

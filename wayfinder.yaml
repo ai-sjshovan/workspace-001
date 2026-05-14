@@ -44,9 +44,9 @@ sources:
   github:
     status: dry-run-only
     kind: github
-    notes: Manual dry runs are acceptable, but unattended GitHub API use still needs rate-limit and dependency review.
+    notes: Manual dry runs against anonymous public repository search are acceptable, but unattended GitHub API use still needs rate-limit and dependency review.
     risk:
-      credentials: optional-token
+      credentials: none
       terms: review-required
       rate_limits: api-rate-review
       scraping: official-api

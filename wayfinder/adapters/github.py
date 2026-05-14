@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-import os
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
 from typing import Any
 
 from .base import NormalizedBatch
@@ -16,6 +16,9 @@ class GitHubCollectError(RuntimeError):
 
 
 class GitHubAdapter:
+    _DEFAULT_BASE_URL = "https://api.github.com/search/repositories"
+    _ALLOWED_HOSTS = {"api.github.com"}
+
     def __init__(self, name: str, config: dict[str, Any]) -> None:
         self.name = name
         self.config = config
@@ -23,21 +26,26 @@ class GitHubAdapter:
     def healthcheck(self) -> tuple[bool, str]:
         try:
             count = len(self._query_specs())
+            base_url = self._base_url()
         except ValueError as exc:
             return False, str(exc)
-        auth_mode = "token" if self._token() else "anonymous"
-        return count > 0, f"GitHub search configured with {count} quer{'y' if count == 1 else 'ies'} ({auth_mode})"
-
-    def _token(self) -> str:
-        return str(os.environ.get("GITHUB_TOKEN") or "").strip()
+        return count > 0, (
+            f"GitHub public search configured with {count} quer{'y' if count == 1 else 'ies'} "
+            f"via {base_url} (anonymous only)"
+        )
 
     def _timeout_seconds(self) -> float:
         value = self.config.get("timeout_seconds", 20)
         return max(float(value), 1.0)
 
     def _base_url(self) -> str:
-        value = str(self.config.get("base_url") or "https://api.github.com/search/repositories").strip()
-        return value or "https://api.github.com/search/repositories"
+        value = str(self.config.get("base_url") or self._DEFAULT_BASE_URL).strip() or self._DEFAULT_BASE_URL
+        parsed = urllib.parse.urlparse(value)
+        if parsed.scheme != "https" or parsed.netloc not in self._ALLOWED_HOSTS:
+            raise ValueError("github source requires the official https://api.github.com repository search endpoint")
+        if not parsed.path.rstrip("/").endswith("/search/repositories"):
+            raise ValueError("github source must use the /search/repositories public search path")
+        return value
 
     def _query_specs(self) -> list[dict[str, Any]]:
         configured = self.config.get("queries")
@@ -82,14 +90,10 @@ class GitHubAdapter:
         return specs
 
     def _headers(self) -> dict[str, str]:
-        headers = {
+        return {
             "Accept": "application/vnd.github+json",
             "User-Agent": "codex-foundry-wayfinder",
         }
-        token = self._token()
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        return headers
 
     def _read_payload(self, request: urllib.request.Request, spec: dict[str, Any]) -> dict[str, Any]:
         try:
@@ -97,7 +101,7 @@ class GitHubAdapter:
                 payload = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
-            message = self._format_http_error(exc.code, body)
+            message = self._format_http_error(exc.code, body, exc.headers)
             raise GitHubCollectError(f"GitHub API error for query '{spec['query']}': {message}") from exc
         except urllib.error.URLError as exc:
             raise GitHubCollectError(f"GitHub network error for query '{spec['query']}': {exc.reason}") from exc
@@ -111,7 +115,22 @@ class GitHubAdapter:
             raise GitHubCollectError(f"GitHub returned an invalid payload for query '{spec['query']}'")
         return payload
 
-    def _format_http_error(self, status_code: int, body: str) -> str:
+    def _rate_limit_suffix(self, headers: Any) -> str:
+        if headers is None:
+            return ""
+        remaining = str(headers.get("X-RateLimit-Remaining") or "").strip()
+        reset_raw = str(headers.get("X-RateLimit-Reset") or "").strip()
+        if remaining != "0" and not reset_raw:
+            return ""
+        if reset_raw:
+            try:
+                reset_at = datetime.fromtimestamp(int(reset_raw), tz=timezone.utc).isoformat().replace("+00:00", "Z")
+            except ValueError:
+                reset_at = reset_raw
+            return f"; rate limit resets at {reset_at}"
+        return "; rate limit exhausted"
+
+    def _format_http_error(self, status_code: int, body: str, headers: Any = None) -> str:
         detail = ""
         if body:
             try:
@@ -122,8 +141,8 @@ class GitHubAdapter:
                 detail = str(payload.get("message") or "").strip()
             elif body.strip():
                 detail = body.strip()
-        if status_code == 403 and "rate limit" in detail.lower():
-            return f"HTTP 403 rate limit exceeded ({detail})"
+        if status_code in {403, 429} and "rate limit" in detail.lower():
+            return f"HTTP {status_code} rate limit exceeded ({detail}){self._rate_limit_suffix(headers)}"
         if detail:
             return f"HTTP {status_code} {detail}"
         return f"HTTP {status_code}"
@@ -146,19 +165,34 @@ class GitHubAdapter:
                 raise GitHubCollectError(f"GitHub payload missing repository items for query '{spec['query']}'")
             for item in items:
                 if isinstance(item, dict):
-                    item["_wayfinder_query"] = spec["query"]
-                    item["_wayfinder_category"] = spec["label"]
-                    records.append(item)
+                    records.append(
+                        {
+                            **item,
+                            "_wayfinder_query": spec["query"],
+                            "_wayfinder_category": spec["label"],
+                        }
+                    )
+        records.sort(
+            key=lambda item: (
+                str(item.get("full_name") or ""),
+                str(item.get("_wayfinder_category") or ""),
+                str(item.get("updated_at") or ""),
+            )
+        )
         return records
 
     def normalize(self, raw_records: list[dict[str, Any]]) -> NormalizedBatch:
         batch = NormalizedBatch()
+        seen_ids: set[str] = set()
         for item in raw_records:
             repo_name = str(item.get("name") or "").strip()
-            full_name = str(item.get("full_name") or "")
-            html_url = str(item.get("html_url") or "")
+            full_name = str(item.get("full_name") or "").strip()
+            html_url = str(item.get("html_url") or "").strip()
             if not repo_name or not full_name or not html_url:
                 continue
+            if full_name in seen_ids:
+                continue
+            seen_ids.add(full_name)
             description = str(item.get("description") or "")
             topics = item.get("topics") if isinstance(item.get("topics"), list) else []
             category = ", ".join(str(topic) for topic in topics[:8])
