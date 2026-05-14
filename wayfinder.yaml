@@ -62,6 +62,8 @@ cron:
   enabled: false
   schedule: daily
   token_free: true
+  # Leave OS cron disabled until the command below is explicitly approved.
+  # python3 -m wayfinder scheduled-ingest
 
 scoring:
   evidence_count_weight: 0.35
