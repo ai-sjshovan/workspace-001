@@ -20,7 +20,7 @@ class HackerNewsAdapterTests(unittest.TestCase):
         adapter = HackerNewsAdapter(
             "hackernews",
             {
-                "base_url": "https://example.com/api",
+                "base_url": "https://hn.algolia.com/api/v1/search",
                 "timeout_seconds": "2",
                 "queries": ["founder pain"],
             },
