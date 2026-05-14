@@ -1,0 +1,133 @@
+repos:
+  - name: reddit-research-mcp
+    url: https://github.com/king-of-the-grackles/reddit-research-mcp
+    license: MIT
+    category: reddit-research-mcp
+    sources_supported: [reddit]
+    useful_outputs:
+      - cited Reddit posts and comments
+      - subreddit discovery
+      - customer discovery reports
+      - competitor sentiment reports
+    install_complexity: medium
+    api_keys_required: hosted OAuth/MCP connection
+    safety_risks:
+      - hosted dependency
+      - external authentication
+      - sends research queries to third-party service
+    can_reuse_code: partial
+    can_reuse_ideas: high
+    verdict: high-leverage candidate for Reddit research, but review privacy and hosted dependency before wiring into cron
+  - name: app-idea-hunter
+    url: https://github.com/Nakoliss/app-idea-hunter
+    license: unknown
+    category: pain-mining-pipeline
+    sources_supported: [reddit, google-play]
+    useful_outputs:
+      - complaint mining
+      - pain point filtering
+      - startup idea generation and scoring
+    install_complexity: unknown
+    api_keys_required: likely OpenAI plus source-specific access
+    safety_risks:
+      - scraping behavior needs review
+      - dependency and license status must be verified
+    can_reuse_code: inspect-first
+    can_reuse_ideas: high
+    verdict: inspect before reuse; likely useful for adapter and scoring design
+  - name: launchlens
+    url: https://github.com/kle-08/launchlens
+    license: unknown
+    category: idea-validation-cli
+    sources_supported: [web, competitors]
+    useful_outputs:
+      - yes/no validation verdict
+      - market score
+      - competitor insights
+    install_complexity: low
+    api_keys_required: likely LLM/search provider
+    safety_risks:
+      - external API usage likely
+    can_reuse_code: inspect-first
+    can_reuse_ideas: medium
+    verdict: useful inspiration for CLI UX and validation report shape
+  - name: prometheus-idea-engine
+    url: https://github.com/williamDalston/prometheus-idea-engine
+    license: unknown
+    category: idea-generation-engine
+    sources_supported: [unknown]
+    useful_outputs:
+      - async idea generation
+      - deduplication
+      - scoring
+      - observability patterns
+    install_complexity: unknown
+    api_keys_required: likely LLM provider
+    safety_risks:
+      - architecture may be heavier than v1 needs
+    can_reuse_code: inspect-first
+    can_reuse_ideas: medium
+    verdict: inspect for scoring and dedupe ideas, not as v1 dependency
+  - name: business-idea-multi-agent
+    url: https://github.com/rhofkens/business-idea-multi-agent
+    license: unknown
+    category: multi-agent-idea-evaluation
+    sources_supported: [unknown]
+    useful_outputs:
+      - multi-agent idea evaluation workflow
+      - competitive analysis prompts
+    install_complexity: medium
+    api_keys_required: likely LLM provider
+    safety_risks:
+      - agent-heavy pattern could burn tokens
+    can_reuse_code: unlikely
+    can_reuse_ideas: medium
+    verdict: use as design reference only; avoid agent-heavy ingestion
+  - name: internet-problem-atlas
+    url: https://github.com/Crynge/internet-problem-atlas
+    license: unknown
+    category: opportunity-dataset-dashboard
+    sources_supported: [dataset]
+    useful_outputs:
+      - searchable pain point atlas
+      - dashboard/data model inspiration
+    install_complexity: unknown
+    api_keys_required: unknown
+    safety_risks:
+      - dataset provenance/license needs review
+    can_reuse_code: inspect-first
+    can_reuse_ideas: high
+    verdict: useful inspiration for Wayfinder UI and opportunity database
+  - name: crawlbase-mcp
+    url: https://github.com/crawlbase/crawlbase-mcp
+    license: unknown
+    category: web-crawling-mcp
+    sources_supported: [web, hackernews, competitor-pages]
+    useful_outputs:
+      - HTML/markdown crawl output
+      - screenshots
+      - JavaScript-rendered pages
+    install_complexity: medium
+    api_keys_required: Crawlbase tokens
+    safety_risks:
+      - hosted crawling provider
+      - anti-bot/proxy behavior needs policy review
+    can_reuse_code: low
+    can_reuse_ideas: medium
+    verdict: optional later adapter for difficult web pages, disabled by default
+  - name: RivalSearchMCP
+    url: https://github.com/damionrashford/RivalSearchMCP
+    license: unknown
+    category: web-research-mcp
+    sources_supported: [search, web]
+    useful_outputs:
+      - multi-engine search
+      - content extraction
+      - trends analysis
+    install_complexity: medium
+    api_keys_required: likely search providers
+    safety_risks:
+      - source/provider terms need review
+    can_reuse_code: inspect-first
+    can_reuse_ideas: medium
+    verdict: inspect for web research adapter ideas
