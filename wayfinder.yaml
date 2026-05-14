@@ -1,0 +1,37 @@
+wayfinder:
+  name: Wayfinder
+  storage_path: .ai-state/wayfinder/wayfinder.db
+  audit_log: logs/wayfinder-audit.log
+
+sources:
+  oss-ledger:
+    enabled: true
+    kind: static_ledger
+    path: research/open-source-intel-ledger.yaml
+  hackernews:
+    enabled: true
+    kind: hackernews
+    queries:
+      - "SaaS pain points"
+      - "startup idea validation"
+      - "competitor analysis tool"
+    hits_per_query: 10
+  github:
+    enabled: true
+    kind: github
+    queries:
+      - "startup ideas pain points"
+      - "market research SaaS ideas"
+      - "competitor analysis startup validation"
+    per_page: 10
+
+cron:
+  enabled: false
+  schedule: daily
+  token_free: true
+
+scoring:
+  evidence_count_weight: 0.35
+  monetization_signal_weight: 0.25
+  build_fit_weight: 0.25
+  freshness_weight: 0.15
