@@ -241,6 +241,56 @@ def search_signals(conn: sqlite3.Connection, query: str, limit: int = 20) -> lis
         ).fetchall()
 
 
+def browse_signals(
+    conn: sqlite3.Connection,
+    query: str = "",
+    source: str = "",
+    category: str = "",
+    limit: int = 50,
+) -> list[sqlite3.Row]:
+    clauses: list[str] = []
+    params: list[object] = []
+
+    if source.strip():
+        clauses.append("source = ?")
+        params.append(source.strip())
+    if category.strip():
+        clauses.append("category = ?")
+        params.append(category.strip())
+    if query.strip():
+        like = f"%{query}%"
+        clauses.append("(title LIKE ? OR body LIKE ? OR source_url LIKE ? OR product LIKE ? OR category LIKE ?)")
+        params.extend([like, like, like, like, like])
+
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    params.append(limit)
+    return conn.execute(
+        f"""
+        SELECT *
+        FROM signals
+        {where}
+        ORDER BY score DESC, collected_at DESC, id DESC
+        LIMIT ?
+        """,
+        params,
+    ).fetchall()
+
+
+def signal_filter_values(conn: sqlite3.Connection) -> dict[str, list[str]]:
+    return {
+        "sources": [
+            row[0]
+            for row in conn.execute("SELECT DISTINCT source FROM signals WHERE source != '' ORDER BY source COLLATE NOCASE")
+        ],
+        "categories": [
+            row[0]
+            for row in conn.execute(
+                "SELECT DISTINCT category FROM signals WHERE category != '' ORDER BY category COLLATE NOCASE"
+            )
+        ],
+    }
+
+
 def list_rows(conn: sqlite3.Connection, table: str, limit: int = 50) -> list[sqlite3.Row]:
     if table not in {"signals", "products", "opportunities", "ingest_runs"}:
         raise ValueError(f"Unsupported table: {table}")

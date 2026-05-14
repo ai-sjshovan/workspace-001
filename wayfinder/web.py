@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from .config import storage_path
-from .db import connect, counts, list_rows, search_signals
+from .db import browse_signals, connect, counts, list_rows, search_signals, signal_filter_values
 
 
 STYLE = """
@@ -20,17 +20,33 @@ nav { display: flex; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
 a { color: #006c67; font-weight: 700; text-decoration: none; }
 header a { color: #d2f06f; }
 main { padding: 28px 36px 48px; max-width: 1180px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stack { display: grid; gap: 18px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
 .metric, .row { background: #ffffff; border: 1px solid #dbe2d4; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 0 rgba(16, 37, 35, .06); }
 .metric strong { display: block; font-size: 26px; color: #102523; }
 .metric span, .meta { color: #66746a; font-size: 13px; }
-form { display: flex; gap: 8px; margin: 0 0 18px; }
-input { flex: 1; min-width: 180px; padding: 11px 12px; border: 1px solid #bfcab9; border-radius: 7px; font-size: 15px; }
+form.filters { display: grid; grid-template-columns: minmax(220px, 2.2fr) repeat(2, minmax(150px, 1fr)) auto; gap: 10px; margin: 0; }
+input, select { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid #bfcab9; border-radius: 7px; font-size: 15px; background: #fff; box-sizing: border-box; }
 button { padding: 11px 15px; border: 0; border-radius: 7px; background: #102523; color: #f6fbf2; font-weight: 800; cursor: pointer; }
-.row { margin-bottom: 10px; }
-.row h2 { margin: 0 0 6px; font-size: 17px; }
+.toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.panel { background: #eef3e8; border: 1px solid #dbe2d4; border-radius: 10px; padding: 14px; }
+.row h2 { margin: 0; font-size: 17px; }
 .row p { margin: 6px 0 0; line-height: 1.45; }
+.row-grid { display: grid; gap: 10px; }
+.signal-head, .scan-grid { display: grid; gap: 8px; }
+.signal-head { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+.scan-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.source-link { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; word-break: break-all; }
+.excerpt { color: #22312b; }
+.subtle { color: #66746a; font-size: 14px; }
+.score { min-width: 78px; text-align: right; font-weight: 800; color: #102523; }
 .tag { display: inline-block; margin-right: 6px; padding: 2px 7px; border-radius: 99px; background: #e9f2dc; color: #40502e; font-size: 12px; font-weight: 700; }
+.list-head { margin: 0 0 4px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: #66746a; }
+@media (max-width: 760px) {
+  header, main { padding-left: 18px; padding-right: 18px; }
+  form.filters, .signal-head { grid-template-columns: 1fr; }
+  .score { text-align: left; }
+}
 """
 
 
@@ -63,6 +79,24 @@ def layout(title: str, body: str) -> bytes:
 </html>""".encode("utf-8")
 
 
+def filter_form(query: str, source: str, category: str, values: dict[str, list[str]]) -> str:
+    def options(items: list[str], selected: str, label: str) -> str:
+        html_options = [f'<option value="">{esc(label)}</option>']
+        for item in items:
+            active = ' selected="selected"' if item == selected else ""
+            html_options.append(f'<option value="{esc(item)}"{active}>{esc(item)}</option>')
+        return "".join(html_options)
+
+    return f"""<section class="panel">
+  <form class="filters" method="get" action="/">
+    <input name="q" value="{esc(query)}" placeholder="Search titles, excerpts, products, categories">
+    <select name="source">{options(values["sources"], source, "All sources")}</select>
+    <select name="category">{options(values["categories"], category, "All categories")}</select>
+    <button type="submit">Filter</button>
+  </form>
+</section>"""
+
+
 def signal_rows(rows: list[Any]) -> str:
     if not rows:
         return "<p>No signals found yet. Run <code>wayfinder ingest --source oss-ledger</code>.</p>"
@@ -71,11 +105,18 @@ def signal_rows(rows: list[Any]) -> str:
         body = esc(row["body"])
         if len(body) > 320:
             body = body[:317] + "..."
+        source_url = row["source_url"] or ""
         chunks.append(
             f"""<article class="row">
-  <h2><a href="{esc(row['source_url'])}">{esc(row['title'])}</a></h2>
-  <div class="meta"><span class="tag">{esc(row['source'])}</span><span class="tag">{esc(row['category'])}</span> score={esc(row['score'])}</div>
-  <p>{body}</p>
+  <div class="signal-head">
+    <div>
+      <h2><a href="{esc(source_url)}">{esc(row['title'])}</a></h2>
+      <div class="meta"><span class="tag">{esc(row['source'])}</span><span class="tag">{esc(row['category'])}</span></div>
+    </div>
+    <div class="score">score {esc(row['score'])}</div>
+  </div>
+  <p class="source-link"><a href="{esc(source_url)}">{esc(source_url)}</a></p>
+  <p class="excerpt">{body}</p>
 </article>"""
         )
     return "\n".join(chunks)
@@ -86,10 +127,23 @@ def product_rows(rows: list[Any]) -> str:
         return "<p>No product intel found yet.</p>"
     return "\n".join(
         f"""<article class="row">
-  <h2><a href="{esc(row['url'])}">{esc(row['product_name'])}</a></h2>
-  <div class="meta"><span class="tag">{esc(row['category'])}</span>{esc(row['pricing_model'])}</div>
-  <p>{esc(row['strengths'])}</p>
-  <p>{esc(row['feature_gaps'])}</p>
+  <div class="signal-head">
+    <div>
+      <h2><a href="{esc(row['url'])}">{esc(row['product_name'])}</a></h2>
+      <div class="meta"><span class="tag">{esc(row['category'])}</span>{esc(row['pricing_model'])}</div>
+    </div>
+    <div class="subtle">{esc(row['audience'])}</div>
+  </div>
+  <div class="scan-grid">
+    <div>
+      <p class="list-head">Strengths</p>
+      <p>{esc(row['strengths'])}</p>
+    </div>
+    <div>
+      <p class="list-head">Feature gaps</p>
+      <p>{esc(row['feature_gaps'])}</p>
+    </div>
+  </div>
 </article>"""
         for row in rows
     )
@@ -100,11 +154,27 @@ def opportunity_rows(rows: list[Any]) -> str:
         return "<p>No opportunities found yet.</p>"
     return "\n".join(
         f"""<article class="row">
-  <h2>{esc(row['title'])}</h2>
-  <div class="meta"><span class="tag">{esc(row['target_user'])}</span> evidence={esc(row['evidence_count'])}</div>
-  <p><strong>Problem:</strong> {esc(row['problem'])}</p>
-  <p><strong>Angle:</strong> {esc(row['iteration_angle'])}</p>
-  <p><strong>Monetization:</strong> {esc(row['monetization_strategy'])}</p>
+  <div class="signal-head">
+    <div>
+      <h2>{esc(row['title'])}</h2>
+      <div class="meta"><span class="tag">{esc(row['target_user'])}</span> evidence={esc(row['evidence_count'])}</div>
+    </div>
+    <div class="subtle">{esc(row['build_difficulty'])}</div>
+  </div>
+  <div class="scan-grid">
+    <div>
+      <p class="list-head">Problem</p>
+      <p>{esc(row['problem'])}</p>
+    </div>
+    <div>
+      <p class="list-head">Angle</p>
+      <p>{esc(row['iteration_angle'])}</p>
+    </div>
+    <div>
+      <p class="list-head">Monetization</p>
+      <p>{esc(row['monetization_strategy'])}</p>
+    </div>
+  </div>
 </article>"""
         for row in rows
     )
@@ -141,21 +211,28 @@ class WayfinderHandler(BaseHTTPRequestHandler):
         conn = connect(storage_path(self.config))
         try:
             if parsed.path == "/":
+                query = params.get("q", [""])[0]
+                source = params.get("source", [""])[0]
+                category = params.get("category", [""])[0]
                 metric_html = "".join(
                     f'<div class="metric"><strong>{value}</strong><span>{esc(name)}</span></div>'
                     for name, value in counts(conn).items()
                 )
-                rows = list_rows(conn, "signals", 12)
-                self.send_html("Dashboard", f'<section class="grid">{metric_html}</section>{signal_rows(rows)}')
+                values = signal_filter_values(conn)
+                rows = browse_signals(conn, query=query, source=source, category=category, limit=30)
+                summary = f'<section class="toolbar"><p class="subtle">Showing {len(rows)} signal rows.</p><a href="/search?q={esc(query)}">Open search results</a></section>'
+                body = f'<div class="stack"><section class="grid">{metric_html}</section>{filter_form(query, source, category, values)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>'
+                self.send_html("Dashboard", body)
                 return
             if parsed.path == "/search":
                 query = params.get("q", [""])[0]
                 rows = search_signals(conn, query, 30)
                 form = (
-                    f'<form method="get" action="/search"><input name="q" value="{esc(query)}" '
-                    'placeholder="Search pains, products, markets"><button>Search</button></form>'
+                    f'<section class="panel"><form class="filters" method="get" action="/search"><input name="q" value="{esc(query)}" '
+                    'placeholder="Search pains, products, markets"><button>Search</button></form></section>'
                 )
-                self.send_html("Search", form + signal_rows(rows))
+                summary = f'<section class="toolbar"><p class="subtle">Search returned {len(rows)} rows.</p><a href="/?q={esc(query)}">Use dashboard filters</a></section>'
+                self.send_html("Search", f'<div class="stack">{form}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>')
                 return
             if parsed.path == "/api/search":
                 query = params.get("q", [""])[0]
@@ -163,10 +240,14 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 self.send_json([dict(row) for row in rows])
                 return
             if parsed.path == "/products":
-                self.send_html("Products", product_rows(list_rows(conn, "products", 50)))
+                rows = list_rows(conn, "products", 50)
+                body = f'<div class="stack"><section class="toolbar"><p class="subtle">{len(rows)} products indexed.</p></section><section class="row-grid">{product_rows(rows)}</section></div>'
+                self.send_html("Products", body)
                 return
             if parsed.path == "/opportunities":
-                self.send_html("Opportunities", opportunity_rows(list_rows(conn, "opportunities", 50)))
+                rows = list_rows(conn, "opportunities", 50)
+                body = f'<div class="stack"><section class="toolbar"><p class="subtle">{len(rows)} opportunities indexed.</p></section><section class="row-grid">{opportunity_rows(rows)}</section></div>'
+                self.send_html("Opportunities", body)
                 return
             self.send_html("Not Found", "<p>Not found.</p>", HTTPStatus.NOT_FOUND)
         finally:
