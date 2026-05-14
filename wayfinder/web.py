@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from .config import storage_path
-from .db import browse_signals, connect, counts, list_rows, search_signals, signal_filter_values
+from .db import browse_signals, connect, counts, list_rows, search_signals, signal_filter_values, source_detail
 
 
 STYLE = """
@@ -30,12 +30,16 @@ input, select { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid
 button { padding: 11px 15px; border: 0; border-radius: 7px; background: #102523; color: #f6fbf2; font-weight: 800; cursor: pointer; }
 .toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
 .panel { background: #eef3e8; border: 1px solid #dbe2d4; border-radius: 10px; padding: 14px; }
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 14px; align-items: start; }
 .row h2 { margin: 0; font-size: 17px; }
 .row p { margin: 6px 0 0; line-height: 1.45; }
 .row-grid { display: grid; gap: 10px; }
 .signal-head, .scan-grid { display: grid; gap: 8px; }
 .signal-head { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
 .scan-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.mini-list { display: grid; gap: 10px; margin-top: 12px; }
+.mini-item { padding-top: 10px; border-top: 1px solid #dbe2d4; }
+.mini-item:first-child { padding-top: 0; border-top: 0; }
 .source-link { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; word-break: break-all; }
 .excerpt { color: #22312b; }
 .subtle { color: #66746a; font-size: 14px; }
@@ -44,7 +48,7 @@ button { padding: 11px 15px; border: 0; border-radius: 7px; background: #102523;
 .list-head { margin: 0 0 4px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: #66746a; }
 @media (max-width: 760px) {
   header, main { padding-left: 18px; padding-right: 18px; }
-  form.filters, .signal-head { grid-template-columns: 1fr; }
+  form.filters, .signal-head, .detail-grid { grid-template-columns: 1fr; }
   .score { text-align: left; }
 }
 """
@@ -120,6 +124,49 @@ def signal_rows(rows: list[Any]) -> str:
 </article>"""
         )
     return "\n".join(chunks)
+
+
+def source_detail_panel(detail: dict[str, Any] | None) -> str:
+    if not detail:
+        return ""
+    category_chips = "".join(
+        f'<span class="tag">{esc(item["category"])} {esc(item["total"])}</span>' for item in detail["categories"]
+    ) or '<span class="subtle">No categories tagged yet.</span>'
+    signal_items = "".join(
+        f"""<div class="mini-item">
+  <strong><a href="{esc(item['source_url'])}">{esc(item['title'])}</a></strong>
+  <div class="meta"><span class="tag">{esc(item['category'] or 'uncategorized')}</span>score {esc(item['score'])}</div>
+</div>"""
+        for item in detail["signals"]
+    )
+    opportunity_items = "".join(
+        f"""<div class="mini-item">
+  <strong>{esc(item['title'])}</strong>
+  <div class="meta"><span class="tag">{esc(item['category'] or 'uncategorized')}</span>{esc(item['target_user'])} · score {esc(item['opportunity_score'])} · evidence {esc(item['evidence_count'])}</div>
+</div>"""
+        for item in detail["opportunities"]
+    ) or '<p class="subtle">No source-linked opportunities indexed yet.</p>'
+    return f"""<section class="panel">
+  <div class="detail-grid">
+    <div>
+      <p class="list-head">Selected source</p>
+      <h2>{esc(detail['source'])}</h2>
+      <p class="subtle">Signals {esc(detail['signal_count'])} · opportunities {esc(detail['opportunity_count'])} · avg score {esc(detail['avg_score'])}</p>
+      <p class="subtle">Latest signal captured: {esc(detail['latest_signal_at'] or 'unknown')}</p>
+      <p class="list-head">Top categories</p>
+      <p>{category_chips}</p>
+      <div class="mini-list">
+        <p class="list-head">Recent high-signal items</p>
+        {signal_items}
+      </div>
+    </div>
+    <div>
+      <p class="list-head">Source opportunity view</p>
+      <p class="subtle">Highest opportunity score: {esc(detail['top_opportunity_score'])}</p>
+      <div class="mini-list">{opportunity_items}</div>
+    </div>
+  </div>
+</section>"""
 
 
 def product_rows(rows: list[Any]) -> str:
@@ -238,8 +285,9 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 )
                 values = signal_filter_values(conn)
                 rows = browse_signals(conn, query=query, source=source, category=category, limit=30)
+                detail = source_detail(conn, source)
                 summary = f'<section class="toolbar"><p class="subtle">Showing {len(rows)} signal rows.</p><a href="/search?q={esc(query)}">Open search results</a></section>'
-                body = f'<div class="stack"><section class="grid">{metric_html}</section>{filter_form(query, source, category, values)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>'
+                body = f'<div class="stack"><section class="grid">{metric_html}</section>{filter_form(query, source, category, values)}{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>'
                 self.send_html("Dashboard", body)
                 return
             if parsed.path == "/search":

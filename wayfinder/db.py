@@ -407,6 +407,74 @@ def signal_filter_values(conn: sqlite3.Connection) -> dict[str, list[str]]:
     }
 
 
+def source_detail(conn: sqlite3.Connection, source: str) -> dict[str, object] | None:
+    selected = source.strip()
+    if not selected:
+        return None
+
+    signal_summary = conn.execute(
+        """
+        SELECT COUNT(*) AS signal_count, COALESCE(ROUND(AVG(score), 1), 0) AS avg_score, MAX(collected_at) AS latest_signal_at
+        FROM signals
+        WHERE source = ?
+        """,
+        (selected,),
+    ).fetchone()
+    if signal_summary is None or not signal_summary["signal_count"]:
+        return None
+
+    opportunity_summary = conn.execute(
+        """
+        SELECT COUNT(*) AS opportunity_count, COALESCE(MAX(opportunity_score), 0) AS top_opportunity_score
+        FROM opportunities
+        WHERE source = ?
+        """,
+        (selected,),
+    ).fetchone()
+    categories = conn.execute(
+        """
+        SELECT category, COUNT(*) AS total
+        FROM signals
+        WHERE source = ? AND category != ''
+        GROUP BY category
+        ORDER BY total DESC, category COLLATE NOCASE
+        LIMIT 5
+        """,
+        (selected,),
+    ).fetchall()
+    signals = conn.execute(
+        """
+        SELECT title, category, score, source_url, collected_at
+        FROM signals
+        WHERE source = ?
+        ORDER BY score DESC, collected_at DESC, id DESC
+        LIMIT 5
+        """,
+        (selected,),
+    ).fetchall()
+    opportunities = conn.execute(
+        """
+        SELECT title, category, target_user, opportunity_score, evidence_count
+        FROM opportunities
+        WHERE source = ?
+        ORDER BY opportunity_score DESC, evidence_count DESC, collected_at DESC, id DESC
+        LIMIT 3
+        """,
+        (selected,),
+    ).fetchall()
+    return {
+        "source": selected,
+        "signal_count": int(signal_summary["signal_count"]),
+        "avg_score": signal_summary["avg_score"],
+        "latest_signal_at": signal_summary["latest_signal_at"] or "",
+        "opportunity_count": int(opportunity_summary["opportunity_count"]) if opportunity_summary else 0,
+        "top_opportunity_score": opportunity_summary["top_opportunity_score"] if opportunity_summary else 0,
+        "categories": [dict(row) for row in categories],
+        "signals": [dict(row) for row in signals],
+        "opportunities": [dict(row) for row in opportunities],
+    }
+
+
 def list_rows(conn: sqlite3.Connection, table: str, limit: int = 50) -> list[sqlite3.Row]:
     if table not in {"signals", "products", "opportunities", "ingest_runs"}:
         raise ValueError(f"Unsupported table: {table}")
