@@ -17,6 +17,7 @@ From the repository root:
 ```bash
 python3 -m wayfinder sources list --health
 python3 -m wayfinder ingest --source oss-ledger
+python3 -m wayfinder scheduled-ingest --allow-disabled
 python3 -m wayfinder ingest --source hackernews --dry-run
 python3 -m wayfinder search "reddit pain"
 python3 -m wayfinder products --limit 20
@@ -44,6 +45,30 @@ Each adapter implements three methods:
 - `normalize()` converts raw records into `Signal`, `ProductIntel`, and `Opportunity` records.
 
 New sources should start as `dry-run-only` adapters before being enabled in recurring cron. Sources that require credentials, scrape pages, or collect user-generated content need an explicit safety review before unattended collection.
+
+## Scheduled Ingest
+
+The daily runner is `python3 -m wayfinder scheduled-ingest`. It is intentionally guarded by `cron.enabled: false` in `wayfinder.yaml`, so unattended ingest stays off until someone explicitly approves it.
+
+Manual validation while the guard is off:
+
+```bash
+python3 -m wayfinder scheduled-ingest --allow-disabled
+```
+
+Behavior:
+
+- runs approved sources only (`status: enabled`)
+- skips `dry-run-only`, `needs-review`, and `disabled` sources with audit log entries
+- writes source-level counts, duration, and error details to `logs/wayfinder-audit.log`
+- records `token_free=true` and `llm_tokens=0` for the scheduled run path
+
+Example cron entry, left disabled by default:
+
+```cron
+# Daily Wayfinder ingest; remove the leading # only after cron.enabled is set to true
+# 17 4 * * * cd /path/to/workspace-001 && /usr/bin/python3 -m wayfinder scheduled-ingest >> logs/wayfinder-cron.log 2>&1
+```
 
 ## Source Safety
 

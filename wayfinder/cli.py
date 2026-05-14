@@ -4,6 +4,7 @@ import argparse
 import json
 import sqlite3
 import sys
+import time
 from typing import Any
 
 from . import __version__
@@ -61,6 +62,10 @@ def runnable_sources(config: dict[str, Any], dry_run: bool = False) -> dict[str,
         for name, cfg in source_configs(config).items()
         if source_policy(cfg).status in allowed_statuses
     }
+
+
+def approved_scheduled_sources(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return runnable_sources(config, dry_run=False)
 
 
 def score_summary(row: sqlite3.Row) -> str:
@@ -133,8 +138,15 @@ def cmd_sources(args: argparse.Namespace) -> int:
     return 0
 
 
-def ingest_source(name: str, cfg: dict[str, Any], args: argparse.Namespace, config: dict[str, Any]) -> tuple[int, str]:
+def ingest_source(
+    name: str,
+    cfg: dict[str, Any],
+    args: argparse.Namespace,
+    config: dict[str, Any],
+    audit_action: str | None = None,
+) -> tuple[int, str]:
     started = utc_now()
+    started_monotonic = time.perf_counter()
     adapter = build_adapter(name, cfg)
     raw = adapter.collect()
     batch = adapter.normalize(raw)
@@ -146,13 +158,16 @@ def ingest_source(name: str, cfg: dict[str, Any], args: argparse.Namespace, conf
     if args.dry_run:
         write_event(
             audit_log_path(config),
-            "wayfinder_ingest_dry_run",
+            audit_action or "wayfinder_ingest_dry_run",
             source=name,
             raw_records=len(raw),
             normalized=collected,
             normalized_signals=normalized_signals,
             normalized_products=normalized_products,
             normalized_opportunities=normalized_opportunities,
+            duration_ms=round((time.perf_counter() - started_monotonic) * 1000, 3),
+            token_free=True,
+            llm_tokens=0,
         )
         return 0, (
             f"{name}: dry-run queries={query_count} collected={len(raw)} normalized={collected} "
@@ -190,13 +205,16 @@ def ingest_source(name: str, cfg: dict[str, Any], args: argparse.Namespace, conf
         conn.close()
     write_event(
         audit_log_path(config),
-        "wayfinder_ingest",
+        audit_action or "wayfinder_ingest",
         source=name,
         raw_records=len(raw),
         normalized=collected,
         inserted_signals=inserted_signals,
         inserted_products=inserted_products,
         inserted_opportunities=inserted_opportunities,
+        duration_ms=round((time.perf_counter() - started_monotonic) * 1000, 3),
+        token_free=True,
+        llm_tokens=0,
     )
     return inserted_signals + inserted_products + inserted_opportunities, (
         f"{name}: raw={len(raw)} inserted signals={inserted_signals} "
@@ -241,6 +259,110 @@ def cmd_ingest(args: argparse.Namespace) -> int:
             print(color(f"{name}: failed: {exc}", RED, not args.no_color), file=sys.stderr)
             rc = 1
     return rc
+
+
+def cmd_scheduled_ingest(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    cron_cfg = config.get("cron") if isinstance(config.get("cron"), dict) else {}
+    if not bool(cron_cfg.get("enabled", False)) and not args.allow_disabled:
+        message = "Scheduled ingest is disabled in config; rerun with --allow-disabled for manual validation."
+        write_event(
+            audit_log_path(config),
+            "wayfinder_scheduled_ingest_blocked",
+            reason="cron_disabled",
+            token_free=True,
+            llm_tokens=0,
+        )
+        print(color(message, RED, not args.no_color), file=sys.stderr)
+        return 1
+
+    started_monotonic = time.perf_counter()
+    all_sources = source_configs(config)
+    approved = approved_scheduled_sources(config)
+    skipped = 0
+    succeeded = 0
+    failed = 0
+
+    write_event(
+        audit_log_path(config),
+        "wayfinder_scheduled_ingest_started",
+        enabled=bool(cron_cfg.get("enabled", False)),
+        schedule=str(cron_cfg.get("schedule") or "daily"),
+        source_count=len(all_sources),
+        approved_source_count=len(approved),
+        token_free=True,
+        llm_tokens=0,
+    )
+
+    for name, cfg in all_sources.items():
+        if name not in approved:
+            status = source_policy(cfg).status
+            write_event(
+                audit_log_path(config),
+                "wayfinder_scheduled_ingest_skipped",
+                source=name,
+                status=status,
+                reason="source_not_approved_for_unattended_ingest",
+                token_free=True,
+                llm_tokens=0,
+            )
+            print(color(f"{name}: skipped status={status}", YELLOW, not args.no_color))
+            skipped += 1
+            continue
+        try:
+            _, message = ingest_source(name, cfg, args, config, audit_action="wayfinder_scheduled_ingest_source")
+            print(color(message, GREEN, not args.no_color))
+            succeeded += 1
+        except HackerNewsCollectError as exc:
+            write_event(
+                audit_log_path(config),
+                "wayfinder_scheduled_ingest_error",
+                source=name,
+                error=str(exc),
+                duration_ms=round((time.perf_counter() - started_monotonic) * 1000, 3),
+                token_free=True,
+                llm_tokens=0,
+            )
+            print(color(f"{name}: network failure: {exc}", RED, not args.no_color), file=sys.stderr)
+            failed += 1
+        except GitHubCollectError as exc:
+            write_event(
+                audit_log_path(config),
+                "wayfinder_scheduled_ingest_error",
+                source=name,
+                error=str(exc),
+                duration_ms=round((time.perf_counter() - started_monotonic) * 1000, 3),
+                token_free=True,
+                llm_tokens=0,
+            )
+            print(color(f"{name}: GitHub ingest failed: {exc}", RED, not args.no_color), file=sys.stderr)
+            failed += 1
+        except Exception as exc:  # noqa: BLE001
+            write_event(
+                audit_log_path(config),
+                "wayfinder_scheduled_ingest_error",
+                source=name,
+                error=str(exc),
+                duration_ms=round((time.perf_counter() - started_monotonic) * 1000, 3),
+                token_free=True,
+                llm_tokens=0,
+            )
+            print(color(f"{name}: failed: {exc}", RED, not args.no_color), file=sys.stderr)
+            failed += 1
+
+    write_event(
+        audit_log_path(config),
+        "wayfinder_scheduled_ingest_finished",
+        enabled=bool(cron_cfg.get("enabled", False)),
+        schedule=str(cron_cfg.get("schedule") or "daily"),
+        approved_sources=succeeded,
+        skipped_sources=skipped,
+        failed_sources=failed,
+        duration_ms=round((time.perf_counter() - started_monotonic) * 1000, 3),
+        token_free=True,
+        llm_tokens=0,
+    )
+    return 1 if failed else 0
 
 
 def cmd_search(args: argparse.Namespace) -> int:
@@ -350,6 +472,18 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument("--all", action="store_true", help="Ingest all enabled sources")
     ingest.add_argument("--dry-run", action="store_true", help="Collect and normalize without writing the DB")
     ingest.set_defaults(func=cmd_ingest)
+
+    scheduled = subparsers.add_parser(
+        "scheduled-ingest",
+        help="Run the daily unattended ingest for approved sources only",
+    )
+    leaf_options(scheduled)
+    scheduled.add_argument(
+        "--allow-disabled",
+        action="store_true",
+        help="Run manually even when cron.enabled is false in config",
+    )
+    scheduled.set_defaults(func=cmd_scheduled_ingest, dry_run=False)
 
     search = subparsers.add_parser("search", help="Search stored signals")
     leaf_options(search)
