@@ -8,6 +8,7 @@ from typing import Any
 
 from . import __version__
 from .adapters import build_adapter
+from .adapters.github import GitHubCollectError
 from .adapters.hackernews import HackerNewsCollectError
 from .audit import write_event
 from .config import audit_log_path, load_config, source_configs, storage_path
@@ -156,6 +157,10 @@ def cmd_ingest(args: argparse.Namespace) -> int:
         except HackerNewsCollectError as exc:
             write_event(audit_log_path(config), "wayfinder_ingest_error", source=name, error=str(exc))
             print(color(f"{name}: network failure: {exc}", RED, not args.no_color), file=sys.stderr)
+            rc = 1
+        except GitHubCollectError as exc:
+            write_event(audit_log_path(config), "wayfinder_ingest_error", source=name, error=str(exc))
+            print(color(f"{name}: GitHub ingest failed: {exc}", RED, not args.no_color), file=sys.stderr)
             rc = 1
         except Exception as exc:  # noqa: BLE001
             write_event(audit_log_path(config), "wayfinder_ingest_error", source=name, error=str(exc))
