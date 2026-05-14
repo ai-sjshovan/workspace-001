@@ -17,7 +17,7 @@ sources:
       pii_user_generated_content: low-curated-public-metadata
       hosted_dependencies: none
   hackernews:
-    status: needs-review
+    status: dry-run-only
     kind: hackernews
     notes: Public Algolia results are useful, but unattended ingest still needs review for UGC handling and query-rate expectations.
     risk:
