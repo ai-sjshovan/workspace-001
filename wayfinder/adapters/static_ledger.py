@@ -74,6 +74,8 @@ class StaticLedgerAdapter:
             batch.opportunities.append(
                 Opportunity(
                     title=f"Leverage {name}",
+                    source=self.name,
+                    category=str(item.get("category") or ""),
                     target_user="Codex Foundry operator",
                     problem=f"Need {item.get('category') or 'research'} capability without rebuilding from scratch.",
                     evidence_count=1,

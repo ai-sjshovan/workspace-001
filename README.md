@@ -23,6 +23,7 @@ python3 -m wayfinder search "reddit pain"
 python3 -m wayfinder products --limit 20
 python3 -m wayfinder opportunities --limit 20
 python3 -m wayfinder score --limit 10
+python3 -m wayfinder export --min-score 40 --source oss-ledger
 python3 -m wayfinder stats
 python3 -m wayfinder serve --port 8766
 ```
@@ -101,6 +102,16 @@ Wayfinder ranks opportunities with a deterministic weighted model configured und
 - `build_fit`: rewards lower complexity plus better reuse/code-fit signals.
 
 `python3 -m wayfinder score` rescales existing rows in place and prints ranked opportunities with per-component contributions. Re-running ingest updates the existing opportunity row by fingerprint and refreshes the deterministic score instead of inserting a duplicate.
+
+## Task Draft Export
+
+`python3 -m wayfinder export` turns stored opportunities into deterministic Markdown task drafts for operator review. Filters are optional and composable:
+
+- `--min-score` keeps only opportunities at or above a threshold.
+- `--category` keeps only a matching opportunity category.
+- `--source` keeps only a matching opportunity source.
+
+The export is intentionally read-only: it prints editable Markdown, does not auto-stage work, does not call LLMs, and does not create Linear issues.
 
 ## Current Sources
 

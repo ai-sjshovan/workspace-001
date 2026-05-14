@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS opportunities (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT '',
   target_user TEXT NOT NULL DEFAULT '',
   problem TEXT NOT NULL DEFAULT '',
   evidence_count INTEGER NOT NULL DEFAULT 0,
@@ -98,6 +100,8 @@ def connect(path: pathlib.Path) -> sqlite3.Connection:
 def ensure_schema(conn: sqlite3.Connection) -> None:
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(opportunities)").fetchall()}
     for name, definition in (
+        ("source", "TEXT NOT NULL DEFAULT ''"),
+        ("category", "TEXT NOT NULL DEFAULT ''"),
         ("opportunity_score", "REAL NOT NULL DEFAULT 0"),
         ("score_components_json", "TEXT NOT NULL DEFAULT '{}'"),
         ("scored_at", "TEXT NOT NULL DEFAULT ''"),
@@ -200,14 +204,16 @@ def insert_opportunities(conn: sqlite3.Connection, opportunities: Iterable[Oppor
         cur = conn.execute(
             """
             INSERT INTO opportunities (
-              title, target_user, problem, evidence_count, competing_products,
+              title, source, category, target_user, problem, evidence_count, competing_products,
               what_products_do_right, what_users_want_better, build_difficulty,
               replication_time_estimate, iteration_angle, monetization_strategy,
               foundry_task_suggestions, opportunity_score, score_components_json,
               scored_at, collected_at, fingerprint, raw_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(fingerprint) DO UPDATE SET
               title = excluded.title,
+              source = excluded.source,
+              category = excluded.category,
               target_user = excluded.target_user,
               problem = excluded.problem,
               evidence_count = excluded.evidence_count,
@@ -227,6 +233,8 @@ def insert_opportunities(conn: sqlite3.Connection, opportunities: Iterable[Oppor
             """,
             (
                 opportunity.title,
+                opportunity.source,
+                opportunity.category,
                 opportunity.target_user,
                 opportunity.problem,
                 opportunity.evidence_count,
@@ -259,6 +267,41 @@ def ranked_opportunities(conn: sqlite3.Connection, limit: int = 50) -> list[sqli
         LIMIT ?
         """,
         (limit,),
+    ).fetchall()
+
+
+def filtered_opportunities(
+    conn: sqlite3.Connection,
+    *,
+    limit: int = 50,
+    min_score: float | None = None,
+    category: str = "",
+    source: str = "",
+) -> list[sqlite3.Row]:
+    clauses: list[str] = []
+    params: list[object] = []
+
+    if min_score is not None:
+        clauses.append("opportunity_score >= ?")
+        params.append(min_score)
+    if category.strip():
+        clauses.append("category = ?")
+        params.append(category.strip())
+    if source.strip():
+        clauses.append("source = ?")
+        params.append(source.strip())
+
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    params.append(limit)
+    return conn.execute(
+        f"""
+        SELECT *
+        FROM opportunities
+        {where}
+        ORDER BY opportunity_score DESC, evidence_count DESC, collected_at DESC, id DESC
+        LIMIT ?
+        """,
+        params,
     ).fetchall()
 
 

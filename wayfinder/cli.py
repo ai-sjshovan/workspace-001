@@ -16,6 +16,7 @@ from .config import audit_log_path, load_config, source_configs, source_policy, 
 from .db import (
     connect,
     counts,
+    filtered_opportunities,
     insert_opportunities,
     insert_products,
     insert_signals,
@@ -101,6 +102,82 @@ def print_opportunities(rows: list[sqlite3.Row], no_color: bool = False) -> None
                 if len(value) > 220:
                     value = value[:217] + "..."
                 print(f"   {color(field + ':', DIM, not no_color)} {value}")
+
+
+def draft_title(row: sqlite3.Row) -> str:
+    category = str(row["category"] or "").replace("-", " ").strip()
+    if category:
+        return f"{row['title']} for {category}"
+    return str(row["title"])
+
+
+def draft_goal(row: sqlite3.Row) -> str:
+    parts = [str(row["problem"] or "").strip(), str(row["iteration_angle"] or "").strip()]
+    return " ".join(part for part in parts if part) or f"Review {row['title']} and decide whether it merits a follow-on Foundry task."
+
+
+def draft_acceptance_criteria(row: sqlite3.Row) -> list[str]:
+    criteria = [
+        f"Review the opportunity context for `{row['title']}` and capture the concrete reuse angle for `{row['target_user'] or 'the operator'}`.",
+        f"Use the existing evidence, competition, and user-want signals to decide whether this should become a follow-on Foundry task.",
+    ]
+    if row["foundry_task_suggestions"]:
+        criteria.append(f"Translate the existing suggestion into an operator-ready next step: {row['foundry_task_suggestions']}.")
+    else:
+        criteria.append("Produce a specific next step that can be reviewed by Hermes or pasted into Linear without further rewriting.")
+    return criteria
+
+
+def draft_validation(row: sqlite3.Row) -> list[str]:
+    return [
+        f"Confirm the draft references the source opportunity score (`{row['opportunity_score']}`) and the relevant evidence fields.",
+        "Confirm the draft is specific enough for Hermes review or direct paste into Linear.",
+    ]
+
+
+def draft_scope_boundaries(row: sqlite3.Row) -> list[str]:
+    boundaries = [
+        "Do not auto-stage follow-on tasks.",
+        "Do not call LLMs.",
+        "Do not create Linear issues directly from this command.",
+    ]
+    if row["source"]:
+        boundaries.append(f"Do not broaden this draft beyond the `{row['source']}` source material without explicit operator review.")
+    return boundaries
+
+
+def format_task_draft(row: sqlite3.Row, index: int) -> str:
+    metadata = [
+        f"source={row['source'] or 'unknown'}",
+        f"category={row['category'] or 'uncategorized'}",
+        f"score={row['opportunity_score']}",
+    ]
+    lines = [
+        f"## Task Draft {index}: {draft_title(row)}",
+        "",
+        f"Metadata: {' | '.join(metadata)}",
+        "",
+        "### Goal",
+        draft_goal(row),
+        "",
+        "### Acceptance Criteria",
+    ]
+    lines.extend(f"- {item}" for item in draft_acceptance_criteria(row))
+    lines.extend(
+        [
+            "",
+            "### Validation",
+        ]
+    )
+    lines.extend(f"- {item}" for item in draft_validation(row))
+    lines.extend(
+        [
+            "",
+            "### Scope Boundaries",
+        ]
+    )
+    lines.extend(f"- {item}" for item in draft_scope_boundaries(row))
+    return "\n".join(lines)
 
 
 def cmd_sources(args: argparse.Namespace) -> int:
@@ -425,6 +502,25 @@ def cmd_score(args: argparse.Namespace) -> int:
     return cmd_opportunities(args)
 
 
+def cmd_export(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    conn = connect(storage_path(config))
+    try:
+        rows = filtered_opportunities(
+            conn,
+            limit=args.limit,
+            min_score=args.min_score,
+            category=args.category,
+            source=args.source,
+        )
+        if not rows:
+            return 0
+        print("\n\n---\n\n".join(format_task_draft(row, index) for index, row in enumerate(rows, start=1)))
+    finally:
+        conn.close()
+    return 0
+
+
 def cmd_stats(args: argparse.Namespace) -> int:
     config = load_config(args.config)
     conn = connect(storage_path(config))
@@ -510,6 +606,14 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--limit", type=int, default=20)
     score.add_argument("--json", action="store_true")
     score.set_defaults(func=cmd_score)
+
+    export = subparsers.add_parser("export", help="Generate Foundry-ready Markdown task drafts")
+    leaf_options(export)
+    export.add_argument("--limit", type=int, default=10)
+    export.add_argument("--min-score", type=float, default=None, help="Only export opportunities at or above this score")
+    export.add_argument("--category", default="", help="Only export opportunities in this category")
+    export.add_argument("--source", default="", help="Only export opportunities from this source")
+    export.set_defaults(func=cmd_export)
 
     stats = subparsers.add_parser("stats", help="Show local database counts")
     leaf_options(stats)
