@@ -2,11 +2,31 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+SourceStatus = Literal["enabled", "dry-run-only", "needs-review", "disabled"]
+
+
+@dataclass(slots=True)
+class SourceRiskReview:
+    credentials: str = "none"
+    terms: str = "review-required"
+    rate_limits: str = "unknown"
+    scraping: str = "none"
+    pii_user_generated_content: str = "none"
+    hosted_dependencies: str = "none"
+
+
+@dataclass(slots=True)
+class SourceReviewPolicy:
+    status: SourceStatus = "needs-review"
+    notes: str = ""
+    risk: SourceRiskReview = field(default_factory=SourceRiskReview)
 
 
 @dataclass(slots=True)
