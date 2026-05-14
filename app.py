@@ -75,6 +75,34 @@ def get_client_pulse_payload() -> dict[str, object]:
     }
 
 
+def get_client_pulse_actions_payload() -> dict[str, object]:
+    clients = get_client_pulse_clients()
+    health_rank = {"At Risk": 0, "Watch": 1, "Growth": 2, "Stable": 3}
+    priority_by_health = {
+        "At Risk": "Critical",
+        "Watch": "High",
+        "Growth": "Medium",
+        "Stable": "Low",
+    }
+    actions = [
+        {
+            "client": client["name"],
+            "owner": client["owner"],
+            "health": client["health"],
+            "priority": priority_by_health[client["health"]],
+            "next_action": client["next_action"],
+            "last_touch": client["last_touch"],
+        }
+        for client in sorted(clients, key=lambda client: (health_rank[client["health"]], client["name"]))
+    ]
+    return {
+        "app": "Client Pulse",
+        "status": "ok",
+        "total_actions": len(actions),
+        "actions": actions,
+    }
+
+
 def render_client_pulse_csv() -> str:
     output = io.StringIO()
     writer = csv.DictWriter(
@@ -404,6 +432,11 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         if self.path == "/api/client-pulse":
             body = json.dumps(get_client_pulse_payload()).encode("utf-8")
+            self._send(200, body, "application/json; charset=utf-8")
+            return
+
+        if self.path == "/api/client-pulse/actions":
+            body = json.dumps(get_client_pulse_actions_payload()).encode("utf-8")
             self._send(200, body, "application/json; charset=utf-8")
             return
 
