@@ -12,8 +12,18 @@ from .adapters.github import GitHubCollectError
 from .adapters.hackernews import HackerNewsCollectError
 from .audit import write_event
 from .config import audit_log_path, load_config, source_configs, storage_path
-from .db import connect, counts, insert_opportunities, insert_products, insert_signals, list_rows, search_signals
-from .models import utc_now
+from .db import (
+    connect,
+    counts,
+    insert_opportunities,
+    insert_products,
+    insert_signals,
+    list_rows,
+    ranked_opportunities,
+    rescore_opportunities,
+    search_signals,
+)
+from .models import scoring_weights, utc_now
 
 
 RESET = "\033[0m"
@@ -46,6 +56,41 @@ def print_rows(rows: list[sqlite3.Row], fields: list[str], no_color: bool = Fals
 
 def enabled_sources(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {name: cfg for name, cfg in source_configs(config).items() if cfg.get("enabled", True)}
+
+
+def score_summary(row: sqlite3.Row) -> str:
+    try:
+        score_data = json.loads(row["score_components_json"] or "{}")
+    except json.JSONDecodeError:
+        score_data = {}
+    components = score_data.get("components") if isinstance(score_data, dict) else {}
+    if not isinstance(components, dict):
+        return ""
+    ordered = ("evidence_count", "freshness", "monetization_signal", "source_quality", "build_fit")
+    aliases = {
+        "evidence_count": "evidence",
+        "freshness": "freshness",
+        "monetization_signal": "monetization",
+        "source_quality": "source",
+        "build_fit": "fit",
+    }
+    return " ".join(f"{aliases[key]}={components.get(key, 0)}" for key in ordered)
+
+
+def print_opportunities(rows: list[sqlite3.Row], no_color: bool = False) -> None:
+    if not rows:
+        print(color("No rows found.", DIM, not no_color))
+        return
+    for index, row in enumerate(rows, start=1):
+        heading = f"{row['title']} | score={row['opportunity_score']} | {row['target_user']}"
+        print(color(f"{index}. {heading}", BOLD + CYAN, not no_color))
+        print(f"   {color('components:', DIM, not no_color)} {score_summary(row)}")
+        for field in ("problem", "iteration_angle", "monetization_strategy"):
+            if row[field]:
+                value = str(row[field]).replace("\n", " ").strip()
+                if len(value) > 220:
+                    value = value[:217] + "..."
+                print(f"   {color(field + ':', DIM, not no_color)} {value}")
 
 
 def cmd_sources(args: argparse.Namespace) -> int:
@@ -100,7 +145,7 @@ def ingest_source(name: str, cfg: dict[str, Any], args: argparse.Namespace, conf
     try:
         inserted_signals = insert_signals(conn, batch.signals)
         inserted_products = insert_products(conn, batch.products)
-        inserted_opportunities = insert_opportunities(conn, batch.opportunities)
+        inserted_opportunities = insert_opportunities(conn, batch.opportunities, scoring_weights(config))
         conn.execute(
             """
             INSERT INTO ingest_runs (
@@ -197,6 +242,38 @@ def cmd_list(args: argparse.Namespace, table: str, fields: list[str]) -> int:
     return 0
 
 
+def cmd_opportunities(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    weights = scoring_weights(config)
+    conn = connect(storage_path(config))
+    try:
+        if args.rescore:
+            updated = rescore_opportunities(conn, weights)
+            if not args.json:
+                print(color(f"rescored={updated}", GREEN, not args.no_color))
+        rows = ranked_opportunities(conn, args.limit)
+        if args.json:
+            payload = []
+            for row in rows:
+                item = dict(row)
+                try:
+                    item["score_components"] = json.loads(item.pop("score_components_json", "{}"))
+                except json.JSONDecodeError:
+                    item["score_components"] = {}
+                payload.append(item)
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print_opportunities(rows, args.no_color)
+    finally:
+        conn.close()
+    return 0
+
+
+def cmd_score(args: argparse.Namespace) -> int:
+    args.rescore = True
+    return cmd_opportunities(args)
+
+
 def cmd_stats(args: argparse.Namespace) -> int:
     config = load_config(args.config)
     conn = connect(storage_path(config))
@@ -261,8 +338,15 @@ def build_parser() -> argparse.ArgumentParser:
     opportunities = subparsers.add_parser("opportunities", help="List opportunities")
     leaf_options(opportunities)
     opportunities.add_argument("--limit", type=int, default=20)
+    opportunities.add_argument("--rescore", action="store_true", help="Recompute deterministic scores before listing")
     opportunities.add_argument("--json", action="store_true")
-    opportunities.set_defaults(func=lambda args: cmd_list(args, "opportunities", ["title", "target_user", "build_difficulty"]))
+    opportunities.set_defaults(func=cmd_opportunities)
+
+    score = subparsers.add_parser("score", help="Rescore and rank opportunities")
+    leaf_options(score)
+    score.add_argument("--limit", type=int, default=20)
+    score.add_argument("--json", action="store_true")
+    score.set_defaults(func=cmd_score)
 
     stats = subparsers.add_parser("stats", help="Show local database counts")
     leaf_options(stats)

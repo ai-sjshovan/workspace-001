@@ -6,7 +6,7 @@ import pathlib
 import sqlite3
 from typing import Iterable
 
-from .models import Opportunity, ProductIntel, Signal
+from .models import Opportunity, ProductIntel, Signal, opportunity_from_row_data, score_opportunity, utc_now
 
 
 SCHEMA = """
@@ -62,6 +62,9 @@ CREATE TABLE IF NOT EXISTS opportunities (
   iteration_angle TEXT NOT NULL DEFAULT '',
   monetization_strategy TEXT NOT NULL DEFAULT '',
   foundry_task_suggestions TEXT NOT NULL DEFAULT '',
+  opportunity_score REAL NOT NULL DEFAULT 0,
+  score_components_json TEXT NOT NULL DEFAULT '{}',
+  scored_at TEXT NOT NULL DEFAULT '',
   collected_at TEXT NOT NULL,
   fingerprint TEXT NOT NULL UNIQUE,
   raw_json TEXT NOT NULL DEFAULT '{}'
@@ -88,7 +91,20 @@ def connect(path: pathlib.Path) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
+    ensure_schema(conn)
     return conn
+
+
+def ensure_schema(conn: sqlite3.Connection) -> None:
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(opportunities)").fetchall()}
+    for name, definition in (
+        ("opportunity_score", "REAL NOT NULL DEFAULT 0"),
+        ("score_components_json", "TEXT NOT NULL DEFAULT '{}'"),
+        ("scored_at", "TEXT NOT NULL DEFAULT ''"),
+    ):
+        if name not in columns:
+            conn.execute(f"ALTER TABLE opportunities ADD COLUMN {name} {definition}")
+    conn.commit()
 
 
 def stable_fingerprint(*parts: str) -> str:
@@ -175,17 +191,39 @@ def insert_products(conn: sqlite3.Connection, products: Iterable[ProductIntel]) 
     return inserted
 
 
-def insert_opportunities(conn: sqlite3.Connection, opportunities: Iterable[Opportunity]) -> int:
+def insert_opportunities(conn: sqlite3.Connection, opportunities: Iterable[Opportunity], weights: dict[str, float]) -> int:
     inserted = 0
     for opportunity in opportunities:
+        fingerprint = opportunity_fingerprint(opportunity)
+        score_data = score_opportunity(opportunity, weights)
+        exists = conn.execute("SELECT 1 FROM opportunities WHERE fingerprint = ?", (fingerprint,)).fetchone() is not None
         cur = conn.execute(
             """
-            INSERT OR IGNORE INTO opportunities (
+            INSERT INTO opportunities (
               title, target_user, problem, evidence_count, competing_products,
               what_products_do_right, what_users_want_better, build_difficulty,
               replication_time_estimate, iteration_angle, monetization_strategy,
-              foundry_task_suggestions, collected_at, fingerprint, raw_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              foundry_task_suggestions, opportunity_score, score_components_json,
+              scored_at, collected_at, fingerprint, raw_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(fingerprint) DO UPDATE SET
+              title = excluded.title,
+              target_user = excluded.target_user,
+              problem = excluded.problem,
+              evidence_count = excluded.evidence_count,
+              competing_products = excluded.competing_products,
+              what_products_do_right = excluded.what_products_do_right,
+              what_users_want_better = excluded.what_users_want_better,
+              build_difficulty = excluded.build_difficulty,
+              replication_time_estimate = excluded.replication_time_estimate,
+              iteration_angle = excluded.iteration_angle,
+              monetization_strategy = excluded.monetization_strategy,
+              foundry_task_suggestions = excluded.foundry_task_suggestions,
+              opportunity_score = excluded.opportunity_score,
+              score_components_json = excluded.score_components_json,
+              scored_at = excluded.scored_at,
+              collected_at = excluded.collected_at,
+              raw_json = excluded.raw_json
             """,
             (
                 opportunity.title,
@@ -200,13 +238,48 @@ def insert_opportunities(conn: sqlite3.Connection, opportunities: Iterable[Oppor
                 opportunity.iteration_angle,
                 opportunity.monetization_strategy,
                 opportunity.foundry_task_suggestions,
+                score_data["score"],
+                json.dumps(score_data, sort_keys=True),
+                utc_now(),
                 opportunity.collected_at,
-                opportunity_fingerprint(opportunity),
+                fingerprint,
                 json.dumps(opportunity.raw, sort_keys=True, default=str),
             ),
         )
-        inserted += int(bool(cur.rowcount))
+        inserted += int(bool(cur.rowcount) and not exists)
     return inserted
+
+
+def ranked_opportunities(conn: sqlite3.Connection, limit: int = 50) -> list[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT *
+        FROM opportunities
+        ORDER BY opportunity_score DESC, evidence_count DESC, collected_at DESC, id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+
+
+def rescore_opportunities(conn: sqlite3.Connection, weights: dict[str, float]) -> int:
+    rows = conn.execute("SELECT * FROM opportunities").fetchall()
+    updated = 0
+    for row in rows:
+        raw = json.loads(row["raw_json"] or "{}")
+        opportunity = opportunity_from_row_data(dict(row), raw if isinstance(raw, dict) else {})
+        score_data = score_opportunity(opportunity, weights)
+        conn.execute(
+            """
+            UPDATE opportunities
+            SET opportunity_score = ?, score_components_json = ?, scored_at = ?
+            WHERE id = ?
+            """,
+            (score_data["score"], json.dumps(score_data, sort_keys=True), utc_now(), row["id"]),
+        )
+        updated += 1
+    conn.commit()
+    return updated
 
 
 def search_signals(conn: sqlite3.Connection, query: str, limit: int = 20) -> list[sqlite3.Row]:
@@ -294,6 +367,8 @@ def signal_filter_values(conn: sqlite3.Connection) -> dict[str, list[str]]:
 def list_rows(conn: sqlite3.Connection, table: str, limit: int = 50) -> list[sqlite3.Row]:
     if table not in {"signals", "products", "opportunities", "ingest_runs"}:
         raise ValueError(f"Unsupported table: {table}")
+    if table == "opportunities":
+        return ranked_opportunities(conn, limit)
     return conn.execute(f"SELECT * FROM {table} ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
 
 
