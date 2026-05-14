@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .base import NormalizedBatch
-from ..models import ProductIntel, Signal
+from ..models import Opportunity, ProductIntel, Signal
 
 
 class GitHubCollectError(RuntimeError):
@@ -178,8 +178,57 @@ class GitHubAdapter:
             return f"HTTP {status_code} {detail}"
         return f"HTTP {status_code}"
 
+    def _collapse_text(self, value: Any) -> str:
+        return " ".join(str(value or "").strip().split())
+
+    def _string_list(self, value: Any) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        seen: set[str] = set()
+        values: list[str] = []
+        for item in value:
+            text = self._collapse_text(item)
+            lowered = text.lower()
+            if not text or lowered in seen:
+                continue
+            seen.add(lowered)
+            values.append(text)
+        return values
+
+    def _merge_record(self, existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+        merged = {**existing, **incoming}
+        merged["_wayfinder_queries"] = self._string_list(
+            [*self._string_list(existing.get("_wayfinder_queries")), *self._string_list(incoming.get("_wayfinder_queries"))]
+        )
+        merged["_wayfinder_categories"] = self._string_list(
+            [
+                *self._string_list(existing.get("_wayfinder_categories")),
+                *self._string_list(incoming.get("_wayfinder_categories")),
+            ]
+        )
+        merged["_wayfinder_query"] = ", ".join(merged["_wayfinder_queries"])
+        merged["_wayfinder_category"] = ", ".join(merged["_wayfinder_categories"])
+        merged["topics"] = self._string_list([*self._string_list(existing.get("topics")), *self._string_list(incoming.get("topics"))])
+
+        existing_description = self._collapse_text(existing.get("description"))
+        incoming_description = self._collapse_text(incoming.get("description"))
+        if len(existing_description) > len(incoming_description):
+            merged["description"] = existing.get("description")
+
+        existing_updated = self._collapse_text(existing.get("updated_at"))
+        incoming_updated = self._collapse_text(incoming.get("updated_at"))
+        if existing_updated > incoming_updated:
+            merged["updated_at"] = existing.get("updated_at")
+
+        try:
+            merged["stargazers_count"] = max(int(existing.get("stargazers_count") or 0), int(incoming.get("stargazers_count") or 0))
+        except (TypeError, ValueError):
+            merged["stargazers_count"] = incoming.get("stargazers_count") or existing.get("stargazers_count") or 0
+
+        return merged
+
     def collect(self) -> list[dict[str, Any]]:
-        records: list[dict[str, Any]] = []
+        records_by_repo: dict[str, dict[str, Any]] = {}
         for spec in self._query_specs():
             params = urllib.parse.urlencode(
                 {
@@ -195,18 +244,24 @@ class GitHubAdapter:
             if not isinstance(items, list):
                 raise GitHubCollectError(f"GitHub payload missing repository items for query '{spec['query']}'")
             for item in items:
-                if isinstance(item, dict):
-                    records.append(
-                        {
-                            **item,
-                            "_wayfinder_query": spec["query"],
-                            "_wayfinder_category": spec["label"],
-                        }
-                    )
+                if not isinstance(item, dict):
+                    continue
+                full_name = self._collapse_text(item.get("full_name"))
+                if not full_name:
+                    continue
+                normalized = {
+                    **item,
+                    "_wayfinder_query": spec["query"],
+                    "_wayfinder_category": spec["label"],
+                    "_wayfinder_queries": [spec["query"]],
+                    "_wayfinder_categories": [spec["label"]],
+                }
+                existing = records_by_repo.get(full_name)
+                records_by_repo[full_name] = self._merge_record(existing, normalized) if existing else normalized
+        records = list(records_by_repo.values())
         records.sort(
             key=lambda item: (
                 str(item.get("full_name") or ""),
-                str(item.get("_wayfinder_category") or ""),
                 str(item.get("updated_at") or ""),
             )
         )
@@ -224,22 +279,41 @@ class GitHubAdapter:
             if full_name in seen_ids:
                 continue
             seen_ids.add(full_name)
-            description = str(item.get("description") or "")
-            topics = item.get("topics") if isinstance(item.get("topics"), list) else []
-            category = ", ".join(str(topic) for topic in topics[:8])
+            description = self._collapse_text(item.get("description"))
+            topics = self._string_list(item.get("topics"))
+            category = ", ".join(topics[:8])
             stars = float(item.get("stargazers_count") or 0)
             updated_at = str(item.get("updated_at") or "unknown")
-            normalized_category = category or str(item.get("_wayfinder_category") or item.get("_wayfinder_query") or "")
+            matched_categories = self._string_list(item.get("_wayfinder_categories"))
+            matched_queries = self._string_list(item.get("_wayfinder_queries"))
+            normalized_category = category or ", ".join(matched_categories or matched_queries)
+            language = self._collapse_text(item.get("language"))
+            homepage = self._collapse_text(item.get("homepage"))
+            license_name = self._collapse_text((item.get("license") or {}).get("spdx_id") if isinstance(item.get("license"), dict) else "")
+            query_context = ", ".join(matched_queries)
+            repo_facts = [
+                f"stars={int(stars)}",
+                f"updated={updated_at}",
+                f"language={language or 'unknown'}",
+                f"license={license_name or 'unknown'}",
+            ]
+            if topics:
+                repo_facts.append(f"topics={', '.join(topics[:8])}")
+            if homepage:
+                repo_facts.append(f"homepage={homepage}")
+            signal_body = "; ".join(part for part in [description, ", ".join(repo_facts), query_context] if part)
             batch.signals.append(
                 Signal(
                     source=self.name,
                     source_id=full_name,
                     source_url=html_url,
                     title=full_name,
-                    body=description,
+                    body=signal_body,
                     score=stars,
                     product=full_name,
                     category=normalized_category,
+                    feature_request=query_context,
+                    monetization_signal=license_name,
                     raw=item,
                 )
             )
@@ -248,9 +322,29 @@ class GitHubAdapter:
                     product_name=full_name,
                     url=html_url,
                     category=normalized_category,
-                    strengths=f"repo={repo_name}; stars={int(stars)}; updated={updated_at}",
-                    audience=str(item.get("_wayfinder_category") or item.get("_wayfinder_query") or ""),
+                    strengths="; ".join(["repo=" + repo_name, *repo_facts]),
+                    feature_gaps=f"Matched GitHub queries: {query_context}" if query_context else "",
+                    audience=", ".join(matched_categories or matched_queries),
                     monetization_notes=f"GitHub repo {full_name} topics={category or 'none'}",
+                    raw=item,
+                )
+            )
+            batch.opportunities.append(
+                Opportunity(
+                    title=f"Inspect {full_name} for leverage",
+                    source=self.name,
+                    category=normalized_category,
+                    target_user="Wayfinder operator",
+                    problem=description or f"Need better tooling in {normalized_category or 'open-source workflows'}.",
+                    evidence_count=max(1, len(matched_queries)),
+                    competing_products=full_name,
+                    what_products_do_right=f"Repository shows traction with {int(stars)} stars and {language or 'unknown'} implementation.",
+                    what_users_want_better=f"Matched public GitHub demand: {query_context}" if query_context else "",
+                    build_difficulty="inspect-first",
+                    replication_time_estimate="inspect before estimating",
+                    iteration_angle=f"Reuse repository patterns, docs, or architecture from {full_name} where safe.",
+                    monetization_strategy="open-source leverage or competitor/tool intelligence for future product bets",
+                    foundry_task_suggestions=f"Review {full_name} for reusable patterns and market adjacency signals.",
                     raw=item,
                 )
             )
