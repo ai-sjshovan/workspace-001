@@ -194,6 +194,20 @@ class HackerNewsAdapter:
         values.discard("")
         return min(values) if values else ""
 
+    def _pick_categories(self, records: list[dict[str, Any]]) -> list[str]:
+        values: list[str] = []
+        for record in records:
+            values.extend(self._string_list(record.get("_wayfinder_categories")))
+            values.extend(self._string_list(record.get("_wayfinder_category")))
+        return self._unique_parts(*values)
+
+    def _pick_queries(self, records: list[dict[str, Any]]) -> list[str]:
+        values: list[str] = []
+        for record in records:
+            values.extend(self._string_list(record.get("_wayfinder_queries")))
+            values.extend(self._string_list(record.get("_wayfinder_query")))
+        return self._unique_parts(*values)
+
     def _pick_score(self, records: list[dict[str, Any]]) -> float:
         scores: list[float] = []
         for record in records:
@@ -211,6 +225,33 @@ class HackerNewsAdapter:
                 seen.add(part)
                 unique.append(part)
         return unique
+
+    def _string_list(self, value: Any) -> list[str]:
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        text = str(value or "").strip()
+        return [text] if text else []
+
+    def _merge_record(self, existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
+        merged = dict(existing)
+        queries = self._unique_parts(
+            *self._string_list(existing.get("_wayfinder_queries")),
+            *self._string_list(incoming.get("_wayfinder_queries")),
+            *self._string_list(existing.get("_wayfinder_query")),
+            *self._string_list(incoming.get("_wayfinder_query")),
+        )
+        categories = self._unique_parts(
+            *self._string_list(existing.get("_wayfinder_categories")),
+            *self._string_list(incoming.get("_wayfinder_categories")),
+            *self._string_list(existing.get("_wayfinder_category")),
+            *self._string_list(incoming.get("_wayfinder_category")),
+        )
+        merged.update(incoming)
+        merged["_wayfinder_queries"] = queries
+        merged["_wayfinder_categories"] = categories
+        merged["_wayfinder_query"] = ", ".join(queries)
+        merged["_wayfinder_category"] = ", ".join(categories) or ", ".join(queries)
+        return merged
 
     def _canonical_signal_payload(self, records: list[dict[str, Any]]) -> Signal | None:
         object_id = str(records[0].get("objectID") or "")
@@ -238,7 +279,12 @@ class HackerNewsAdapter:
                 ),
             )
         )
-        canonical_raw["_wayfinder_category"] = self._pick_category(records)
+        categories = self._pick_categories(records)
+        queries = self._pick_queries(records)
+        canonical_raw["_wayfinder_category"] = ", ".join(categories) or self._pick_category(records)
+        canonical_raw["_wayfinder_categories"] = categories
+        canonical_raw["_wayfinder_query"] = ", ".join(queries)
+        canonical_raw["_wayfinder_queries"] = queries
         canonical_raw["url"] = article_url
         canonical_raw["author"] = author
         canonical_raw["points"] = self._pick_score(records)
@@ -257,7 +303,7 @@ class HackerNewsAdapter:
         )
 
     def collect(self) -> list[dict[str, Any]]:
-        records: list[dict[str, Any]] = []
+        records_by_id: dict[str, dict[str, Any]] = {}
         fixture_hits = self._fixture_hits_by_query()
         for spec in self._query_specs():
             hits: list[dict[str, Any]]
@@ -284,14 +330,20 @@ class HackerNewsAdapter:
                     raise HackerNewsCollectError(f"invalid payload for query '{spec['query']}': missing hits list")
             for hit in hits:
                 if isinstance(hit, dict):
-                    records.append(
-                        {
-                            **hit,
-                            "_wayfinder_query": spec["query"],
-                            "_wayfinder_category": spec["label"],
-                            "_wayfinder_tags": spec["tags"],
-                        }
-                    )
+                    normalized = {
+                        **hit,
+                        "_wayfinder_query": spec["query"],
+                        "_wayfinder_category": spec["label"],
+                        "_wayfinder_tags": spec["tags"],
+                        "_wayfinder_queries": [spec["query"]],
+                        "_wayfinder_categories": [spec["label"]],
+                    }
+                    object_id = str(hit.get("objectID") or "").strip()
+                    if not object_id:
+                        continue
+                    existing = records_by_id.get(object_id)
+                    records_by_id[object_id] = self._merge_record(existing, normalized) if existing else normalized
+        records = list(records_by_id.values())
         records.sort(
             key=lambda item: (
                 str(item.get("objectID") or ""),
@@ -305,6 +357,8 @@ class HackerNewsAdapter:
         batch = NormalizedBatch()
         records_by_id: dict[str, list[dict[str, Any]]] = {}
         for item in raw_records:
+            if not isinstance(item, dict):
+                continue
             object_id = str(item.get("objectID") or "")
             if not object_id:
                 continue
