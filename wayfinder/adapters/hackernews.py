@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import json
+import pathlib
 import re
 import socket
 import urllib.parse
@@ -19,6 +20,7 @@ class HackerNewsCollectError(RuntimeError):
 
 class HackerNewsAdapter:
     _DEFAULT_BASE_URL = "https://hn.algolia.com/api/v1/search"
+    _ALLOWED_HOSTS = {"hn.algolia.com"}
 
     def __init__(self, name: str, config: dict[str, Any] | Any) -> None:
         self.name = name
@@ -27,11 +29,21 @@ class HackerNewsAdapter:
     def healthcheck(self) -> tuple[bool, str]:
         try:
             specs = self._query_specs()
-            base_url = self._base_url()
+            fixture_path = self._fixture_path()
+            if fixture_path is not None:
+                self._fixture_hits_by_query()
+            else:
+                self._base_url()
+                self._timeout_seconds()
         except ValueError as exc:
             return False, str(exc)
         count = len(specs)
-        return count > 0, f"HN Algolia API configured with {count} quer{'y' if count == 1 else 'ies'} via {base_url}"
+        if fixture_path is not None:
+            return count > 0, (
+                f"HN deterministic fixture configured with {count} quer{'y' if count == 1 else 'ies'} "
+                f"via {fixture_path}"
+            )
+        return count > 0, f"HN Algolia API configured with {count} quer{'y' if count == 1 else 'ies'} via {self._base_url()}"
 
     def _timeout_seconds(self) -> float:
         value = self.config.get("timeout_seconds", 15)
@@ -43,9 +55,25 @@ class HackerNewsAdapter:
     def _base_url(self) -> str:
         value = str(self.config.get("base_url") or self._DEFAULT_BASE_URL).strip() or self._DEFAULT_BASE_URL
         parsed = urllib.parse.urlparse(value)
-        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-            raise ValueError("hackernews source requires a valid http(s) base_url")
+        if parsed.scheme != "https" or parsed.netloc not in self._ALLOWED_HOSTS:
+            raise ValueError("hackernews source requires the official https://hn.algolia.com search endpoint")
+        if not parsed.path.rstrip("/").endswith("/api/v1/search"):
+            raise ValueError("hackernews source must use the /api/v1/search public search path")
         return value
+
+    def _fixture_path(self) -> pathlib.Path | None:
+        value = self.config.get("fixture_path")
+        if not value:
+            return None
+        path = pathlib.Path(str(value))
+        config_dir = self.config.get("_config_dir")
+        if path.is_absolute() or not config_dir:
+            resolved = path
+        else:
+            resolved = (pathlib.Path(str(config_dir)) / path).resolve()
+        if not resolved.exists():
+            raise ValueError(f"hackernews fixture_path does not exist: {resolved}")
+        return resolved
 
     def _query_specs(self) -> list[dict[str, Any]]:
         configured = self.config.get("queries")
@@ -113,6 +141,34 @@ class HackerNewsAdapter:
         if not isinstance(payload, dict):
             raise HackerNewsCollectError(f"invalid payload for query '{spec['query']}': expected JSON object")
         return payload
+
+    def _fixture_hits_by_query(self) -> dict[str, list[dict[str, Any]]]:
+        fixture_path = self._fixture_path()
+        if fixture_path is None:
+            return {}
+        try:
+            payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+        except OSError as exc:
+            raise ValueError(f"hackernews fixture_path could not be read: {exc.strerror or str(exc)}") from exc
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"hackernews fixture_path is not valid JSON: {fixture_path}") from exc
+        if not isinstance(payload, dict):
+            raise ValueError("hackernews fixture_path must contain a JSON object") from None
+        results = payload.get("results")
+        if not isinstance(results, list):
+            raise ValueError("hackernews fixture_path must contain a results list") from None
+        hits_by_query: dict[str, list[dict[str, Any]]] = {}
+        for item in results:
+            if not isinstance(item, dict):
+                continue
+            query = str(item.get("query") or "").strip()
+            hits = item.get("hits")
+            if not query or not isinstance(hits, list):
+                continue
+            hits_by_query[query] = [hit for hit in hits if isinstance(hit, dict)]
+        if not hits_by_query:
+            raise ValueError("hackernews fixture_path must contain at least one query with hit dictionaries")
+        return hits_by_query
 
     def _clean_text(self, value: Any) -> str:
         text = html.unescape(str(value or ""))
@@ -202,23 +258,30 @@ class HackerNewsAdapter:
 
     def collect(self) -> list[dict[str, Any]]:
         records: list[dict[str, Any]] = []
+        fixture_hits = self._fixture_hits_by_query()
         for spec in self._query_specs():
-            params = urllib.parse.urlencode(
-                {
-                    "query": spec["query"],
-                    "tags": spec["tags"],
-                    "hitsPerPage": spec["hits_per_page"],
-                }
-            )
-            url = f"{self._base_url()}?{params}"
-            request = urllib.request.Request(
-                url,
-                headers={"User-Agent": "wayfinder/0 hn-ingest"},
-            )
-            payload = self._read_payload(request, spec)
-            hits = payload.get("hits")
-            if not isinstance(hits, list):
-                raise HackerNewsCollectError(f"invalid payload for query '{spec['query']}': missing hits list")
+            hits: list[dict[str, Any]]
+            if fixture_hits:
+                hits = fixture_hits.get(spec["query"], [])
+                if not hits:
+                    raise HackerNewsCollectError(f"fixture payload missing hits for query '{spec['query']}'")
+            else:
+                params = urllib.parse.urlencode(
+                    {
+                        "query": spec["query"],
+                        "tags": spec["tags"],
+                        "hitsPerPage": spec["hits_per_page"],
+                    }
+                )
+                url = f"{self._base_url()}?{params}"
+                request = urllib.request.Request(
+                    url,
+                    headers={"User-Agent": "wayfinder/0 hn-ingest"},
+                )
+                payload = self._read_payload(request, spec)
+                hits = payload.get("hits")
+                if not isinstance(hits, list):
+                    raise HackerNewsCollectError(f"invalid payload for query '{spec['query']}': missing hits list")
             for hit in hits:
                 if isinstance(hit, dict):
                     records.append(
