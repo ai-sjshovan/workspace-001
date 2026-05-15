@@ -62,6 +62,8 @@ Each adapter implements three methods:
 
 New sources should start as `dry-run-only` adapters before being enabled in recurring cron. Sources that require credentials, scrape pages, or collect user-generated content need an explicit safety review before unattended collection.
 
+The GitHub adapter stays anonymous by default, even if `GITHUB_TOKEN` is present in the environment. To intentionally enable documented credentials for manual testing, set `allow_credentials: true` on the `github` source and then provide either `token:` or `token_env:`.
+
 ## Scheduled Ingest
 
 The daily runner is `python3 -m wayfinder scheduled-ingest`. It is intentionally guarded by `cron.enabled: false` in `wayfinder.yaml`, so unattended ingest stays off until someone explicitly approves it.
