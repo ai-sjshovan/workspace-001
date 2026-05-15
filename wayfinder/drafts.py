@@ -5,7 +5,12 @@ from typing import Any
 
 
 def _value(row: Mapping[str, Any], key: str) -> Any:
-    return row.get(key)
+    if hasattr(row, "get"):
+        return row.get(key)
+    try:
+        return row[key]
+    except (KeyError, IndexError, TypeError):
+        return None
 
 
 def draft_title(row: Mapping[str, Any]) -> str:
