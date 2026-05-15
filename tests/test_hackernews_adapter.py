@@ -156,6 +156,69 @@ class HackerNewsAdapterTests(unittest.TestCase):
             ["competitor analysis tool", "founder pain", "startup idea validation"],
         )
 
+    def test_fixture_healthcheck_collect_normalize_allows_zero_hit_query_and_keeps_schema_mapping(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fixture_path = Path(tmpdir) / "hn-fixture.json"
+            fixture_path.write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {"query": "SaaS pain points", "hits": []},
+                            {
+                                "query": "startup idea validation",
+                                "hits": [
+                                    {
+                                        "objectID": "4003",
+                                        "title": "What startup idea validation misses",
+                                        "story_title": "What startup idea validation misses",
+                                        "story_text": "People collect wish lists but not operational proof from public discussions.",
+                                        "comment_text": "",
+                                        "url": "https://example.com/startup-idea-validation-misses",
+                                        "author": "rowan",
+                                        "points": 57,
+                                        "created_at": "2026-05-12T08:15:00Z",
+                                    }
+                                ],
+                            },
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            adapter = HackerNewsAdapter(
+                "hackernews",
+                {
+                    "fixture_path": str(fixture_path),
+                    "queries": [
+                        {"query": "SaaS pain points", "label": "founder-pain"},
+                        {"query": "startup idea validation", "label": "idea-validation"},
+                    ],
+                },
+            )
+
+            ok, message = adapter.healthcheck()
+            records = adapter.collect()
+            batch = adapter.normalize(records)
+            conn = connect(Path(":memory:"))
+            try:
+                inserted = insert_signals(conn, batch.signals)
+                rows = search_signals(conn, "operational proof", limit=5)
+            finally:
+                conn.close()
+
+        self.assertTrue(ok)
+        self.assertIn("HN deterministic fixture configured with 2 queries", message)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["objectID"], "4003")
+        self.assertEqual(records[0]["_wayfinder_query"], "startup idea validation")
+        self.assertEqual(records[0]["_wayfinder_queries"], ["startup idea validation"])
+        self.assertEqual(len(batch.signals), 1)
+        self.assertEqual(batch.signals[0].category, "idea-validation")
+        self.assertEqual(inserted, 1)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["source"], "hackernews")
+        self.assertEqual(rows[0]["source_id"], "4003")
+
     def test_normalize_keeps_sparse_public_hits_deterministic(self) -> None:
         adapter = HackerNewsAdapter("hackernews", {"queries": ["startup idea validation"]})
         raw_records = [
