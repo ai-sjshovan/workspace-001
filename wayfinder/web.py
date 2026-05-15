@@ -152,6 +152,19 @@ def sanitize_source_value(key: str, value: Any) -> Any:
 def source_catalog_entry(name: str, cfg: dict[str, Any], *, cron_enabled: bool, token_free_default: bool) -> dict[str, Any]:
     policy = source_policy(cfg)
     review_state, unattended_state, review_reason = source_review_summary(policy)
+    cron_eligible = unattended_state == "eligible"
+    unresolved_risks = [
+        field
+        for field, value in {
+            "credentials": policy.risk.credentials,
+            "terms": policy.risk.terms,
+            "rate_limits": policy.risk.rate_limits,
+            "scraping": policy.risk.scraping,
+            "pii_user_generated_content": policy.risk.pii_user_generated_content,
+            "hosted_dependencies": policy.risk.hosted_dependencies,
+        }.items()
+        if str(value).strip().lower() == "unknown" or "review" in str(value).strip().lower()
+    ]
     safe_config = {
         key: sanitize_source_value(key, value)
         for key, value in cfg.items()
@@ -166,6 +179,7 @@ def source_catalog_entry(name: str, cfg: dict[str, Any], *, cron_enabled: bool, 
         "unattended": unattended_state,
         "why": review_reason,
         "notes": policy.notes,
+        "cron_eligible": cron_eligible,
         "risk": {
             "credentials": policy.risk.credentials,
             "terms": policy.risk.terms,
@@ -174,8 +188,13 @@ def source_catalog_entry(name: str, cfg: dict[str, Any], *, cron_enabled: bool, 
             "pii_user_generated_content": policy.risk.pii_user_generated_content,
             "hosted_dependencies": policy.risk.hosted_dependencies,
         },
+        "risk_summary": {
+            "review_state": review_state,
+            "unresolved": unresolved_risks,
+            "notes": policy.notes,
+        },
         "unattended_cron": {
-            "eligible": unattended_state == "eligible",
+            "eligible": cron_eligible,
             "global_cron_enabled": cron_enabled,
             "token_free_default": token_free_default,
         },
