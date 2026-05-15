@@ -321,9 +321,9 @@ class HackerNewsAdapter:
         for spec in self._query_specs():
             hits: list[dict[str, Any]]
             if fixture_hits:
-                hits = fixture_hits.get(spec["query"], [])
-                if not hits:
+                if spec["query"] not in fixture_hits:
                     raise HackerNewsCollectError(f"fixture payload missing hits for query '{spec['query']}'")
+                hits = fixture_hits[spec["query"]]
             else:
                 params = urllib.parse.urlencode(
                     {
