@@ -237,6 +237,9 @@ class HackerNewsAdapter:
         values = self._string_list(record.get(list_key))
         return values if values else self._string_list(record.get(single_key))
 
+    def _record_identifier(self, record: dict[str, Any]) -> str:
+        return str(record.get("objectID") or record.get("story_id") or "").strip()
+
     def _merge_record(self, existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
         merged = dict(existing)
         queries = self._unique_parts(
@@ -255,10 +258,12 @@ class HackerNewsAdapter:
         return merged
 
     def _canonical_signal_payload(self, records: list[dict[str, Any]]) -> Signal | None:
-        object_id = str(records[0].get("objectID") or "")
+        object_id = self._record_identifier(records[0])
         title = self._pick_text(records, "title", "story_title")
-        if not object_id or not title:
+        if not object_id:
             return None
+        if not title:
+            title = f"HN item {object_id}"
         article_url = self._pick_url(records, "url", "story_url")
         hn_url = f"https://news.ycombinator.com/item?id={object_id}"
         author = self._pick_text(records, "author")
@@ -283,6 +288,7 @@ class HackerNewsAdapter:
         categories = self._pick_categories(records)
         queries = self._pick_queries(records)
         canonical_category = categories[0] if categories else ""
+        canonical_raw["objectID"] = object_id
         canonical_raw["_wayfinder_category"] = canonical_category
         canonical_raw["_wayfinder_categories"] = categories
         canonical_raw["_wayfinder_query"] = ", ".join(queries)
@@ -340,9 +346,10 @@ class HackerNewsAdapter:
                         "_wayfinder_queries": [spec["query"]],
                         "_wayfinder_categories": [spec["label"]],
                     }
-                    object_id = str(hit.get("objectID") or "").strip()
+                    object_id = self._record_identifier(hit)
                     if not object_id:
                         continue
+                    normalized["objectID"] = object_id
                     existing = records_by_id.get(object_id)
                     records_by_id[object_id] = self._merge_record(existing, normalized) if existing else normalized
         records = list(records_by_id.values())
@@ -361,7 +368,7 @@ class HackerNewsAdapter:
         for item in raw_records:
             if not isinstance(item, dict):
                 continue
-            object_id = str(item.get("objectID") or "")
+            object_id = self._record_identifier(item)
             if not object_id:
                 continue
             records_by_id.setdefault(object_id, []).append(item)
