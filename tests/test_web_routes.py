@@ -295,6 +295,19 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertIn("View source context", body)
         self.assertIn(f'/sources/{quote(self.source_name)}', body)
 
+        status, body = self.fetch("/search?q=Wayfinder")
+        self.assertEqual(status, 200)
+        self.assertIn("Wayfinder dashboard smoke signal", body)
+        self.assertIn("URL-backed filters", body)
+        self.assertIn(f'/sources/{quote(self.source_name)}', body)
+
+        status, body = self.fetch("/sources")
+        self.assertEqual(status, 200)
+        self.assertIn("Source safety and cron status", body)
+        self.assertIn("Select a source to inspect its linked signals and opportunities.", body)
+        self.assertIn(self.source_name, body)
+        self.assertIn(f'/sources/{quote(self.source_name)}', body)
+
         status, body = self.fetch("/products")
         self.assertEqual(status, 200)
         self.assertIn("Pain Radar", body)
