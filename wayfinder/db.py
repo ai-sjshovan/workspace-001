@@ -117,7 +117,9 @@ def stable_fingerprint(*parts: str) -> str:
 
 
 def signal_fingerprint(signal: Signal) -> str:
-    return stable_fingerprint(signal.source, signal.source_id, signal.source_url, signal.title)
+    if signal.source_id:
+        return stable_fingerprint(signal.source, signal.source_id)
+    return stable_fingerprint(signal.source, signal.source_url, signal.title)
 
 
 def product_fingerprint(product: ProductIntel) -> str:
@@ -132,12 +134,28 @@ def insert_signals(conn: sqlite3.Connection, signals: Iterable[Signal]) -> int:
     inserted = 0
     for signal in signals:
         fingerprint = signal_fingerprint(signal)
-        cur = conn.execute(
+        exists = conn.execute("SELECT 1 FROM signals WHERE fingerprint = ?", (fingerprint,)).fetchone() is not None
+        conn.execute(
             """
-            INSERT OR IGNORE INTO signals (
+            INSERT INTO signals (
               source, source_id, source_url, title, body, author, score, product, category,
               pain_type, feature_request, monetization_signal, collected_at, fingerprint, raw_json
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(fingerprint) DO UPDATE SET
+              source = excluded.source,
+              source_id = excluded.source_id,
+              source_url = excluded.source_url,
+              title = excluded.title,
+              body = excluded.body,
+              author = excluded.author,
+              score = excluded.score,
+              product = excluded.product,
+              category = excluded.category,
+              pain_type = excluded.pain_type,
+              feature_request = excluded.feature_request,
+              monetization_signal = excluded.monetization_signal,
+              collected_at = excluded.collected_at,
+              raw_json = excluded.raw_json
             """,
             (
                 signal.source,
@@ -157,12 +175,12 @@ def insert_signals(conn: sqlite3.Connection, signals: Iterable[Signal]) -> int:
                 json.dumps(signal.raw, sort_keys=True, default=str),
             ),
         )
-        if cur.rowcount:
-            conn.execute(
-                "INSERT INTO signals_fts(title, body, source_url, fingerprint) VALUES (?, ?, ?, ?)",
-                (signal.title, signal.body, signal.source_url, fingerprint),
-            )
-            inserted += 1
+        conn.execute("DELETE FROM signals_fts WHERE fingerprint = ?", (fingerprint,))
+        conn.execute(
+            "INSERT INTO signals_fts(title, body, source_url, fingerprint) VALUES (?, ?, ?, ?)",
+            (signal.title, signal.body, signal.source_url, fingerprint),
+        )
+        inserted += int(not exists)
     return inserted
 
 

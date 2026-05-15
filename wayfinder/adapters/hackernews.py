@@ -238,7 +238,12 @@ class HackerNewsAdapter:
         return values if values else self._string_list(record.get(single_key))
 
     def _record_identifier(self, record: dict[str, Any]) -> str:
-        return str(record.get("objectID") or record.get("story_id") or "").strip()
+        value = record.get("objectID")
+        if value in (None, ""):
+            value = record.get("story_id")
+        if isinstance(value, bool) or not isinstance(value, (str, int)):
+            return ""
+        return str(value).strip()
 
     def _merge_record(self, existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
         merged = dict(existing)
