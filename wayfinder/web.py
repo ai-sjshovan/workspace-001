@@ -363,6 +363,8 @@ def filter_form(
     query: str = "",
     source: str = "",
     category: str = "",
+    pricing_model: str = "",
+    complaint: str = "",
     product: str = "",
     pain_type: str = "",
     feature_request: str = "",
@@ -371,6 +373,8 @@ def filter_form(
     include_query: bool = True,
     include_source: bool = True,
     include_category: bool = True,
+    include_pricing: bool = False,
+    include_complaint: bool = False,
     include_product: bool = False,
     include_market: bool = False,
     include_pain_type: bool = False,
@@ -391,6 +395,10 @@ def filter_form(
         controls.append(options("source", values.get("sources", []), source, "All sources"))
     if include_category:
         controls.append(options("category", values.get("categories", []), category, "All categories"))
+    if include_pricing:
+        controls.append(options("pricing", values.get("pricing_models", []), pricing_model, "All pricing"))
+    if include_complaint:
+        controls.append(options("complaint", values.get("complaints", []), complaint, "All complaint themes"))
     if include_product:
         controls.append(options("product", values.get("products", []), product, "All products"))
     if include_market:
@@ -1391,16 +1399,35 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/products":
                 category = params.get("category", [""])[0]
+                pricing_model = params.get("pricing", [""])[0]
+                complaint = params.get("complaint", [""])[0]
                 values = product_filter_values(conn)
-                rows = filtered_products(conn, category=category, limit=50)
+                rows = filtered_products(
+                    conn,
+                    category=category,
+                    pricing_model=pricing_model,
+                    complaint=complaint,
+                    limit=50,
+                )
                 filters = filter_form(
                     "/products",
                     category=category,
+                    pricing_model=pricing_model,
+                    complaint=complaint,
                     values=values,
                     include_query=False,
                     include_source=False,
+                    include_pricing=True,
+                    include_complaint=True,
                 )
-                body = f'<div class="stack">{filters}<section class="toolbar"><p class="subtle">{len(rows)} products indexed.</p></section><section class="row-grid">{product_rows(rows)}</section></div>'
+                browse_summary = active_filter_summary(
+                    [("category", category), ("pricing", pricing_model), ("complaint", complaint)]
+                )
+                body = (
+                    f'<div class="stack">{filters}<section class="toolbar"><div><p class="subtle">{len(rows)} products indexed.</p>'
+                    f"{browse_summary}</div><div class=\"toolbar-links\"><a href=\"/products\">Clear filters</a></div></section>"
+                    f'<section class="row-grid">{product_rows(rows)}</section></div>'
+                )
                 self.send_html("Products", body)
                 return
             if parsed.path == "/opportunities":

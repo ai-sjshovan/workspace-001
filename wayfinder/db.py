@@ -589,7 +589,19 @@ def product_filter_values(conn: sqlite3.Connection) -> dict[str, list[str]]:
             for row in conn.execute(
                 "SELECT DISTINCT category FROM products WHERE category != '' ORDER BY category COLLATE NOCASE"
             )
-        ]
+        ],
+        "pricing_models": [
+            row[0]
+            for row in conn.execute(
+                "SELECT DISTINCT pricing_model FROM products WHERE pricing_model != '' ORDER BY pricing_model COLLATE NOCASE"
+            )
+        ],
+        "complaints": [
+            row[0]
+            for row in conn.execute(
+                "SELECT DISTINCT complaints FROM products WHERE complaints != '' ORDER BY complaints COLLATE NOCASE"
+            )
+        ],
     }
 
 
@@ -828,6 +840,8 @@ def filtered_products(
     conn: sqlite3.Connection,
     *,
     category: str = "",
+    pricing_model: str = "",
+    complaint: str = "",
     limit: int = 50,
     offset: int = 0,
 ) -> list[sqlite3.Row]:
@@ -837,6 +851,12 @@ def filtered_products(
     if category.strip():
         clauses.append("category = ?")
         params.append(category.strip())
+    if pricing_model.strip():
+        clauses.append("pricing_model = ?")
+        params.append(pricing_model.strip())
+    if complaint.strip():
+        clauses.append("complaints = ?")
+        params.append(complaint.strip())
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     params.extend((limit, offset))
