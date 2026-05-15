@@ -639,11 +639,39 @@ class WayfinderHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(payload)
 
+    def health_payload(self) -> tuple[HTTPStatus, dict[str, Any]]:
+        try:
+            db_path = storage_path(self.config)
+            conn = connect(db_path)
+            conn.close()
+        except Exception as exc:
+            return (
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                {
+                    "ok": False,
+                    "service": "wayfinder",
+                    "config": "loaded",
+                    "database": "unavailable",
+                    "error": str(exc),
+                },
+            )
+        return (
+            HTTPStatus.OK,
+            {
+                "ok": True,
+                "service": "wayfinder",
+                "config": "loaded",
+                "database": "ready",
+                "storage_path": str(db_path),
+            },
+        )
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         params = parse_qs(parsed.query)
         if parsed.path == "/health":
-            self.send_json({"ok": True, "service": "wayfinder"})
+            status, payload = self.health_payload()
+            self.send_json(payload, status)
             return
         conn = connect(storage_path(self.config))
         try:

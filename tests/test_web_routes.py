@@ -88,7 +88,16 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
 
         status, body = self.fetch("/health")
         self.assertEqual(status, 200)
-        self.assertEqual(json.loads(body), {"ok": True, "service": "wayfinder"})
+        self.assertEqual(
+            json.loads(body),
+            {
+                "ok": True,
+                "service": "wayfinder",
+                "config": "loaded",
+                "database": "ready",
+                "storage_path": str(self.storage_path),
+            },
+        )
 
         status, body = self.fetch("/api/sources")
         self.assertEqual(status, 200)
