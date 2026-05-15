@@ -407,6 +407,34 @@ def signal_filter_values(conn: sqlite3.Connection) -> dict[str, list[str]]:
     }
 
 
+def product_filter_values(conn: sqlite3.Connection) -> dict[str, list[str]]:
+    return {
+        "categories": [
+            row[0]
+            for row in conn.execute(
+                "SELECT DISTINCT category FROM products WHERE category != '' ORDER BY category COLLATE NOCASE"
+            )
+        ]
+    }
+
+
+def opportunity_filter_values(conn: sqlite3.Connection) -> dict[str, list[str]]:
+    return {
+        "sources": [
+            row[0]
+            for row in conn.execute(
+                "SELECT DISTINCT source FROM opportunities WHERE source != '' ORDER BY source COLLATE NOCASE"
+            )
+        ],
+        "categories": [
+            row[0]
+            for row in conn.execute(
+                "SELECT DISTINCT category FROM opportunities WHERE category != '' ORDER BY category COLLATE NOCASE"
+            )
+        ],
+    }
+
+
 def source_detail(conn: sqlite3.Connection, source: str) -> dict[str, object] | None:
     selected = source.strip()
     if not selected:
@@ -481,6 +509,28 @@ def list_rows(conn: sqlite3.Connection, table: str, limit: int = 50) -> list[sql
     if table == "opportunities":
         return ranked_opportunities(conn, limit)
     return conn.execute(f"SELECT * FROM {table} ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+
+
+def filtered_products(conn: sqlite3.Connection, *, category: str = "", limit: int = 50) -> list[sqlite3.Row]:
+    clauses: list[str] = []
+    params: list[object] = []
+
+    if category.strip():
+        clauses.append("category = ?")
+        params.append(category.strip())
+
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    params.append(limit)
+    return conn.execute(
+        f"""
+        SELECT *
+        FROM products
+        {where}
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        params,
+    ).fetchall()
 
 
 def counts(conn: sqlite3.Connection) -> dict[str, int]:

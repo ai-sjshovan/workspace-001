@@ -5,10 +5,21 @@ import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote_plus, urlparse
 
 from .config import storage_path
-from .db import browse_signals, connect, counts, list_rows, search_signals, signal_filter_values, source_detail
+from .db import (
+    browse_signals,
+    connect,
+    counts,
+    filtered_opportunities,
+    filtered_products,
+    opportunity_filter_values,
+    product_filter_values,
+    search_signals,
+    signal_filter_values,
+    source_detail,
+)
 
 
 STYLE = """
@@ -83,7 +94,27 @@ def layout(title: str, body: str) -> bytes:
 </html>""".encode("utf-8")
 
 
-def filter_form(query: str, source: str, category: str, values: dict[str, list[str]]) -> str:
+def source_drill_in(source: str, label: str | None = None) -> str:
+    source_name = (source or "").strip()
+    if not source_name:
+        return ""
+    href = f"/sources?source={quote_plus(source_name)}"
+    return f'<a class="tag" href="{href}">{esc(label or source_name)}</a>'
+
+
+def filter_form(
+    action: str,
+    *,
+    query: str = "",
+    source: str = "",
+    category: str = "",
+    values: dict[str, list[str]],
+    placeholder: str = "Search titles, excerpts, products, categories",
+    include_query: bool = True,
+    include_source: bool = True,
+    include_category: bool = True,
+    submit_label: str = "Filter",
+) -> str:
     def options(items: list[str], selected: str, label: str) -> str:
         html_options = [f'<option value="">{esc(label)}</option>']
         for item in items:
@@ -91,12 +122,19 @@ def filter_form(query: str, source: str, category: str, values: dict[str, list[s
             html_options.append(f'<option value="{esc(item)}"{active}>{esc(item)}</option>')
         return "".join(html_options)
 
+    controls: list[str] = []
+    if include_query:
+        controls.append(f'<input name="q" value="{esc(query)}" placeholder="{esc(placeholder)}">')
+    if include_source:
+        controls.append(f'<select name="source">{options(values.get("sources", []), source, "All sources")}</select>')
+    if include_category:
+        controls.append(
+            f'<select name="category">{options(values.get("categories", []), category, "All categories")}</select>'
+        )
+    controls.append(f"<button type=\"submit\">{esc(submit_label)}</button>")
     return f"""<section class="panel">
-  <form class="filters" method="get" action="/">
-    <input name="q" value="{esc(query)}" placeholder="Search titles, excerpts, products, categories">
-    <select name="source">{options(values["sources"], source, "All sources")}</select>
-    <select name="category">{options(values["categories"], category, "All categories")}</select>
-    <button type="submit">Filter</button>
+  <form class="filters" method="get" action="{esc(action)}">
+    {''.join(controls)}
   </form>
 </section>"""
 
@@ -115,7 +153,7 @@ def signal_rows(rows: list[Any]) -> str:
   <div class="signal-head">
     <div>
       <h2><a href="{esc(source_url)}">{esc(row['title'])}</a></h2>
-      <div class="meta"><span class="tag">{esc(row['source'])}</span><span class="tag">{esc(row['category'])}</span></div>
+      <div class="meta">{source_drill_in(str(row['source']))}<span class="tag">{esc(row['category'])}</span></div>
     </div>
     <div class="score">score {esc(row['score'])}</div>
   </div>
@@ -221,7 +259,7 @@ def opportunity_rows(rows: list[Any]) -> str:
   <div class="signal-head">
     <div>
       <h2>{esc(row['title'])}</h2>
-      <div class="meta"><span class="tag">{esc(row['target_user'])}</span> evidence={esc(row['evidence_count'])}</div>
+      <div class="meta">{source_drill_in(str(row['source']), str(row['source']) or 'source')}<span class="tag">{esc(row['target_user'])}</span> evidence={esc(row['evidence_count'])}</div>
     </div>
     <div class="score">score {esc(row['opportunity_score'])}</div>
   </div>
@@ -287,32 +325,91 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 rows = browse_signals(conn, query=query, source=source, category=category, limit=30)
                 detail = source_detail(conn, source)
                 summary = f'<section class="toolbar"><p class="subtle">Showing {len(rows)} signal rows.</p><a href="/search?q={esc(query)}">Open search results</a></section>'
-                body = f'<div class="stack"><section class="grid">{metric_html}</section>{filter_form(query, source, category, values)}{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>'
+                body = f'<div class="stack"><section class="grid">{metric_html}</section>{filter_form("/", query=query, source=source, category=category, values=values)}{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>'
                 self.send_html("Dashboard", body)
                 return
             if parsed.path == "/search":
                 query = params.get("q", [""])[0]
-                rows = search_signals(conn, query, 30)
-                form = (
-                    f'<section class="panel"><form class="filters" method="get" action="/search"><input name="q" value="{esc(query)}" '
-                    'placeholder="Search pains, products, markets"><button>Search</button></form></section>'
+                source = params.get("source", [""])[0]
+                category = params.get("category", [""])[0]
+                values = signal_filter_values(conn)
+                if not query.strip() and not source.strip() and not category.strip():
+                    rows = search_signals(conn, query, 30)
+                elif query.strip() and not source.strip() and not category.strip():
+                    rows = search_signals(conn, query, 30)
+                elif query.strip():
+                    rows = [
+                        row
+                        for row in search_signals(conn, query, 120)
+                        if (not source.strip() or row["source"] == source.strip())
+                        and (not category.strip() or row["category"] == category.strip())
+                    ][:30]
+                else:
+                    rows = browse_signals(conn, source=source, category=category, limit=30)
+                detail = source_detail(conn, source)
+                form = filter_form(
+                    "/search",
+                    query=query,
+                    source=source,
+                    category=category,
+                    values=values,
+                    placeholder="Search pains, products, markets",
+                    submit_label="Search",
                 )
-                summary = f'<section class="toolbar"><p class="subtle">Search returned {len(rows)} rows.</p><a href="/?q={esc(query)}">Use dashboard filters</a></section>'
-                self.send_html("Search", f'<div class="stack">{form}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>')
+                summary = f'<section class="toolbar"><p class="subtle">Search returned {len(rows)} rows.</p><a href="/?q={esc(query)}&source={quote_plus(source)}&category={quote_plus(category)}">Use dashboard browse view</a></section>'
+                self.send_html(
+                    "Search",
+                    f'<div class="stack">{form}{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>',
+                )
                 return
             if parsed.path == "/api/search":
                 query = params.get("q", [""])[0]
                 rows = search_signals(conn, query, 50)
                 self.send_json([dict(row) for row in rows])
                 return
+            if parsed.path == "/sources":
+                query = params.get("q", [""])[0]
+                source = params.get("source", [""])[0]
+                category = params.get("category", [""])[0]
+                values = signal_filter_values(conn)
+                detail = source_detail(conn, source)
+                rows = browse_signals(conn, query=query, source=source, category=category, limit=30) if source.strip() else []
+                body = (
+                    f'<div class="stack">{filter_form("/sources", query=query, source=source, category=category, values=values, submit_label="Inspect")}'
+                    f'{source_detail_panel(detail)}'
+                    f'<section class="toolbar"><p class="subtle">Showing {len(rows)} source-linked signal rows.</p><a href="/opportunities?source={quote_plus(source)}">Open source opportunities</a></section>'
+                    f'<section class="row-grid">{signal_rows(rows) if source.strip() else "<p>Select a source to inspect its linked signals and opportunities.</p>"}</section></div>'
+                )
+                self.send_html("Source Drill-In", body)
+                return
             if parsed.path == "/products":
-                rows = list_rows(conn, "products", 50)
-                body = f'<div class="stack"><section class="toolbar"><p class="subtle">{len(rows)} products indexed.</p></section><section class="row-grid">{product_rows(rows)}</section></div>'
+                category = params.get("category", [""])[0]
+                values = product_filter_values(conn)
+                rows = filtered_products(conn, category=category, limit=50)
+                filters = filter_form(
+                    "/products",
+                    category=category,
+                    values=values,
+                    include_query=False,
+                    include_source=False,
+                )
+                body = f'<div class="stack">{filters}<section class="toolbar"><p class="subtle">{len(rows)} products indexed.</p></section><section class="row-grid">{product_rows(rows)}</section></div>'
                 self.send_html("Products", body)
                 return
             if parsed.path == "/opportunities":
-                rows = list_rows(conn, "opportunities", 50)
-                body = f'<div class="stack"><section class="toolbar"><p class="subtle">{len(rows)} opportunities indexed.</p></section><section class="row-grid">{opportunity_rows(rows)}</section></div>'
+                source = params.get("source", [""])[0]
+                category = params.get("category", [""])[0]
+                values = opportunity_filter_values(conn)
+                rows = filtered_opportunities(conn, source=source, category=category, limit=50)
+                detail = source_detail(conn, source)
+                filters = filter_form(
+                    "/opportunities",
+                    source=source,
+                    category=category,
+                    values=values,
+                    include_query=False,
+                )
+                body = f'<div class="stack">{filters}{source_detail_panel(detail)}<section class="toolbar"><p class="subtle">{len(rows)} opportunities indexed.</p></section><section class="row-grid">{opportunity_rows(rows)}</section></div>'
                 self.send_html("Opportunities", body)
                 return
             self.send_html("Not Found", "<p>Not found.</p>", HTTPStatus.NOT_FOUND)
