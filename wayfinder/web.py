@@ -858,6 +858,30 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     return
                 self.send_json(payload)
                 return
+            if parsed.path == "/api/opportunities":
+                source = params.get("source", [""])[0]
+                category = params.get("category", [""])[0]
+                min_score_raw = params.get("min_score", [""])[0].strip()
+                limit_raw = params.get("limit", ["50"])[0].strip()
+                try:
+                    min_score = float(min_score_raw) if min_score_raw else None
+                except ValueError:
+                    min_score = None
+                try:
+                    limit = max(1, min(int(limit_raw or "50"), 100))
+                except ValueError:
+                    limit = 50
+                rows = filtered_opportunities(conn, source=source, category=category, min_score=min_score, limit=limit)
+                payload = []
+                for row in rows:
+                    item = dict(row)
+                    try:
+                        item["score_components"] = json.loads(item.pop("score_components_json", "{}"))
+                    except json.JSONDecodeError:
+                        item["score_components"] = {}
+                    payload.append(item)
+                self.send_json(payload)
+                return
             if parsed.path == "/sources":
                 payload = source_catalog_payload(self.config)
                 query = params.get("q", [""])[0]
