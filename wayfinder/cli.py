@@ -41,6 +41,41 @@ def color(value: str, code: str, enabled: bool = True) -> str:
     return f"{code}{value}{RESET}" if enabled else value
 
 
+def unresolved_risk_fields(policy: Any) -> list[str]:
+    checks = {
+        "credentials": policy.risk.credentials,
+        "terms": policy.risk.terms,
+        "rate_limits": policy.risk.rate_limits,
+        "scraping": policy.risk.scraping,
+        "pii_ugc": policy.risk.pii_user_generated_content,
+        "hosted_dependencies": policy.risk.hosted_dependencies,
+    }
+    unresolved: list[str] = []
+    for field, value in checks.items():
+        normalized = str(value).strip().lower()
+        if normalized == "unknown" or "review" in normalized:
+            unresolved.append(field)
+    return unresolved
+
+
+def source_review_summary(policy: Any) -> tuple[str, str, str]:
+    unresolved = unresolved_risk_fields(policy)
+    if policy.status == "enabled":
+        reason = policy.notes or "Reviewed for unattended ingest with configured risk fields."
+        return "approved", "eligible", reason
+    if policy.status == "disabled":
+        reason = policy.notes or "Disabled in config until an operator re-enables it."
+        return "blocked", "blocked", reason
+    base_reason = "Manual testing only until review items are cleared." if policy.status == "dry-run-only" else "Source remains pending explicit review."
+    if unresolved:
+        reason = f"{base_reason} unresolved={','.join(unresolved)}"
+    else:
+        reason = base_reason
+    if policy.notes:
+        reason = f"{reason} notes={policy.notes}"
+    return "pending", "blocked", reason
+
+
 def print_rows(rows: list[sqlite3.Row], fields: list[str], no_color: bool = False) -> None:
     if not rows:
         print(color("No rows found.", DIM, not no_color))
@@ -203,6 +238,8 @@ def cmd_sources(args: argparse.Namespace) -> int:
             f"scraping={risk.scraping} pii_ugc={risk.pii_user_generated_content} "
             f"hosted_dependencies={risk.hosted_dependencies}"
         )
+        review_state, unattended_state, review_reason = source_review_summary(policy)
+        print(f"  review={review_state} unattended={unattended_state} why={review_reason}")
         if policy.notes:
             print(f"  notes={policy.notes}")
         if args.health and policy.status != "disabled":

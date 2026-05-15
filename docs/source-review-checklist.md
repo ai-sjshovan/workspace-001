@@ -7,7 +7,7 @@ This guide is additive to the current source policies in `wayfinder.yaml`. It do
 ## Review Surfaces
 
 - `wayfinder.yaml` is the source of truth for `status`, `notes`, and `risk.*` policy fields.
-- `python3 -m wayfinder sources list --health` is the operator review surface for the configured source policies.
+- `python3 -m wayfinder sources list --health` is the operator review surface for the configured source policies, and it prints `review=...`, `unattended=...`, and `why=...` summaries for each adapter.
 - The source catalog in `wayfinder/web.py` exposes the same safety metadata under `policy_status`, `risk`, and `unattended_cron`.
 - `python3 -m wayfinder scheduled-ingest` is the unattended path and must stay blocked by `cron.enabled: false` until approval is complete.
 
@@ -53,6 +53,14 @@ The web source catalog mirrors these values:
 - `unattended_cron.eligible` is true only when `status: enabled`.
 - `unattended_cron.global_cron_enabled` reflects the top-level `cron.enabled` switch.
 - `unattended_cron.token_free_default` reflects the top-level `cron.token_free` setting.
+
+The CLI source review summary should be interpreted as:
+
+- `review=approved`: the adapter is reviewed for unattended use.
+- `review=pending`: the adapter is still limited to manual or review-only usage.
+- `review=blocked`: the adapter is intentionally disabled in config.
+- `unattended=eligible`: the adapter may participate in unattended ingest once the separate global cron switch is enabled.
+- `unattended=blocked`: the adapter must stay out of unattended ingest because it is pending review or disabled.
 
 ## Promotion Rules
 

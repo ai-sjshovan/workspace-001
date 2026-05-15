@@ -92,6 +92,8 @@ Example cron entry, left disabled by default:
 
 Promotion and review steps for unattended ingest live in `docs/source-review-checklist.md`.
 
+`python3 -m wayfinder sources list --health` is the operator-facing audit view for configured adapters. It prints `review=...`, `unattended=...`, and `why=...` summaries so approved, blocked, and pending-review sources are visibly distinct without inferring meaning from raw risk fields alone.
+
 Each source carries a review status in `wayfinder.yaml`:
 
 - `enabled`: approved for unattended ingest and eligible for cron once the broader cron switch is enabled.
