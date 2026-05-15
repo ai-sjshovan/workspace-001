@@ -188,29 +188,26 @@ class HackerNewsAdapter:
         values.discard("")
         return min(values, key=lambda value: (-len(value), value)) if values else ""
 
-    def _pick_url(self, records: list[dict[str, Any]], key: str) -> str:
-        values = {str(record.get(key) or "").strip() for record in records}
+    def _pick_url(self, records: list[dict[str, Any]], *keys: str) -> str:
+        values = {
+            str(record.get(key) or "").strip()
+            for record in records
+            for key in keys
+        }
         values.discard("")
         return min(values, key=lambda value: (-len(value), value)) if values else ""
-
-    def _pick_category(self, records: list[dict[str, Any]]) -> str:
-        values = {str(record.get("_wayfinder_category") or record.get("_wayfinder_query") or "").strip() for record in records}
-        values.discard("")
-        return min(values) if values else ""
 
     def _pick_categories(self, records: list[dict[str, Any]]) -> list[str]:
         values: list[str] = []
         for record in records:
-            values.extend(self._string_list(record.get("_wayfinder_categories")))
-            values.extend(self._string_list(record.get("_wayfinder_category")))
-        return self._unique_parts(*values)
+            values.extend(self._metadata_values(record, "_wayfinder_categories", "_wayfinder_category"))
+        return sorted(self._unique_parts(*values))
 
     def _pick_queries(self, records: list[dict[str, Any]]) -> list[str]:
         values: list[str] = []
         for record in records:
-            values.extend(self._string_list(record.get("_wayfinder_queries")))
-            values.extend(self._string_list(record.get("_wayfinder_query")))
-        return self._unique_parts(*values)
+            values.extend(self._metadata_values(record, "_wayfinder_queries", "_wayfinder_query"))
+        return sorted(self._unique_parts(*values))
 
     def _pick_score(self, records: list[dict[str, Any]]) -> float:
         scores: list[float] = []
@@ -236,19 +233,19 @@ class HackerNewsAdapter:
         text = str(value or "").strip()
         return [text] if text else []
 
+    def _metadata_values(self, record: dict[str, Any], list_key: str, single_key: str) -> list[str]:
+        values = self._string_list(record.get(list_key))
+        return values if values else self._string_list(record.get(single_key))
+
     def _merge_record(self, existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
         merged = dict(existing)
         queries = self._unique_parts(
-            *self._string_list(existing.get("_wayfinder_queries")),
-            *self._string_list(incoming.get("_wayfinder_queries")),
-            *self._string_list(existing.get("_wayfinder_query")),
-            *self._string_list(incoming.get("_wayfinder_query")),
+            *self._metadata_values(existing, "_wayfinder_queries", "_wayfinder_query"),
+            *self._metadata_values(incoming, "_wayfinder_queries", "_wayfinder_query"),
         )
         categories = self._unique_parts(
-            *self._string_list(existing.get("_wayfinder_categories")),
-            *self._string_list(incoming.get("_wayfinder_categories")),
-            *self._string_list(existing.get("_wayfinder_category")),
-            *self._string_list(incoming.get("_wayfinder_category")),
+            *self._metadata_values(existing, "_wayfinder_categories", "_wayfinder_category"),
+            *self._metadata_values(incoming, "_wayfinder_categories", "_wayfinder_category"),
         )
         merged.update(incoming)
         merged["_wayfinder_queries"] = queries
@@ -262,7 +259,7 @@ class HackerNewsAdapter:
         title = self._pick_text(records, "title", "story_title")
         if not object_id or not title:
             return None
-        article_url = self._pick_url(records, "url")
+        article_url = self._pick_url(records, "url", "story_url")
         hn_url = f"https://news.ycombinator.com/item?id={object_id}"
         author = self._pick_text(records, "author")
         body = "\n".join(
@@ -285,7 +282,7 @@ class HackerNewsAdapter:
         )
         categories = self._pick_categories(records)
         queries = self._pick_queries(records)
-        canonical_category = self._pick_category(records)
+        canonical_category = categories[0] if categories else ""
         canonical_raw["_wayfinder_category"] = canonical_category
         canonical_raw["_wayfinder_categories"] = categories
         canonical_raw["_wayfinder_query"] = ", ".join(queries)
