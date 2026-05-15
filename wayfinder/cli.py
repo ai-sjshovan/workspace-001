@@ -77,11 +77,11 @@ def score_summary(row: sqlite3.Row) -> str:
     components = score_data.get("components") if isinstance(score_data, dict) else {}
     if not isinstance(components, dict):
         return ""
-    ordered = ("evidence_count", "freshness", "monetization_signal", "source_quality", "build_fit")
+    ordered = ("pain", "freshness", "recurrence", "source_quality", "build_fit")
     aliases = {
-        "evidence_count": "evidence",
+        "pain": "pain",
         "freshness": "freshness",
-        "monetization_signal": "monetization",
+        "recurrence": "recurrence",
         "source_quality": "source",
         "build_fit": "fit",
     }

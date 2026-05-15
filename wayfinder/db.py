@@ -328,7 +328,7 @@ def ranked_opportunities(conn: sqlite3.Connection, limit: int = 50) -> list[sqli
         """
         SELECT *
         FROM opportunities
-        ORDER BY opportunity_score DESC, evidence_count DESC, collected_at DESC, id DESC
+        ORDER BY opportunity_score DESC, evidence_count DESC, collected_at DESC, fingerprint ASC
         LIMIT ?
         """,
         (limit,),
@@ -364,7 +364,7 @@ def filtered_opportunities(
         SELECT *
         FROM opportunities
         {where}
-        ORDER BY opportunity_score DESC, evidence_count DESC, collected_at DESC, id DESC
+        ORDER BY opportunity_score DESC, evidence_count DESC, collected_at DESC, fingerprint ASC
         LIMIT ?
         OFFSET ?
         """,
