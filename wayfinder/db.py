@@ -123,10 +123,16 @@ def signal_fingerprint(signal: Signal) -> str:
 
 
 def product_fingerprint(product: ProductIntel) -> str:
+    raw_fingerprint = str(product.raw.get("_wayfinder_product_fingerprint") or "").strip()
+    if raw_fingerprint:
+        return stable_fingerprint(raw_fingerprint)
     return stable_fingerprint(product.product_name, product.url, product.category)
 
 
 def opportunity_fingerprint(opportunity: Opportunity) -> str:
+    raw_fingerprint = str(opportunity.raw.get("_wayfinder_opportunity_fingerprint") or "").strip()
+    if raw_fingerprint:
+        return stable_fingerprint(raw_fingerprint)
     return stable_fingerprint(opportunity.title, opportunity.target_user, opportunity.problem)
 
 

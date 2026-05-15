@@ -254,6 +254,7 @@ class GitHubAdapter:
 
     def _normalized_raw(self, item: dict[str, Any], *, query_context: str, normalized_category: str, license_name: str) -> dict[str, Any]:
         full_name = self._collapse_text(item.get("full_name"))
+        repo_key = self._repo_key(full_name)
         stars = int(self._star_count(item.get("stargazers_count")) or 0)
         language = self._collapse_text(item.get("language"))
         description = self._collapse_text(item.get("description"))
@@ -277,6 +278,9 @@ class GitHubAdapter:
             "can_reuse_code": "inspect-first",
             "can_reuse_ideas": "high" if description else "medium",
             "query_context": query_context,
+            "_wayfinder_repo_key": repo_key,
+            "_wayfinder_product_fingerprint": f"github-product:{repo_key}",
+            "_wayfinder_opportunity_fingerprint": f"github-opportunity:{repo_key}",
         }
 
     def _string_list(self, value: Any) -> list[str]:

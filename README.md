@@ -62,7 +62,7 @@ Each adapter implements three methods:
 
 New sources should start as `dry-run-only` adapters before being enabled in recurring cron. Sources that require credentials, scrape pages, or collect user-generated content need an explicit safety review before unattended collection.
 
-The GitHub adapter stays anonymous by default, even if `GITHUB_TOKEN` is present in the environment. To intentionally enable documented credentials for manual testing, set `allow_credentials: true` on the `github` source and then provide either `token:` or `token_env:`.
+The GitHub adapter stays anonymous by default, even if `GITHUB_TOKEN` is present in the environment. To intentionally enable documented credentials for manual testing, set `allow_credentials: true` on the `github` source and then provide either `token:` or `token_env:`. If GitHub returns a rate-limit response, Wayfinder surfaces the HTTP status plus the reset time when GitHub provides it so the adapter can fail clearly without guessing.
 
 ## Scheduled Ingest
 
