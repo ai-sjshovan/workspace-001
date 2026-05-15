@@ -14,6 +14,7 @@ from .db import (
     counts,
     filtered_opportunities,
     filtered_products,
+    opportunity_score_filter_values,
     opportunity_filter_values,
     product_filter_values,
     search_signals,
@@ -75,6 +76,9 @@ button { padding: 11px 15px; border: 0; border-radius: 7px; background: #102523;
 .score { min-width: 78px; text-align: right; font-weight: 800; color: #102523; }
 .tag { display: inline-block; margin-right: 6px; padding: 2px 7px; border-radius: 99px; background: #e9f2dc; color: #40502e; font-size: 12px; font-weight: 700; }
 .tag.active { background: #102523; color: #f6fbf2; }
+.tag.good { background: #dff5df; color: #215228; }
+.tag.warn { background: #fff2cf; color: #6a4d00; }
+.tag.bad { background: #fde0de; color: #7a1f1a; }
 .list-head { margin: 0 0 4px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: #66746a; }
 .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
 .card-grid .row { height: 100%; }
@@ -83,6 +87,7 @@ button { padding: 11px 15px; border: 0; border-radius: 7px; background: #102523;
 .source-card.active { border-color: #102523; box-shadow: 0 0 0 2px rgba(16, 37, 35, .12); }
 .source-card h2 { color: #102523; }
 .toolbar-links { display: flex; gap: 10px; flex-wrap: wrap; }
+.run-list { display: grid; gap: 10px; }
 @media (max-width: 760px) {
   header, main { padding-left: 18px; padding-right: 18px; }
   form.filters, .signal-head, .detail-grid { grid-template-columns: 1fr; }
@@ -317,6 +322,15 @@ def signal_rows(rows: list[Any]) -> str:
 def source_detail_panel(detail: dict[str, Any] | None) -> str:
     if not detail:
         return ""
+    recent_runs = detail.get("recent_runs", [])
+    run_items = "".join(
+        f"""<div class="mini-item">
+  <strong>{esc(item['status'])}</strong>
+  <div class="subtle">finished {esc(item['finished_at'] or 'unknown')} · collected {esc(item['collected'])} · signals +{esc(item['inserted_signals'])} · opportunities +{esc(item['inserted_opportunities'])}</div>
+  <div class="subtle">{esc(item['message'] or ('dry run' if item['dry_run'] else 'no run notes'))}</div>
+</div>"""
+        for item in recent_runs
+    ) or '<p class="subtle">No ingest history recorded yet.</p>'
     category_chips = "".join(
         f'<span class="tag">{esc(item["category"])} {esc(item["total"])}</span>' for item in detail["categories"]
     ) or '<span class="subtle">No categories tagged yet.</span>'
@@ -345,6 +359,7 @@ def source_detail_panel(detail: dict[str, Any] | None) -> str:
       <h2>{esc(detail['source'])}</h2>
       <p class="subtle">Signals {esc(detail['signal_count'])} · opportunities {esc(detail['opportunity_count'])} · avg score {esc(detail['avg_score'])}</p>
       <p class="subtle">Latest signal captured: {esc(detail['latest_signal_at'] or 'unknown')}</p>
+      <p class="subtle">Ingest health: {health_status_badge(str(detail.get('health_status') or 'unknown'))} latest run {esc(detail.get('last_ingest_at') or 'unknown')}</p>
       <p class="list-head">Top categories</p>
       <p>{category_chips}</p>
       <div class="mini-list">
@@ -355,6 +370,8 @@ def source_detail_panel(detail: dict[str, Any] | None) -> str:
     <div>
       <p class="list-head">Source opportunity view</p>
       <p class="subtle">Highest opportunity score: {esc(detail['top_opportunity_score'])}</p>
+      <p class="list-head">Recent ingest runs</p>
+      <div class="run-list">{run_items}</div>
       <div class="mini-list">{opportunity_items}</div>
     </div>
   </div>
@@ -363,6 +380,23 @@ def source_detail_panel(detail: dict[str, Any] | None) -> str:
 
 def source_status_tag(status: str) -> str:
     return f'<span class="tag">{esc(status or "unknown")}</span>'
+
+
+def health_status_badge(status: str) -> str:
+    normalized = status.strip().lower()
+    tone = {
+        "success": "good",
+        "ok": "good",
+        "healthy": "good",
+        "partial": "warn",
+        "warning": "warn",
+        "dry-run": "warn",
+        "dry_run": "warn",
+        "failed": "bad",
+        "error": "bad",
+    }.get(normalized, "")
+    class_name = f"tag {tone}".strip()
+    return f'<span class="{class_name}">{esc(status or "unknown")}</span>'
 
 
 def source_list_page(
@@ -382,7 +416,7 @@ def source_list_page(
       <h2><a href="{esc(source_path(item['key']))}">{esc(item['key'])}</a></h2>
       <p class="meta">{source_status_tag(str(item['policy_status']))}<span class="tag">{esc(item['kind'])}</span></p>
     </div>
-    <div class="subtle">Signals {esc(activity.get('signal_count', 0))} · opportunities {esc(activity.get('opportunity_count', 0))}</div>
+    <div class="subtle">Signals {esc(activity.get('signal_count', 0))} · opportunities {esc(activity.get('opportunity_count', 0))} · health {esc(activity.get('health_status') or 'unknown')}</div>
   </div>
   <p>{esc(item['notes'] or 'No operator notes recorded.')}</p>
   <p class="subtle">Risk: credentials={esc(item['risk']['credentials'])}, terms={esc(item['risk']['terms'])}, rate_limits={esc(item['risk']['rate_limits'])}</p>
@@ -426,6 +460,7 @@ def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> 
         <p>{esc(source_entry['notes'] or 'No operator notes recorded.')}</p>
         <p class="subtle">Signals {esc(detail['signal_count'])} · opportunities {esc(detail['opportunity_count'])} · avg score {esc(detail['avg_score'])}</p>
         <p class="subtle">Latest signal captured: {esc(detail['latest_signal_at'] or 'none yet')}</p>
+        <p class="subtle">Ingest health: {health_status_badge(str(detail.get('health_status') or 'unknown'))} latest run {esc(detail.get('last_ingest_at') or 'unknown')}</p>
       </div>
       <div>
         <p class="list-head">Safety metadata</p>
@@ -522,6 +557,14 @@ def opportunity_rows(rows: list[Any]) -> str:
 </article>"""
         )
     return "\n".join(chunks)
+
+
+def min_score_options(values: list[str], selected: str) -> str:
+    options = ['<option value="">Any score</option>']
+    for value in values:
+        active = ' selected="selected"' if value == selected else ""
+        options.append(f'<option value="{esc(value)}"{active}>Score {esc(value)}+</option>')
+    return f'<select name="min_score">{"".join(options)}</select>'
 
 
 class WayfinderHandler(BaseHTTPRequestHandler):
@@ -756,8 +799,13 @@ class WayfinderHandler(BaseHTTPRequestHandler):
             if parsed.path == "/opportunities":
                 source = params.get("source", [""])[0]
                 category = params.get("category", [""])[0]
+                min_score_raw = params.get("min_score", [""])[0].strip()
+                try:
+                    min_score = float(min_score_raw) if min_score_raw else None
+                except ValueError:
+                    min_score = None
                 values = opportunity_filter_values(conn)
-                rows = filtered_opportunities(conn, source=source, category=category, limit=50)
+                rows = filtered_opportunities(conn, source=source, category=category, min_score=min_score, limit=50)
                 detail = source_detail(conn, source)
                 filters = filter_form(
                     "/opportunities",
@@ -766,7 +814,20 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     values=values,
                     include_query=False,
                 )
-                body = f'<div class="stack">{filters}{source_detail_panel(detail)}<section class="toolbar"><p class="subtle">{len(rows)} opportunities indexed.</p></section><section class="row-grid">{opportunity_rows(rows)}</section></div>'
+                score_filter = f"""<section class="panel">
+  <form class="filters" method="get" action="/opportunities">
+    <input type="hidden" name="source" value="{esc(source)}">
+    <input type="hidden" name="category" value="{esc(category)}">
+    {min_score_options(values.get("min_scores", opportunity_score_filter_values(conn)), min_score_raw)}
+    <button type="submit">Apply score floor</button>
+  </form>
+</section>"""
+                browse_summary = (
+                    f'<section class="toolbar"><div><p class="subtle">{len(rows)} opportunities indexed.</p>'
+                    f'{active_filter_summary([("source", source), ("category", category), ("min score", min_score_raw)])}</div>'
+                    f'<div class="toolbar-links"><a href="/sources{("?source=" + quote_plus(source)) if source.strip() else ""}">Open source view</a><a href="/opportunities">Clear filters</a></div></section>'
+                )
+                body = f'<div class="stack">{filters}{score_filter}{source_detail_panel(detail)}{browse_summary}<section class="row-grid">{opportunity_rows(rows)}</section></div>'
                 self.send_html("Opportunities", body)
                 return
             self.send_html("Not Found", "<p>Not found.</p>", HTTPStatus.NOT_FOUND)
