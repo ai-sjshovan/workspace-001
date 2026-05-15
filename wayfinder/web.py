@@ -5,7 +5,7 @@ import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
-from urllib.parse import parse_qs, quote_plus, urlparse
+from urllib.parse import parse_qs, quote, quote_plus, unquote, urlparse
 
 from .config import source_configs, source_policy, storage_path
 from .db import (
@@ -18,6 +18,7 @@ from .db import (
     product_filter_values,
     search_signals,
     signal_filter_values,
+    source_activity,
     source_detail,
 )
 
@@ -74,10 +75,14 @@ button { padding: 11px 15px; border: 0; border-radius: 7px; background: #102523;
 .score { min-width: 78px; text-align: right; font-weight: 800; color: #102523; }
 .tag { display: inline-block; margin-right: 6px; padding: 2px 7px; border-radius: 99px; background: #e9f2dc; color: #40502e; font-size: 12px; font-weight: 700; }
 .list-head { margin: 0 0 4px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: #66746a; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+.card-grid .row { height: 100%; }
+.source-title { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
 @media (max-width: 760px) {
   header, main { padding-left: 18px; padding-right: 18px; }
   form.filters, .signal-head, .detail-grid { grid-template-columns: 1fr; }
   .score { text-align: left; }
+  .source-title { flex-direction: column; }
 }
 """
 
@@ -185,8 +190,12 @@ def source_drill_in(source: str, label: str | None = None) -> str:
     source_name = (source or "").strip()
     if not source_name:
         return ""
-    href = f"/sources?source={quote_plus(source_name)}"
+    href = f"/sources/{quote(source_name, safe='')}"
     return f'<a class="tag" href="{href}">{esc(label or source_name)}</a>'
+
+
+def source_path(source_name: str) -> str:
+    return f"/sources/{quote(source_name.strip(), safe='')}"
 
 
 def filter_form(
@@ -292,6 +301,93 @@ def source_detail_panel(detail: dict[str, Any] | None) -> str:
     </div>
   </div>
 </section>"""
+
+
+def source_status_tag(status: str) -> str:
+    return f'<span class="tag">{esc(status or "unknown")}</span>'
+
+
+def source_list_page(
+    payload: dict[str, Any],
+    activity_by_source: dict[str, dict[str, Any]],
+    selected_source: str = "",
+    selected_detail: dict[str, Any] | None = None,
+) -> str:
+    cards = []
+    for item in payload["sources"]:
+        activity = activity_by_source.get(item["key"], {})
+        cards.append(
+            f"""<article class="row">
+  <div class="source-title">
+    <div>
+      <p class="list-head">Source</p>
+      <h2><a href="{esc(source_path(item['key']))}">{esc(item['key'])}</a></h2>
+      <p class="meta">{source_status_tag(str(item['policy_status']))}<span class="tag">{esc(item['kind'])}</span></p>
+    </div>
+    <div class="subtle">Signals {esc(activity.get('signal_count', 0))} · opportunities {esc(activity.get('opportunity_count', 0))}</div>
+  </div>
+  <p>{esc(item['notes'] or 'No operator notes recorded.')}</p>
+  <p class="subtle">Risk: credentials={esc(item['risk']['credentials'])}, terms={esc(item['risk']['terms'])}, rate_limits={esc(item['risk']['rate_limits'])}</p>
+</article>"""
+        )
+    selected_html = ""
+    if selected_source.strip():
+        preview = selected_detail or activity_by_source.get(selected_source.strip())
+        if preview:
+            selected_html = (
+                f'<section class="toolbar"><p class="subtle">Selected source preview for {esc(selected_source)}.</p>'
+                f'<a href="{esc(source_path(selected_source))}">Open dedicated detail page</a></section>'
+                f"{source_detail_panel(preview)}"
+            )
+    return (
+        '<div class="stack">'
+        '<section class="toolbar"><p class="subtle">Configured sources with current policy and activity summaries.</p></section>'
+        f"{selected_html}"
+        f'<section class="card-grid">{"".join(cards) if cards else "<p>No configured sources found.</p>"}</section>'
+        '</div>'
+    )
+
+
+def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> str:
+    risk = source_entry["risk"]
+    config_items = "".join(
+        f'<div class="mini-item"><strong>{esc(key)}</strong><div class="subtle">{esc(value)}</div></div>'
+        for key, value in sorted(source_entry["config"].items())
+    ) or '<p class="subtle">No source-specific config captured.</p>'
+    return f"""<div class="stack">
+  <section class="toolbar">
+    <p class="subtle"><a href="/sources">Source list</a> / {esc(source_entry['key'])}</p>
+    <a href="/opportunities?source={quote_plus(source_entry['key'])}">Open linked opportunities</a>
+  </section>
+  <section class="panel">
+    <div class="detail-grid">
+      <div>
+        <p class="list-head">Policy status</p>
+        <h2>{esc(source_entry['key'])}</h2>
+        <p class="meta">{source_status_tag(str(source_entry['policy_status']))}<span class="tag">{esc(source_entry['kind'])}</span></p>
+        <p>{esc(source_entry['notes'] or 'No operator notes recorded.')}</p>
+        <p class="subtle">Signals {esc(detail['signal_count'])} · opportunities {esc(detail['opportunity_count'])} · avg score {esc(detail['avg_score'])}</p>
+        <p class="subtle">Latest signal captured: {esc(detail['latest_signal_at'] or 'none yet')}</p>
+      </div>
+      <div>
+        <p class="list-head">Safety metadata</p>
+        <div class="mini-list">
+          <div class="mini-item"><strong>Credentials</strong><div class="subtle">{esc(risk['credentials'])}</div></div>
+          <div class="mini-item"><strong>Terms</strong><div class="subtle">{esc(risk['terms'])}</div></div>
+          <div class="mini-item"><strong>Rate limits</strong><div class="subtle">{esc(risk['rate_limits'])}</div></div>
+          <div class="mini-item"><strong>Scraping</strong><div class="subtle">{esc(risk['scraping'])}</div></div>
+          <div class="mini-item"><strong>PII / UGC</strong><div class="subtle">{esc(risk['pii_user_generated_content'])}</div></div>
+          <div class="mini-item"><strong>Hosted dependencies</strong><div class="subtle">{esc(risk['hosted_dependencies'])}</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {source_detail_panel(detail)}
+  <section class="row">
+    <p class="list-head">Config snapshot</p>
+    <div class="mini-list">{config_items}</div>
+  </section>
+</div>"""
 
 
 def product_rows(rows: list[Any]) -> str:
@@ -411,7 +507,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 values = signal_filter_values(conn)
                 rows = browse_signals(conn, query=query, source=source, category=category, limit=30)
                 detail = source_detail(conn, source)
-                summary = f'<section class="toolbar"><p class="subtle">Showing {len(rows)} signal rows.</p><a href="/search?q={esc(query)}">Open search results</a></section>'
+                summary = f'<section class="toolbar"><p class="subtle">Showing {len(rows)} signal rows.</p><a href="/sources">Browse sources</a><a href="/search?q={esc(query)}">Open search results</a></section>'
                 body = f'<div class="stack"><section class="grid">{metric_html}</section>{filter_form("/", query=query, source=source, category=category, values=values)}{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>'
                 self.send_html("Dashboard", body)
                 return
@@ -470,19 +566,40 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 self.send_json(payload)
                 return
             if parsed.path == "/sources":
+                payload = source_catalog_payload(self.config)
                 query = params.get("q", [""])[0]
                 source = params.get("source", [""])[0]
                 category = params.get("category", [""])[0]
                 values = signal_filter_values(conn)
                 detail = source_detail(conn, source)
                 rows = browse_signals(conn, query=query, source=source, category=category, limit=30) if source.strip() else []
+                activity_by_source = {item["key"]: source_activity(conn, item["key"]) for item in payload["sources"]}
                 body = (
-                    f'<div class="stack">{filter_form("/sources", query=query, source=source, category=category, values=values, submit_label="Inspect")}'
+                    f'<div class="stack">{source_list_page(payload, activity_by_source, source, detail)}'
+                    f'{filter_form("/sources", query=query, source=source, category=category, values=values, submit_label="Inspect")}'
                     f'{source_detail_panel(detail)}'
                     f'<section class="toolbar"><p class="subtle">Showing {len(rows)} source-linked signal rows.</p><a href="/opportunities?source={quote_plus(source)}">Open source opportunities</a></section>'
                     f'<section class="row-grid">{signal_rows(rows) if source.strip() else "<p>Select a source to inspect its linked signals and opportunities.</p>"}</section></div>'
                 )
-                self.send_html("Source Drill-In", body)
+                self.send_html("Sources", body)
+                return
+            if parsed.path.startswith("/sources/"):
+                source_name = unquote(parsed.path.removeprefix("/sources/")).strip()
+                payload = source_catalog_payload(self.config, source_name)
+                source_entry = payload["source"]
+                if source_entry is None:
+                    self.send_html(
+                        "Source Not Found",
+                        (
+                            f'<div class="stack"><section class="row"><h2>Source not found</h2>'
+                            f'<p class="subtle">No configured source matches <code>{esc(source_name)}</code>.</p>'
+                            f'<p><a href="/sources">Return to the source list</a></p></section></div>'
+                        ),
+                        HTTPStatus.NOT_FOUND,
+                    )
+                    return
+                detail = source_activity(conn, source_name)
+                self.send_html("Source Detail", source_detail_page(source_entry, detail))
                 return
             if parsed.path == "/products":
                 category = params.get("category", [""])[0]
