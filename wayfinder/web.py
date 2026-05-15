@@ -352,6 +352,24 @@ def opportunity_export_payload(row: Any) -> dict[str, Any]:
     }
 
 
+def opportunity_score_payload(row: Any) -> dict[str, Any]:
+    item = dict(row)
+    score_components = parse_score_components(str(item.get("score_components_json", "{}")))
+    return {
+        "id": item.get("id"),
+        "fingerprint": item.get("fingerprint"),
+        "title": item.get("title"),
+        "source": item.get("source"),
+        "category": item.get("category"),
+        "target_user": item.get("target_user"),
+        "evidence_count": int(item.get("evidence_count") or 0),
+        "opportunity_score": item.get("opportunity_score"),
+        "scored_at": item.get("scored_at"),
+        "collected_at": item.get("collected_at"),
+        "score_breakdown": score_components,
+    }
+
+
 def active_filter_summary(filters: list[tuple[str, str]]) -> str:
     active = [(label, value.strip()) for label, value in filters if value.strip()]
     if not active:
@@ -1417,6 +1435,20 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 for row in rows:
                     payload.append(opportunity_export_payload(row))
                 self.send_json(payload)
+                return
+            if parsed.path.startswith("/api/opportunities/") and parsed.path.endswith("/score"):
+                identifier = unquote(parsed.path.removeprefix("/api/opportunities/").removesuffix("/score")).strip()
+                row = opportunity_detail(conn, identifier)
+                if row is None:
+                    self.send_json(
+                        {
+                            "error": "opportunity_not_found",
+                            "requested_identifier": identifier,
+                        },
+                        HTTPStatus.NOT_FOUND,
+                    )
+                    return
+                self.send_json(opportunity_score_payload(row))
                 return
             if parsed.path.startswith("/api/opportunities/"):
                 identifier = unquote(parsed.path.removeprefix("/api/opportunities/")).strip()

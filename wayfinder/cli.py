@@ -89,6 +89,19 @@ def score_summary(row: sqlite3.Row) -> str:
     return " ".join(f"{aliases[key]}={components.get(key, 0)}" for key in ordered)
 
 
+def score_trace_summary(row: sqlite3.Row, key: str, aliases: dict[str, str] | None = None) -> str:
+    try:
+        score_data = json.loads(row["score_components_json"] or "{}")
+    except json.JSONDecodeError:
+        score_data = {}
+    section = score_data.get(key) if isinstance(score_data, dict) else {}
+    if not isinstance(section, dict):
+        return ""
+    ordered = ("pain", "freshness", "recurrence", "source_quality", "build_fit")
+    names = aliases or {item: item for item in ordered}
+    return " ".join(f"{names[item]}={section.get(item, 0)}" for item in ordered)
+
+
 def print_opportunities(rows: list[sqlite3.Row], no_color: bool = False) -> None:
     if not rows:
         print(color("No rows found.", DIM, not no_color))
@@ -97,6 +110,23 @@ def print_opportunities(rows: list[sqlite3.Row], no_color: bool = False) -> None
         heading = f"{row['title']} | score={row['opportunity_score']} | {row['target_user']}"
         print(color(f"{index}. {heading}", BOLD + CYAN, not no_color))
         print(f"   {color('components:', DIM, not no_color)} {score_summary(row)}")
+        inputs = score_trace_summary(row, "inputs")
+        if inputs:
+            print(f"   {color('inputs:', DIM, not no_color)} {inputs}")
+        weights = score_trace_summary(
+            row,
+            "weights",
+            aliases={"pain": "pain", "freshness": "freshness", "recurrence": "recurrence", "source_quality": "source", "build_fit": "fit"},
+        )
+        if weights:
+            print(f"   {color('weights:', DIM, not no_color)} {weights}")
+        try:
+            score_data = json.loads(row["score_components_json"] or "{}")
+        except json.JSONDecodeError:
+            score_data = {}
+        reference_time = score_data.get("reference_time") if isinstance(score_data, dict) else ""
+        if reference_time:
+            print(f"   {color('reference_time:', DIM, not no_color)} {reference_time}")
         for field in ("problem", "iteration_angle", "monetization_strategy"):
             if row[field]:
                 value = str(row[field]).replace("\n", " ").strip()

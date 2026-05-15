@@ -139,4 +139,7 @@ class OpportunityScoringTests(unittest.TestCase):
         self.assertIn("recurrence=", output)
         self.assertIn("source=", output)
         self.assertIn("fit=", output)
+        self.assertIn("inputs:", output)
+        self.assertIn("weights:", output)
+        self.assertIn("reference_time:", output)
         self.assertLess(output.index("Higher evidence opportunity"), output.index("Lower evidence opportunity"))
