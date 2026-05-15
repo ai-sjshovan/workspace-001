@@ -1131,6 +1131,42 @@ def min_score_options(values: list[str], selected: str) -> str:
     return f'<select name="min_score">{"".join(options)}</select>'
 
 
+def max_score_options(values: list[str], selected: str) -> str:
+    options = ['<option value="">Any ceiling</option>']
+    for value in values:
+        active = ' selected="selected"' if value == selected else ""
+        options.append(f'<option value="{esc(value)}"{active}>Up to {esc(value)}</option>')
+    return f'<select name="max_score">{"".join(options)}</select>'
+
+
+def freshness_options(selected: str) -> str:
+    options = [
+        ("", "Any freshness"),
+        ("7", "Last 7 days"),
+        ("30", "Last 30 days"),
+        ("90", "Last 90 days"),
+    ]
+    rendered = []
+    for value, label in options:
+        active = ' selected="selected"' if value == selected else ""
+        rendered.append(f'<option value="{esc(value)}"{active}>{esc(label)}</option>')
+    return f'<select name="freshness">{"".join(rendered)}</select>'
+
+
+def opportunity_sort_options(selected: str) -> str:
+    options = [
+        ("score", "Top score"),
+        ("freshest", "Freshest first"),
+        ("evidence", "Most evidence"),
+        ("score_asc", "Lowest score first"),
+    ]
+    rendered = []
+    for value, label in options:
+        active = ' selected="selected"' if value == selected else ""
+        rendered.append(f'<option value="{esc(value)}"{active}>{esc(label)}</option>')
+    return f'<select name="opportunity_sort">{"".join(rendered)}</select>'
+
+
 class WayfinderHandler(BaseHTTPRequestHandler):
     config: dict[str, Any] = {}
 
@@ -1195,7 +1231,10 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 query = params.get("q", [""])[0]
                 source = params.get("source", [""])[0]
                 category = params.get("market", params.get("category", [""]))[0]
+                freshness_raw = params.get("freshness", [""])[0].strip()
                 min_score_raw = params.get("min_score", [""])[0].strip()
+                max_score_raw = params.get("max_score", [""])[0].strip()
+                opportunity_sort = params.get("opportunity_sort", ["score"])[0].strip() or "score"
                 product = params.get("product", [""])[0]
                 pain_type = params.get("pain", [""])[0]
                 feature_request = params.get("feature_gap", [""])[0]
@@ -1203,6 +1242,14 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     min_score = float(min_score_raw) if min_score_raw else None
                 except ValueError:
                     min_score = None
+                try:
+                    max_score = float(max_score_raw) if max_score_raw else None
+                except ValueError:
+                    max_score = None
+                try:
+                    freshness_days = int(freshness_raw) if freshness_raw else None
+                except ValueError:
+                    freshness_days = None
                 metric_html = "".join(
                     f'<div class="metric"><strong>{value}</strong><span>{esc(name)}</span></div>'
                     for name, value in counts(conn).items()
@@ -1220,6 +1267,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     product=product,
                     pain_type=pain_type,
                     feature_request=feature_request,
+                    freshness_days=freshness_days,
                     limit=30,
                 )
                 shortlist = filtered_opportunities(
@@ -1227,6 +1275,9 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     source=source,
                     category=category,
                     min_score=min_score,
+                    max_score=max_score,
+                    freshness_days=freshness_days,
+                    sort_by=opportunity_sort,
                     limit=5,
                 )
                 detail = source_detail(conn, source, signal_id=selected_signal, source_url=selected_record)
@@ -1234,7 +1285,10 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     [
                         ("product", product),
                         ("market", category),
+                        ("freshness", freshness_raw and f"{freshness_raw} days" or ""),
                         ("min score", min_score_raw),
+                        ("max score", max_score_raw),
+                        ("opportunity sort", "" if opportunity_sort == "score" else opportunity_sort.replace("_", " ")),
                         ("source", source),
                         ("pain", pain_type),
                         ("feature gap", feature_request),
@@ -1242,7 +1296,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 )
                 summary = (
                     f'<section class="toolbar"><div><p class="subtle">Showing {len(rows)} signal rows across '
-                    f'product, market, source, pain, and feature-gap filters.</p>{active_filters}</div>'
+                    f'product, market, source, freshness, pain, and feature-gap filters.</p>{active_filters}</div>'
                     f'<div class="toolbar-links"><a href="/sources">Browse sources</a>'
                     f'<a href="/search?q={esc(query)}">Open search results</a><a href="/">Clear filters</a></div></section>'
                 )
@@ -1257,15 +1311,18 @@ class WayfinderHandler(BaseHTTPRequestHandler):
     <input type="hidden" name="product" value="{esc(product)}">
     <input type="hidden" name="pain" value="{esc(pain_type)}">
     <input type="hidden" name="feature_gap" value="{esc(feature_request)}">
+    {freshness_options(freshness_raw)}
     {min_score_options(opportunity_values.get("min_scores", opportunity_score_filter_values(conn)), min_score_raw)}
-    <button type="submit">Apply shortlist score floor</button>
+    {max_score_options(opportunity_values.get("max_scores", opportunity_score_filter_values(conn)), max_score_raw)}
+    {opportunity_sort_options(opportunity_sort)}
+    <button type="submit">Apply opportunity filters</button>
   </form>
 </section>"""
                     f"""<section class="row">
   <section class="toolbar">
     <div>
       <p class="list-head">Top opportunities</p>
-      <p class="subtle">Highest-scoring read-only opportunities for the current source, market, and score filters.</p>
+      <p class="subtle">Read-only opportunities for the current source, freshness, and score filters.</p>
     </div>
     <div class="toolbar-links">
       <a href="/opportunities?source={quote_plus(source)}&category={quote_plus(category)}&min_score={quote_plus(min_score_raw)}">Open full opportunity view</a>
