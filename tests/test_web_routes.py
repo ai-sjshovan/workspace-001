@@ -146,6 +146,17 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         payload = json.loads(body)
         self.assertEqual(payload["source"]["key"], self.source_name)
 
+        status, body = self.fetch(
+            f"/api/opportunities?source={quote(self.source_name)}&category=market-research&min_score=1&limit=1"
+        )
+        self.assertEqual(status, 200)
+        payload = json.loads(body)
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["title"], "Source evidence drill-ins for research operators")
+        self.assertIn("score_components", payload[0])
+        self.assertIn("components", payload[0]["score_components"])
+        self.assertEqual(payload[0]["source"], self.source_name)
+
         status, body = self.fetch(f"/sources/{quote(self.source_name)}")
         self.assertEqual(status, 200)
         self.assertIn(self.source_name, body)
