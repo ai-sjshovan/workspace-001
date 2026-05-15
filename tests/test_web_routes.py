@@ -156,6 +156,33 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertIn("score_components", payload[0])
         self.assertIn("components", payload[0]["score_components"])
         self.assertEqual(payload[0]["source"], self.source_name)
+        self.assertIn("draft_task", payload[0])
+        self.assertEqual(payload[0]["source_context"]["detail_path"], f"/sources/{quote(self.source_name)}")
+
+        opportunity_id = payload[0]["id"]
+        opportunity_fingerprint = payload[0]["fingerprint"]
+
+        status, body = self.fetch(f"/api/opportunities/{opportunity_id}")
+        self.assertEqual(status, 200)
+        payload = json.loads(body)
+        self.assertEqual(payload["id"], opportunity_id)
+        self.assertEqual(payload["fingerprint"], opportunity_fingerprint)
+        self.assertEqual(payload["title"], "Source evidence drill-ins for research operators")
+        self.assertEqual(payload["target_user"], "Agency research lead")
+        self.assertEqual(payload["source"], self.source_name)
+        self.assertEqual(payload["category"], "market-research")
+        self.assertEqual(payload["evidence_count"], 4)
+        self.assertIn("components", payload["score_components"])
+        self.assertEqual(payload["draft_task"]["foundry_task_suggestions"], "Add focused source detail browse views")
+        self.assertEqual(payload["source_context"]["search_path"], f"/search?source={quote(self.source_name)}&market=market-research")
+        self.assertIsNotNone(payload["linked_source_context"])
+        self.assertEqual(payload["linked_source_context"]["source"], self.source_name)
+        self.assertEqual(len(payload["linked_source_context"]["signals"]), 1)
+
+        status, body = self.fetch(f"/api/opportunities/{opportunity_fingerprint}")
+        self.assertEqual(status, 200)
+        payload = json.loads(body)
+        self.assertEqual(payload["id"], opportunity_id)
 
         status, body = self.fetch(f"/sources/{quote(self.source_name)}")
         self.assertEqual(status, 200)
@@ -202,6 +229,12 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         payload = json.loads(body)
         self.assertEqual(payload["error"], "source_not_found")
         self.assertEqual(payload["requested_source"], "missing-source")
+
+        status, body = self.fetch("/api/opportunities/missing-opportunity")
+        self.assertEqual(status, 404)
+        payload = json.loads(body)
+        self.assertEqual(payload["error"], "opportunity_not_found")
+        self.assertEqual(payload["requested_identifier"], "missing-opportunity")
 
         status, body = self.fetch("/sources/missing-source")
         self.assertEqual(status, 404)

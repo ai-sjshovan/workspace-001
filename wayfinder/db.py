@@ -370,6 +370,15 @@ def filtered_opportunities(
     ).fetchall()
 
 
+def opportunity_detail(conn: sqlite3.Connection, identifier: str) -> sqlite3.Row | None:
+    selected = identifier.strip()
+    if not selected:
+        return None
+    if selected.isdigit():
+        return conn.execute("SELECT * FROM opportunities WHERE id = ?", (int(selected),)).fetchone()
+    return conn.execute("SELECT * FROM opportunities WHERE fingerprint = ?", (selected,)).fetchone()
+
+
 def opportunity_score_filter_values(conn: sqlite3.Connection) -> list[str]:
     rows = conn.execute(
         """
