@@ -412,6 +412,71 @@ class GitHubAdapterTests(unittest.TestCase):
         self.assertEqual(len(batch.opportunities), 1)
         self.assertEqual(batch.signals[0].source_id, "org/acme")
 
+    def test_repeated_github_ingests_update_existing_repo_rows_without_duplicate_drift(self) -> None:
+        adapter = GitHubAdapter("github", {"queries": ["founder pain"]})
+        first_batch = adapter.normalize(
+            [
+                {
+                    "name": "acme",
+                    "full_name": "org/acme",
+                    "html_url": "https://github.com/org/acme",
+                    "description": "Founder pain tracker",
+                    "topics": ["analytics"],
+                    "stargazers_count": 12,
+                    "_wayfinder_queries": ["founder pain"],
+                    "_wayfinder_categories": ["pain-research"],
+                }
+            ]
+        )
+        second_batch = adapter.normalize(
+            [
+                {
+                    "name": "acme",
+                    "full_name": "org/acme",
+                    "html_url": "https://github.com/org/acme",
+                    "description": "Longer normalized repository description for repeated ingest coverage",
+                    "topics": ["analytics", "research-ops"],
+                    "stargazers_count": 24,
+                    "_wayfinder_queries": ["founder pain", "competitor analysis"],
+                    "_wayfinder_categories": ["pain-research", "competitor-research"],
+                }
+            ]
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            conn = connect(Path(tmpdir) / "wayfinder.db")
+            try:
+                self.assertEqual(insert_signals(conn, first_batch.signals), 1)
+                self.assertEqual(insert_products(conn, first_batch.products), 1)
+                self.assertEqual(insert_opportunities(conn, first_batch.opportunities, {}), 1)
+
+                self.assertEqual(insert_signals(conn, second_batch.signals), 0)
+                self.assertEqual(insert_products(conn, second_batch.products), 0)
+                self.assertEqual(insert_opportunities(conn, second_batch.opportunities, {}), 0)
+
+                totals = counts(conn)
+                product_rows = conn.execute(
+                    "SELECT category, strengths, feature_gaps FROM products WHERE product_name = ?",
+                    ("org/acme",),
+                ).fetchall()
+                opportunity_rows = conn.execute(
+                    "SELECT problem, what_users_want_better FROM opportunities WHERE competing_products = ?",
+                    ("org/acme",),
+                ).fetchall()
+            finally:
+                conn.close()
+
+        self.assertEqual(
+            totals,
+            {"signals": 1, "products": 1, "opportunities": 1, "ingest_runs": 0},
+        )
+        self.assertEqual(len(product_rows), 1)
+        self.assertEqual(product_rows[0]["category"], "analytics")
+        self.assertIn("Matched GitHub queries: founder pain", product_rows[0]["feature_gaps"])
+        self.assertEqual(len(opportunity_rows), 1)
+        self.assertEqual(opportunity_rows[0]["problem"], "Longer normalized repository description for repeated ingest coverage")
+        self.assertIn("founder pain, competitor analysis", opportunity_rows[0]["what_users_want_better"])
+
 
 if __name__ == "__main__":
     unittest.main()
