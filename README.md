@@ -140,7 +140,7 @@ Wayfinder ranks opportunities with a deterministic weighted model configured und
 
 The export is intentionally read-only: it prints editable Markdown, does not auto-stage work, does not call LLMs, and does not create Linear issues.
 
-## Current Sources
+## Current Supported Sources
 
 | Source | Adapter status | Recurring cron stance | Notes |
 | --- | --- | --- | --- |
@@ -150,6 +150,8 @@ The export is intentionally read-only: it prints editable Markdown, does not aut
 | Reddit / app-store reviews / Product Hunt / broader crawl/search sources | Deferred | Do not schedule | Out of the current Wayfinder scope until safety and terms review are complete. |
 
 The source review checklist in `docs/source-review-checklist.md` is the canonical promotion guide for moving a source from manual testing into unattended cron eligibility.
+
+New sources do not enter unattended ingest by default. Add a candidate source as `dry-run-only`, `needs-review`, or `disabled`, record the risk fields and notes in `wayfinder.yaml`, and promote it to `enabled` only after the checklist approves unattended use. If the review is not acceptable, keep it out of recurring ingest and document the rejection reason in `notes`.
 
 ## Web Smoke
 

@@ -74,6 +74,16 @@ A source can move from `dry-run-only` to `enabled` only when all of the followin
 
 Promotion to `enabled` does not by itself turn cron on. The unattended path remains blocked until the separate top-level cron switch is explicitly approved.
 
+## Approval Or Rejection Decision
+
+Use the checklist to make an explicit go/no-go decision before a new source is added to unattended ingest:
+
+- Approve: keep the source in `wayfinder.yaml`, set `status: enabled`, retain the reviewed risk fields, and leave clear `notes` describing why unattended ingest is acceptable.
+- Reject for now: keep the source at `dry-run-only`, `needs-review`, or `disabled`, update `notes` with the unresolved safety or rate-limit reason, and do not include it in recurring ingest.
+- Reject entirely: remove the candidate from cron consideration, document the reason in operator notes or the issue/PR, and leave the README/checklist posture unchanged until a later review reopens it.
+
+Until a source reaches the approved path above, it must stay out of unattended ingest even if manual dry runs are acceptable.
+
 ## Scheduled Ingest Guardrails
 
 The current unattended guardrails must remain unchanged:
