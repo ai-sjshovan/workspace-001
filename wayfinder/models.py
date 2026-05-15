@@ -275,6 +275,8 @@ def score_opportunity(
     }
     total = round(sum(contributions.values()), 2)
     return {
+        "formula_version": "deterministic-v1",
+        "reference_time": (reference_time or parse_timestamp(opportunity.collected_at)).isoformat(),
         "score": total,
         "components": contributions,
         "inputs": inputs,
