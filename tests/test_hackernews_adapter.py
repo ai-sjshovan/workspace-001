@@ -156,6 +156,76 @@ class HackerNewsAdapterTests(unittest.TestCase):
             ["competitor analysis tool", "founder pain", "startup idea validation"],
         )
 
+    def test_collect_keeps_richer_duplicate_hit_fields_during_dry_run_normalization(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fixture_path = Path(tmpdir) / "hn-fixture.json"
+            fixture_path.write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {
+                                "query": "founder pain",
+                                "hits": [
+                                    {
+                                        "objectID": "42",
+                                        "title": "Ask HN: Founder pain",
+                                        "story_title": "Ask HN: Founder pain",
+                                        "story_text": "Need a better workflow",
+                                        "comment_text": "",
+                                        "url": "https://example.com/founder-pain",
+                                        "author": "alice",
+                                        "points": 12,
+                                        "created_at": "2026-05-14T12:00:00Z",
+                                    }
+                                ],
+                            },
+                            {
+                                "query": "startup idea validation",
+                                "hits": [
+                                    {
+                                        "objectID": "42",
+                                        "title": "",
+                                        "story_title": "",
+                                        "story_text": "",
+                                        "comment_text": "",
+                                        "url": "",
+                                        "author": "alice",
+                                        "points": 12,
+                                        "created_at": "2026-05-14T12:01:00Z",
+                                    }
+                                ],
+                            },
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            adapter = HackerNewsAdapter(
+                "hackernews",
+                {
+                    "fixture_path": str(fixture_path),
+                    "queries": [
+                        {"query": "founder pain", "label": "founder-pain"},
+                        {"query": "startup idea validation", "label": "idea-validation"},
+                    ],
+                },
+            )
+
+            records = adapter.collect()
+            batch = adapter.normalize(records)
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["title"], "Ask HN: Founder pain")
+        self.assertEqual(records[0]["story_text"], "Need a better workflow")
+        self.assertEqual(records[0]["url"], "https://example.com/founder-pain")
+        self.assertEqual(len(batch.signals), 1)
+        self.assertEqual(batch.signals[0].title, "Ask HN: Founder pain")
+        self.assertEqual(batch.signals[0].source_url, "https://example.com/founder-pain")
+        self.assertEqual(
+            batch.signals[0].body,
+            "Need a better workflow\nhttps://example.com/founder-pain\nhttps://news.ycombinator.com/item?id=42",
+        )
+
     def test_fixture_healthcheck_collect_normalize_allows_zero_hit_query_and_keeps_schema_mapping(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             fixture_path = Path(tmpdir) / "hn-fixture.json"
