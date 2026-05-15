@@ -386,7 +386,6 @@ class GitHubAdapterTests(unittest.TestCase):
         adapter = GitHubAdapter("github", {"queries": ["founder pain"]})
         raw_records = [
             "not-a-dict",
-            {"full_name": "org/missing-name", "html_url": "https://github.com/org/missing-name", "stargazers_count": 4},
             {"name": "missing-url", "full_name": "org/missing-url", "stargazers_count": 4},
             {
                 "name": "bad-stars",
@@ -411,6 +410,28 @@ class GitHubAdapterTests(unittest.TestCase):
         self.assertEqual(len(batch.products), 1)
         self.assertEqual(len(batch.opportunities), 1)
         self.assertEqual(batch.signals[0].source_id, "org/acme")
+
+    def test_normalize_uses_full_name_when_sparse_public_search_record_omits_name(self) -> None:
+        adapter = GitHubAdapter("github", {"queries": ["founder pain"]})
+
+        batch = adapter.normalize(
+            [
+                {
+                    "full_name": "org/missing-name",
+                    "html_url": "https://github.com/org/missing-name",
+                    "description": "Sparse public search payload",
+                    "stargazers_count": 4,
+                    "_wayfinder_queries": ["founder pain"],
+                    "_wayfinder_categories": ["pain-research"],
+                }
+            ]
+        )
+
+        self.assertEqual(len(batch.signals), 1)
+        self.assertEqual(len(batch.products), 1)
+        self.assertEqual(len(batch.opportunities), 1)
+        self.assertIn("repo=missing-name", batch.products[0].strengths)
+        self.assertEqual(batch.signals[0].source_id, "org/missing-name")
 
     def test_repeated_github_ingests_update_existing_repo_rows_without_duplicate_drift(self) -> None:
         adapter = GitHubAdapter("github", {"queries": ["founder pain"]})
