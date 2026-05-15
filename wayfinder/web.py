@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import parse_qs, quote, quote_plus, unquote, urlparse
 
 from .adapters import build_adapter
-from .config import source_configs, source_policy, storage_path
+from .config import source_configs, source_policy, source_review_summary, storage_path
 from .db import (
     browse_signals,
     connect,
@@ -151,6 +151,7 @@ def sanitize_source_value(key: str, value: Any) -> Any:
 
 def source_catalog_entry(name: str, cfg: dict[str, Any], *, cron_enabled: bool, token_free_default: bool) -> dict[str, Any]:
     policy = source_policy(cfg)
+    review_state, unattended_state, review_reason = source_review_summary(policy)
     safe_config = {
         key: sanitize_source_value(key, value)
         for key, value in cfg.items()
@@ -159,7 +160,11 @@ def source_catalog_entry(name: str, cfg: dict[str, Any], *, cron_enabled: bool, 
     return {
         "key": name,
         "kind": str(cfg.get("kind") or name),
+        "status": policy.status,
         "policy_status": policy.status,
+        "review": review_state,
+        "unattended": unattended_state,
+        "why": review_reason,
         "notes": policy.notes,
         "risk": {
             "credentials": policy.risk.credentials,
@@ -170,7 +175,7 @@ def source_catalog_entry(name: str, cfg: dict[str, Any], *, cron_enabled: bool, 
             "hosted_dependencies": policy.risk.hosted_dependencies,
         },
         "unattended_cron": {
-            "eligible": policy.status == "enabled",
+            "eligible": unattended_state == "eligible",
             "global_cron_enabled": cron_enabled,
             "token_free_default": token_free_default,
         },
