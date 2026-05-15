@@ -394,8 +394,8 @@ class GitHubAdapter:
         for item in raw_records:
             if not isinstance(item, dict):
                 continue
-            repo_name = str(item.get("name") or "").strip()
             full_name = str(item.get("full_name") or "").strip()
+            repo_name = self._collapse_text(item.get("name")) or full_name.rsplit("/", 1)[-1].strip()
             html_url = str(item.get("html_url") or "").strip()
             if not repo_name or not full_name or not html_url:
                 continue
