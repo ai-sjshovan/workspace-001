@@ -8,6 +8,19 @@ Wayfinder is an internal Codex Foundry research tool that collects public, non-t
 
 The first user is the Codex Foundry operator. Later users may be builders who want a local-first opportunity intelligence pipeline they can run against their own stack.
 
+## Current Acceptance Target
+
+- The current acceptance target for `project/wayfinder` is the completed V1 local-first research workflow that already exists on this branch.
+- V1 remains the active gate until an operator explicitly reopens the project for V2 work.
+- Authorized work at this stage is limited to preserving and documenting the existing deterministic, token-free ingest model, read-only dashboard, task export, and source-safety surfaces.
+- Preserve the existing smoke surface, including `/`, `/health`, `python3 -m wayfinder sources list --health`, `python3 -m wayfinder ingest --source oss-ledger`, `search`, `products`, `opportunities`, `score`, `export`, and `scheduled-ingest --allow-disabled`.
+
+## V2 Status
+
+- New V2 implementation work is not authorized by default on the current branch.
+- No active V2 slice is approved until an operator explicitly requests that the project be reopened for V2.
+- When V2 is explicitly approved later, record exactly one smallest runnable slice with observable success criteria and the preserved V1 smoke checks before starting implementation work.
+
 ## MVP Workflows
 
 1. Run source adapters without LLM calls.

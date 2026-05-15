@@ -10,6 +10,12 @@ The first version is intentionally simple:
 - a small read-only dashboard makes the database browsable
 - external sources are explicit in `wayfinder.yaml`
 
+## Current Acceptance Target
+
+Wayfinder is currently operating against the V1 acceptance target already present on `project/wayfinder`: deterministic, token-free ingest; explicit source-safety controls; read-only browse/detail/export surfaces; and the existing CLI and web smoke checks.
+
+V2 implementation work is not authorized by default. Unless an operator explicitly reopens the project for V2, the current branch should only preserve and clarify the V1 baseline rather than start a new feature slice.
+
 ## Commands
 
 From the repository root:
@@ -44,7 +50,7 @@ python3 -m wayfinder serve --port 8766
 Verified in `workspace-001` on the configured `project/wayfinder` branch.
 
 - Entrypoints: repo-local CLI via `python3 -m wayfinder` and the read-only dashboard via `python3 -m wayfinder serve --port 8766`
-- Confirmed routes: `/` renders the dashboard and `/health` returns `{"ok": true, "service": "wayfinder"}`
+- Confirmed routes: `/` renders the dashboard and `/health` returns a readiness payload with `ok`, `service`, `config`, `database`, and `storage_path`
 - Confirmed CLI smoke path: `sources list --health`, `ingest --source oss-ledger`, `search`, `products`, `opportunities`, and `stats`
 - Current approved ingest baseline: `oss-ledger` is enabled; `hackernews` is `dry-run-only`; `github` is `dry-run-only`
 - Follow-on adapter gap: only `oss-ledger` is approved for normal writes today, so Hacker News and GitHub adapter work still needs safety/rate-limit promotion before unattended ingest
