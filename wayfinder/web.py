@@ -807,6 +807,32 @@ def opportunity_rows(rows: list[Any]) -> str:
     return "\n".join(chunks)
 
 
+def shortlist_rows(rows: list[Any]) -> str:
+    if not rows:
+        return '<p class="subtle">No opportunities match the current shortlist filters.</p>'
+    chunks = []
+    for row in rows:
+        detail_path = f"/opportunities/{esc(row['id'])}"
+        export_path = f"{detail_path}#task-draft-preview"
+        chunks.append(
+            f"""<article class="row">
+  <div class="signal-head">
+    <div>
+      <h2><a href="{detail_path}">{esc(row['title'])}</a></h2>
+      <div class="meta">{source_drill_in(str(row['source']), str(row['source']) or 'source')}<span class="tag">{esc(row['category'] or 'uncategorized')}</span><span class="tag">{esc(row['target_user'] or 'no target user')}</span></div>
+    </div>
+    <div class="score">score {esc(row['opportunity_score'])}</div>
+  </div>
+  <p class="subtle">{esc(row['problem'] or 'No problem statement captured.')}</p>
+  <div class="toolbar-links">
+    <a href="{detail_path}">View detail</a>
+    <a href="{export_path}">Open export</a>
+  </div>
+</article>"""
+        )
+    return "".join(chunks)
+
+
 def draft_preview_text(payload: dict[str, Any]) -> str:
     draft_task = payload["draft_task"]
     score_components = payload.get("score_components", {}).get("components", {})
@@ -928,7 +954,7 @@ def opportunity_detail_page(payload: dict[str, Any], related: dict[str, list[dic
       <div class="metric"><strong>{esc(components.get('build_fit', 0))}</strong><span>Build fit contribution · input {esc(inputs.get('build_fit', 0))} · weight {esc(weights.get('build_fit', 0))}</span></div>
     </div>
   </section>
-  <section class="row">
+  <section class="row" id="task-draft-preview">
     <section class="toolbar">
       <div>
         <p class="list-head">Task draft preview</p>
@@ -1030,14 +1056,20 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 query = params.get("q", [""])[0]
                 source = params.get("source", [""])[0]
                 category = params.get("market", params.get("category", [""]))[0]
+                min_score_raw = params.get("min_score", [""])[0].strip()
                 product = params.get("product", [""])[0]
                 pain_type = params.get("pain", [""])[0]
                 feature_request = params.get("feature_gap", [""])[0]
+                try:
+                    min_score = float(min_score_raw) if min_score_raw else None
+                except ValueError:
+                    min_score = None
                 metric_html = "".join(
                     f'<div class="metric"><strong>{value}</strong><span>{esc(name)}</span></div>'
                     for name, value in counts(conn).items()
                 )
                 values = signal_filter_values(conn)
+                opportunity_values = opportunity_filter_values(conn)
                 source_payload = source_catalog_payload(self.config)
                 dashboard_sources = [item["key"] for item in source_payload["sources"]]
                 activity_by_source = {name: source_activity(conn, name) for name in dashboard_sources}
@@ -1051,11 +1083,19 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     feature_request=feature_request,
                     limit=30,
                 )
+                shortlist = filtered_opportunities(
+                    conn,
+                    source=source,
+                    category=category,
+                    min_score=min_score,
+                    limit=5,
+                )
                 detail = source_detail(conn, source, signal_id=selected_signal, source_url=selected_record)
                 active_filters = active_filter_summary(
                     [
                         ("product", product),
                         ("market", category),
+                        ("min score", min_score_raw),
                         ("source", source),
                         ("pain", pain_type),
                         ("feature gap", feature_request),
@@ -1070,6 +1110,30 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 body = (
                     f'<div class="stack"><section class="grid">{metric_html}</section>'
                     f'{filter_form("/", query=query, source=source, category=category, product=product, pain_type=pain_type, feature_request=feature_request, values=values, include_category=False, include_product=True, include_market=True, include_pain_type=True, include_feature_request=True)}'
+                    f"""<section class="panel">
+  <form class="filters" method="get" action="/">
+    <input type="hidden" name="q" value="{esc(query)}">
+    <input type="hidden" name="source" value="{esc(source)}">
+    <input type="hidden" name="market" value="{esc(category)}">
+    <input type="hidden" name="product" value="{esc(product)}">
+    <input type="hidden" name="pain" value="{esc(pain_type)}">
+    <input type="hidden" name="feature_gap" value="{esc(feature_request)}">
+    {min_score_options(opportunity_values.get("min_scores", opportunity_score_filter_values(conn)), min_score_raw)}
+    <button type="submit">Apply shortlist score floor</button>
+  </form>
+</section>"""
+                    f"""<section class="row">
+  <section class="toolbar">
+    <div>
+      <p class="list-head">Top opportunities</p>
+      <p class="subtle">Highest-scoring read-only opportunities for the current source, market, and score filters.</p>
+    </div>
+    <div class="toolbar-links">
+      <a href="/opportunities?source={quote_plus(source)}&category={quote_plus(category)}&min_score={quote_plus(min_score_raw)}">Open full opportunity view</a>
+    </div>
+  </section>
+  <section class="row-grid">{shortlist_rows(shortlist)}</section>
+</section>"""
                     f'{source_directory(dashboard_sources, source, activity_by_source)}'
                     f'{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>'
                 )

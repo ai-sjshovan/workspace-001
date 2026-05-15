@@ -112,15 +112,22 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertIn("Wayfinder", body)
         self.assertIn('name="product"', body)
         self.assertIn('name="market"', body)
+        self.assertIn('name="min_score"', body)
         self.assertIn('name="pain"', body)
         self.assertIn('name="feature_gap"', body)
+        self.assertIn("Top opportunities", body)
+        self.assertIn("Open export", body)
 
         status, body = self.fetch(
-            f"/?source={quote(self.source_name)}&product=Pain%20Radar&market=market-research&pain=reporting%20delays&feature_gap=deeper%20source%20drill-ins"
+            f"/?source={quote(self.source_name)}&product=Pain%20Radar&market=market-research&min_score=1&pain=reporting%20delays&feature_gap=deeper%20source%20drill-ins"
         )
         self.assertEqual(status, 200)
         self.assertIn("Wayfinder dashboard smoke signal", body)
         self.assertIn("Open dedicated source view", body)
+        self.assertIn("Source evidence drill-ins for research operators", body)
+        self.assertIn('Apply shortlist score floor', body)
+        self.assertIn('href="/opportunities/1"', body)
+        self.assertIn('href="/opportunities/1#task-draft-preview"', body)
 
         status, body = self.fetch("/health")
         self.assertEqual(status, 200)
