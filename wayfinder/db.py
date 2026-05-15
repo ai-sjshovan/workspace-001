@@ -6,7 +6,7 @@ import pathlib
 import sqlite3
 from typing import Iterable
 
-from .models import Opportunity, ProductIntel, Signal, opportunity_from_row_data, score_opportunity, utc_now
+from .models import Opportunity, ProductIntel, Signal, opportunity_from_row_data, parse_timestamp, score_opportunity, utc_now
 
 
 SCHEMA = """
@@ -136,6 +136,43 @@ def opportunity_fingerprint(opportunity: Opportunity) -> str:
     return stable_fingerprint(opportunity.title, opportunity.target_user, opportunity.problem)
 
 
+def _scoring_reference_time(opportunities: Iterable[Opportunity]):
+    timestamps = []
+    for opportunity in opportunities:
+        try:
+            timestamps.append(parse_timestamp(opportunity.collected_at))
+        except ValueError:
+            continue
+    return max(timestamps) if timestamps else None
+
+
+def _rescore_opportunity_rows(
+    conn: sqlite3.Connection,
+    rows: list[sqlite3.Row],
+    weights: dict[str, float],
+) -> int:
+    opportunities: list[tuple[sqlite3.Row, Opportunity]] = []
+    for row in rows:
+        raw = json.loads(row["raw_json"] or "{}")
+        opportunity = opportunity_from_row_data(dict(row), raw if isinstance(raw, dict) else {})
+        opportunities.append((row, opportunity))
+
+    reference_time = _scoring_reference_time(opportunity for _, opportunity in opportunities)
+    updated = 0
+    for row, opportunity in opportunities:
+        score_data = score_opportunity(opportunity, weights, reference_time=reference_time)
+        conn.execute(
+            """
+            UPDATE opportunities
+            SET opportunity_score = ?, score_components_json = ?, scored_at = ?
+            WHERE id = ?
+            """,
+            (score_data["score"], json.dumps(score_data, sort_keys=True), utc_now(), row["id"]),
+        )
+        updated += 1
+    return updated
+
+
 def insert_signals(conn: sqlite3.Connection, signals: Iterable[Signal]) -> int:
     inserted = 0
     for signal in signals:
@@ -221,9 +258,11 @@ def insert_products(conn: sqlite3.Connection, products: Iterable[ProductIntel]) 
 
 def insert_opportunities(conn: sqlite3.Connection, opportunities: Iterable[Opportunity], weights: dict[str, float]) -> int:
     inserted = 0
-    for opportunity in opportunities:
+    buffered = list(opportunities)
+    reference_time = _scoring_reference_time(buffered)
+    for opportunity in buffered:
         fingerprint = opportunity_fingerprint(opportunity)
-        score_data = score_opportunity(opportunity, weights)
+        score_data = score_opportunity(opportunity, weights, reference_time=reference_time)
         exists = conn.execute("SELECT 1 FROM opportunities WHERE fingerprint = ?", (fingerprint,)).fetchone() is not None
         cur = conn.execute(
             """
@@ -279,6 +318,8 @@ def insert_opportunities(conn: sqlite3.Connection, opportunities: Iterable[Oppor
             ),
         )
         inserted += int(bool(cur.rowcount) and not exists)
+    rows = conn.execute("SELECT * FROM opportunities").fetchall()
+    _rescore_opportunity_rows(conn, rows, weights)
     return inserted
 
 
@@ -343,20 +384,7 @@ def opportunity_score_filter_values(conn: sqlite3.Connection) -> list[str]:
 
 def rescore_opportunities(conn: sqlite3.Connection, weights: dict[str, float]) -> int:
     rows = conn.execute("SELECT * FROM opportunities").fetchall()
-    updated = 0
-    for row in rows:
-        raw = json.loads(row["raw_json"] or "{}")
-        opportunity = opportunity_from_row_data(dict(row), raw if isinstance(raw, dict) else {})
-        score_data = score_opportunity(opportunity, weights)
-        conn.execute(
-            """
-            UPDATE opportunities
-            SET opportunity_score = ?, score_components_json = ?, scored_at = ?
-            WHERE id = ?
-            """,
-            (score_data["score"], json.dumps(score_data, sort_keys=True), utc_now(), row["id"]),
-        )
-        updated += 1
+    updated = _rescore_opportunity_rows(conn, rows, weights)
     conn.commit()
     return updated
 

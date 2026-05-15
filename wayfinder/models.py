@@ -125,12 +125,13 @@ def _evidence_input(opportunity: Opportunity) -> float:
     return _clamp(opportunity.evidence_count / 5.0)
 
 
-def _freshness_input(opportunity: Opportunity) -> float:
+def _freshness_input(opportunity: Opportunity, reference_time: datetime | None = None) -> float:
     try:
         collected_at = parse_timestamp(opportunity.collected_at)
     except ValueError:
         return 0.5
-    age_days = max((datetime.now(timezone.utc) - collected_at).total_seconds() / 86400.0, 0.0)
+    baseline = reference_time or collected_at
+    age_days = max((baseline - collected_at).total_seconds() / 86400.0, 0.0)
     return _clamp(1.0 - min(age_days, 180.0) / 180.0, 0.2, 1.0)
 
 
@@ -200,10 +201,15 @@ def _build_fit_input(opportunity: Opportunity) -> float:
     return _clamp(score)
 
 
-def score_opportunity(opportunity: Opportunity, weights: dict[str, float]) -> dict[str, Any]:
+def score_opportunity(
+    opportunity: Opportunity,
+    weights: dict[str, float],
+    *,
+    reference_time: datetime | None = None,
+) -> dict[str, Any]:
     inputs = {
         "evidence_count": round(_evidence_input(opportunity), 4),
-        "freshness": round(_freshness_input(opportunity), 4),
+        "freshness": round(_freshness_input(opportunity, reference_time=reference_time), 4),
         "monetization_signal": round(_monetization_input(opportunity), 4),
         "source_quality": round(_source_quality_input(opportunity), 4),
         "build_fit": round(_build_fit_input(opportunity), 4),
