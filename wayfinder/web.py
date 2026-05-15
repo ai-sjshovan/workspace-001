@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, quote_plus, urlparse
 
-from .config import storage_path
+from .config import source_configs, source_policy, storage_path
 from .db import (
     browse_signals,
     connect,
@@ -20,6 +20,23 @@ from .db import (
     signal_filter_values,
     source_detail,
 )
+
+
+SENSITIVE_CONFIG_KEYS = {
+    "api_key",
+    "apikey",
+    "auth",
+    "authorization",
+    "bearer",
+    "client_secret",
+    "cookie",
+    "credential",
+    "credentials",
+    "password",
+    "private_key",
+    "secret",
+    "token",
+}
 
 
 STYLE = """
@@ -92,6 +109,76 @@ def layout(title: str, body: str) -> bytes:
   <main>{body}</main>
 </body>
 </html>""".encode("utf-8")
+
+
+def is_sensitive_key(key: str) -> bool:
+    normalized = key.strip().lower().replace("-", "_")
+    return any(marker in normalized for marker in SENSITIVE_CONFIG_KEYS)
+
+
+def sanitize_source_value(key: str, value: Any) -> Any:
+    if is_sensitive_key(key):
+        normalized = str(value).strip().lower()
+        if normalized in {"", "none", "false", "0", "null"}:
+            return value
+        return "[redacted]"
+    if isinstance(value, dict):
+        return {str(child_key): sanitize_source_value(str(child_key), child_value) for child_key, child_value in value.items()}
+    if isinstance(value, list):
+        return [sanitize_source_value(key, item) for item in value]
+    return value
+
+
+def source_catalog_entry(name: str, cfg: dict[str, Any], *, cron_enabled: bool, token_free_default: bool) -> dict[str, Any]:
+    policy = source_policy(cfg)
+    safe_config = {
+        key: sanitize_source_value(key, value)
+        for key, value in cfg.items()
+        if key != "_config_dir"
+    }
+    return {
+        "key": name,
+        "kind": str(cfg.get("kind") or name),
+        "policy_status": policy.status,
+        "notes": policy.notes,
+        "risk": {
+            "credentials": policy.risk.credentials,
+            "terms": policy.risk.terms,
+            "rate_limits": policy.risk.rate_limits,
+            "scraping": policy.risk.scraping,
+            "pii_user_generated_content": policy.risk.pii_user_generated_content,
+            "hosted_dependencies": policy.risk.hosted_dependencies,
+        },
+        "unattended_cron": {
+            "eligible": policy.status == "enabled",
+            "global_cron_enabled": cron_enabled,
+            "token_free_default": token_free_default,
+        },
+        "config": safe_config,
+    }
+
+
+def source_catalog_payload(config: dict[str, Any], source_name: str = "") -> dict[str, Any]:
+    cron = config.get("cron") if isinstance(config.get("cron"), dict) else {}
+    cron_enabled = bool(cron.get("enabled", False))
+    token_free_default = bool(cron.get("token_free", False))
+    catalog = {
+        name: source_catalog_entry(name, cfg, cron_enabled=cron_enabled, token_free_default=token_free_default)
+        for name, cfg in source_configs(config).items()
+    }
+    selected_name = source_name.strip()
+    selected = catalog.get(selected_name) if selected_name else None
+    return {
+        "sources": [catalog[name] for name in sorted(catalog)],
+        "source": selected,
+        "requested_source": selected_name or None,
+        "count": len(catalog),
+        "cron": {
+            "enabled": cron_enabled,
+            "schedule": str(cron.get("schedule") or ""),
+            "token_free_default": token_free_default,
+        },
+    }
 
 
 def source_drill_in(source: str, label: str | None = None) -> str:
@@ -366,6 +453,21 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 query = params.get("q", [""])[0]
                 rows = search_signals(conn, query, 50)
                 self.send_json([dict(row) for row in rows])
+                return
+            if parsed.path == "/api/sources":
+                source_name = params.get("source", [""])[0]
+                payload = source_catalog_payload(self.config, source_name)
+                if source_name.strip() and payload["source"] is None:
+                    self.send_json(
+                        {
+                            "error": "source_not_found",
+                            "requested_source": source_name.strip(),
+                            "available_sources": [item["key"] for item in payload["sources"]],
+                        },
+                        HTTPStatus.NOT_FOUND,
+                    )
+                    return
+                self.send_json(payload)
                 return
             if parsed.path == "/sources":
                 query = params.get("q", [""])[0]
