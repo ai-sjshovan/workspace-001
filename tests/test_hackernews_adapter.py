@@ -12,6 +12,7 @@ from wayfinder.adapters.hackernews import HackerNewsAdapter, HackerNewsCollectEr
 from wayfinder.cli import ingest_source
 from wayfinder.config import load_config, source_configs
 from wayfinder.db import connect, insert_signals, search_signals
+from wayfinder.models import Signal
 
 
 class HackerNewsAdapterTests(unittest.TestCase):
@@ -184,6 +185,36 @@ class HackerNewsAdapterTests(unittest.TestCase):
         self.assertEqual(signal.category, "validation")
         self.assertEqual(signal.raw["objectID"], "8055654")
 
+    def test_normalize_skips_malformed_hits_without_losing_valid_records(self) -> None:
+        adapter = HackerNewsAdapter("hackernews", {"queries": ["startup idea validation"]})
+        raw_records = [
+            {
+                "objectID": {"bad": "shape"},
+                "title": "Bad item",
+                "comment_text": "should be skipped",
+                "_wayfinder_query": "startup idea validation",
+                "_wayfinder_category": "validation",
+            },
+            {
+                "story_id": 8055654,
+                "story_title": "",
+                "title": "",
+                "story_url": "http://cayenneapps.com",
+                "url": "",
+                "author": "sangria",
+                "points": None,
+                "created_at": "2014-07-18T21:10:54Z",
+                "comment_text": "startup idea validation in the wild",
+                "_wayfinder_query": "startup idea validation",
+                "_wayfinder_category": "validation",
+            },
+        ]
+
+        batch = adapter.normalize(raw_records)
+
+        self.assertEqual(len(batch.signals), 1)
+        self.assertEqual(batch.signals[0].source_id, "8055654")
+
     def test_dry_run_does_not_write_db_and_live_insert_is_searchable(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -256,6 +287,49 @@ class HackerNewsAdapterTests(unittest.TestCase):
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0]["source"], "hackernews")
             self.assertEqual(rows[0]["source_id"], "4001")
+
+    def test_live_insert_upserts_same_hn_item_without_duplicate_drift(self) -> None:
+        conn = connect(Path(":memory:"))
+        try:
+            first = Signal(
+                source="hackernews",
+                source_id="42",
+                source_url="https://example.com/original",
+                title="Ask HN: Founder pain",
+                body="Need a better workflow",
+                author="alice",
+                score=8,
+                category="alpha",
+                raw={"objectID": "42", "title": "Ask HN: Founder pain"},
+            )
+            second = Signal(
+                source="hackernews",
+                source_id="42",
+                source_url="https://example.com/updated",
+                title="Ask HN: Founder pain updated",
+                body="Need a better workflow with better normalization",
+                author="alice",
+                score=12,
+                category="alpha",
+                raw={"objectID": "42", "title": "Ask HN: Founder pain updated"},
+            )
+
+            first_inserted = insert_signals(conn, [first])
+            second_inserted = insert_signals(conn, [second])
+            rows = conn.execute(
+                "SELECT source_id, source_url, title, body, score FROM signals WHERE source = ?",
+                ("hackernews",),
+            ).fetchall()
+        finally:
+            conn.close()
+
+        self.assertEqual(first_inserted, 1)
+        self.assertEqual(second_inserted, 0)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["source_id"], "42")
+        self.assertEqual(rows[0]["source_url"], "https://example.com/updated")
+        self.assertEqual(rows[0]["title"], "Ask HN: Founder pain updated")
+        self.assertEqual(rows[0]["score"], 12)
 
 
 if __name__ == "__main__":
