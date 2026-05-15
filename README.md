@@ -32,6 +32,7 @@ python3 -m wayfinder serve --port 8766
 
 - Config: `wayfinder.yaml`
 - Architecture: `docs/architecture.md`
+- Source review checklist: `docs/source-review-checklist.md`
 - OSS source ledger: `research/open-source-intel-ledger.yaml`
 - SQLite database: `.ai-state/wayfinder/wayfinder.db`
 - Audit log: `logs/wayfinder-audit.log`
@@ -86,6 +87,8 @@ Example cron entry, left disabled by default:
 ```
 
 ## Source Safety
+
+Promotion and review steps for unattended ingest live in `docs/source-review-checklist.md`.
 
 Each source carries a review status in `wayfinder.yaml`:
 
