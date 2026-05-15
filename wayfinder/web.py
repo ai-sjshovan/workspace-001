@@ -74,10 +74,15 @@ button { padding: 11px 15px; border: 0; border-radius: 7px; background: #102523;
 .subtle { color: #66746a; font-size: 14px; }
 .score { min-width: 78px; text-align: right; font-weight: 800; color: #102523; }
 .tag { display: inline-block; margin-right: 6px; padding: 2px 7px; border-radius: 99px; background: #e9f2dc; color: #40502e; font-size: 12px; font-weight: 700; }
+.tag.active { background: #102523; color: #f6fbf2; }
 .list-head { margin: 0 0 4px; font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: #66746a; }
 .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
 .card-grid .row { height: 100%; }
 .source-title { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+.source-card { display: block; color: inherit; }
+.source-card.active { border-color: #102523; box-shadow: 0 0 0 2px rgba(16, 37, 35, .12); }
+.source-card h2 { color: #102523; }
+.toolbar-links { display: flex; gap: 10px; flex-wrap: wrap; }
 @media (max-width: 760px) {
   header, main { padding-left: 18px; padding-right: 18px; }
   form.filters, .signal-head, .detail-grid { grid-template-columns: 1fr; }
@@ -196,6 +201,40 @@ def source_drill_in(source: str, label: str | None = None) -> str:
 
 def source_path(source_name: str) -> str:
     return f"/sources/{quote(source_name.strip(), safe='')}"
+
+
+def active_filter_summary(filters: list[tuple[str, str]]) -> str:
+    active = [(label, value.strip()) for label, value in filters if value.strip()]
+    if not active:
+        return '<p class="subtle">No filters applied. Browse the highest-signal rows or jump into a source detail view.</p>'
+    tags = "".join(f'<span class="tag active">{esc(label)}: {esc(value)}</span>' for label, value in active)
+    return f'<div>{tags}</div>'
+
+
+def source_directory(source_names: list[str], active_source: str, activity_lookup: dict[str, dict[str, Any]]) -> str:
+    if not source_names:
+        return ""
+    cards: list[str] = []
+    current = active_source.strip()
+    for name in source_names:
+        activity = activity_lookup.get(name, {})
+        selected = ' active' if name == current else ""
+        summary = (
+            f"Signals {esc(activity.get('signal_count', 0))} · opportunities {esc(activity.get('opportunity_count', 0))}"
+        )
+        cards.append(
+            f"""<a class="row source-card{selected}" href="{esc(source_path(name))}">
+  <p class="list-head">Source detail</p>
+  <h2>{esc(name)}</h2>
+  <p class="subtle">{summary}</p>
+  <p class="subtle">Avg score {esc(activity.get('avg_score', 0))} · latest {esc(activity.get('latest_signal_at') or 'none yet')}</p>
+</a>"""
+        )
+    return (
+        '<section class="panel"><section class="toolbar"><div><p class="list-head">Sources</p>'
+        '<p class="subtle">Open a dedicated source detail page directly from the dashboard.</p></div></section>'
+        f'<section class="card-grid">{"".join(cards)}</section></section>'
+    )
 
 
 def filter_form(
@@ -527,6 +566,9 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     for name, value in counts(conn).items()
                 )
                 values = signal_filter_values(conn)
+                source_payload = source_catalog_payload(self.config)
+                dashboard_sources = [item["key"] for item in source_payload["sources"]]
+                activity_by_source = {name: source_activity(conn, name) for name in dashboard_sources}
                 rows = browse_signals(
                     conn,
                     query=query,
@@ -538,14 +580,25 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     limit=30,
                 )
                 detail = source_detail(conn, source)
+                active_filters = active_filter_summary(
+                    [
+                        ("product", product),
+                        ("market", category),
+                        ("source", source),
+                        ("pain", pain_type),
+                        ("feature gap", feature_request),
+                    ]
+                )
                 summary = (
-                    f'<section class="toolbar"><p class="subtle">Showing {len(rows)} signal rows across '
-                    f'product, market, pain, and feature-gap filters.</p><a href="/sources">Browse sources</a>'
-                    f'<a href="/search?q={esc(query)}">Open search results</a></section>'
+                    f'<section class="toolbar"><div><p class="subtle">Showing {len(rows)} signal rows across '
+                    f'product, market, source, pain, and feature-gap filters.</p>{active_filters}</div>'
+                    f'<div class="toolbar-links"><a href="/sources">Browse sources</a>'
+                    f'<a href="/search?q={esc(query)}">Open search results</a><a href="/">Clear filters</a></div></section>'
                 )
                 body = (
                     f'<div class="stack"><section class="grid">{metric_html}</section>'
                     f'{filter_form("/", query=query, source=source, category=category, product=product, pain_type=pain_type, feature_request=feature_request, values=values, include_category=False, include_product=True, include_market=True, include_pain_type=True, include_feature_request=True)}'
+                    f'{source_directory(dashboard_sources, source, activity_by_source)}'
                     f'{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>'
                 )
                 self.send_html("Dashboard", body)
