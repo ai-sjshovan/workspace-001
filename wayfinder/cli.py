@@ -181,6 +181,13 @@ def draft_scope_boundaries(row: sqlite3.Row) -> list[str]:
     return boundaries
 
 
+def draft_delivery_expectation() -> list[str]:
+    return [
+        "Keep the output Markdown-only and operator-editable.",
+        "Hand the draft to Hermes for review or paste it into Linear manually when ready.",
+    ]
+
+
 def format_task_draft(row: sqlite3.Row, index: int) -> str:
     metadata = [
         f"source={row['source'] or 'unknown'}",
@@ -212,6 +219,13 @@ def format_task_draft(row: sqlite3.Row, index: int) -> str:
         ]
     )
     lines.extend(f"- {item}" for item in draft_scope_boundaries(row))
+    lines.extend(
+        [
+            "",
+            "### Delivery Expectation",
+        ]
+    )
+    lines.extend(f"- {item}" for item in draft_delivery_expectation())
     return "\n".join(lines)
 
 
