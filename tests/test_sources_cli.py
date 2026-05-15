@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import argparse
 import io
+import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
 from wayfinder.cli import cmd_sources
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class SourceStatusCliTests(unittest.TestCase):
@@ -95,6 +100,18 @@ class SourceStatusCliTests(unittest.TestCase):
         self.assertIn("disabled-source status=disabled", output)
         self.assertIn("review=blocked unattended=blocked", output)
         self.assertIn("health=disabled Health checks are skipped while this adapter is disabled.", output)
+
+    def test_module_entrypoint_runs_help_from_repo_root(self) -> None:
+        completed = subprocess.run(
+            [sys.executable, "-m", "wayfinder", "--help"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("usage: wayfinder", completed.stdout)
 
 
 if __name__ == "__main__":
