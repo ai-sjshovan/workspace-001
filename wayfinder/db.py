@@ -305,6 +305,18 @@ def filtered_opportunities(
     ).fetchall()
 
 
+def opportunity_score_filter_values(conn: sqlite3.Connection) -> list[str]:
+    rows = conn.execute(
+        """
+        SELECT MAX(opportunity_score) AS max_score
+        FROM opportunities
+        """
+    ).fetchone()
+    max_score = float(rows["max_score"] or 0) if rows else 0.0
+    presets = [40, 55, 70, 85]
+    return [str(value) for value in presets if max_score >= value]
+
+
 def rescore_opportunities(conn: sqlite3.Connection, weights: dict[str, float]) -> int:
     rows = conn.execute("SELECT * FROM opportunities").fetchall()
     updated = 0
@@ -465,6 +477,7 @@ def opportunity_filter_values(conn: sqlite3.Connection) -> dict[str, list[str]]:
                 "SELECT DISTINCT category FROM opportunities WHERE category != '' ORDER BY category COLLATE NOCASE"
             )
         ],
+        "min_scores": opportunity_score_filter_values(conn),
     }
 
 
@@ -523,6 +536,18 @@ def source_detail(conn: sqlite3.Connection, source: str) -> dict[str, object] | 
         """,
         (selected,),
     ).fetchall()
+    recent_runs = conn.execute(
+        """
+        SELECT started_at, finished_at, status, collected, inserted_signals, inserted_products,
+               inserted_opportunities, dry_run, message
+        FROM ingest_runs
+        WHERE source = ?
+        ORDER BY finished_at DESC, id DESC
+        LIMIT 5
+        """,
+        (selected,),
+    ).fetchall()
+    latest_run = recent_runs[0] if recent_runs else None
     return {
         "source": selected,
         "signal_count": int(signal_summary["signal_count"]),
@@ -533,6 +558,9 @@ def source_detail(conn: sqlite3.Connection, source: str) -> dict[str, object] | 
         "categories": [dict(row) for row in categories],
         "signals": [dict(row) for row in signals],
         "opportunities": [dict(row) for row in opportunities],
+        "health_status": str(latest_run["status"]) if latest_run else "unknown",
+        "last_ingest_at": str(latest_run["finished_at"]) if latest_run else "",
+        "recent_runs": [dict(row) for row in recent_runs],
     }
 
 
@@ -585,6 +613,18 @@ def source_activity(conn: sqlite3.Connection, source: str) -> dict[str, object]:
         """,
         (selected,),
     ).fetchall()
+    recent_runs = conn.execute(
+        """
+        SELECT started_at, finished_at, status, collected, inserted_signals, inserted_products,
+               inserted_opportunities, dry_run, message
+        FROM ingest_runs
+        WHERE source = ?
+        ORDER BY finished_at DESC, id DESC
+        LIMIT 5
+        """,
+        (selected,),
+    ).fetchall()
+    latest_run = recent_runs[0] if recent_runs else None
     return {
         "source": selected,
         "signal_count": int(signal_summary["signal_count"]) if signal_summary else 0,
@@ -595,6 +635,9 @@ def source_activity(conn: sqlite3.Connection, source: str) -> dict[str, object]:
         "categories": [dict(row) for row in categories],
         "signals": [dict(row) for row in signals],
         "opportunities": [dict(row) for row in opportunities],
+        "health_status": str(latest_run["status"]) if latest_run else "unknown",
+        "last_ingest_at": str(latest_run["finished_at"]) if latest_run else "",
+        "recent_runs": [dict(row) for row in recent_runs],
     }
 
 
