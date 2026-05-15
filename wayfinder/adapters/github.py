@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import socket
 import urllib.error
 import urllib.parse
@@ -27,15 +28,29 @@ class GitHubAdapter:
 
     def healthcheck(self) -> tuple[bool, str]:
         try:
-            count = len(self._query_specs())
-            base_url = self._base_url()
-            self._timeout_seconds()
-            auth_mode = self._auth_mode()
+            specs = self._query_specs()
+            fixture_path = self._fixture_path()
+            if fixture_path is not None:
+                items_by_query = self._fixture_items_by_query()
+                missing = [spec["query"] for spec in specs if spec["query"] not in items_by_query]
+                if missing:
+                    missing_text = ", ".join(sorted(missing))
+                    raise ValueError(f"github fixture_path is missing items for configured queries: {missing_text}")
+            else:
+                self._base_url()
+                self._timeout_seconds()
+                auth_mode = self._auth_mode()
         except ValueError as exc:
             return False, str(exc)
+        count = len(specs)
+        if fixture_path is not None:
+            return count > 0, (
+                f"GitHub deterministic fixture configured with {count} quer{'y' if count == 1 else 'ies'} "
+                f"via {fixture_path}"
+            )
         return count > 0, (
             f"GitHub public search configured with {count} quer{'y' if count == 1 else 'ies'} "
-            f"via {base_url} ({auth_mode})"
+            f"via {self._base_url()} ({auth_mode})"
         )
 
     def _timeout_seconds(self) -> float:
@@ -71,6 +86,20 @@ class GitHubAdapter:
         if not parsed.path.rstrip("/").endswith("/search/repositories"):
             raise ValueError("github source must use the /search/repositories public search path")
         return value
+
+    def _fixture_path(self) -> pathlib.Path | None:
+        value = self.config.get("fixture_path")
+        if not value:
+            return None
+        path = pathlib.Path(str(value))
+        config_dir = self.config.get("_config_dir")
+        if path.is_absolute() or not config_dir:
+            resolved = path
+        else:
+            resolved = (pathlib.Path(str(config_dir)) / path).resolve()
+        if not resolved.exists():
+            raise ValueError(f"github fixture_path does not exist: {resolved}")
+        return resolved
 
     def _query_specs(self) -> list[dict[str, Any]]:
         configured = self.config.get("queries")
@@ -145,6 +174,34 @@ class GitHubAdapter:
         if not isinstance(payload, dict):
             raise GitHubCollectError(f"GitHub returned an invalid payload for query '{spec['query']}'")
         return payload
+
+    def _fixture_items_by_query(self) -> dict[str, list[dict[str, Any]]]:
+        fixture_path = self._fixture_path()
+        if fixture_path is None:
+            return {}
+        try:
+            payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+        except OSError as exc:
+            raise ValueError(f"github fixture_path could not be read: {exc.strerror or str(exc)}") from exc
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"github fixture_path is not valid JSON: {fixture_path}") from exc
+        if not isinstance(payload, dict):
+            raise ValueError("github fixture_path must contain a JSON object") from None
+        results = payload.get("results")
+        if not isinstance(results, list):
+            raise ValueError("github fixture_path must contain a results list") from None
+        items_by_query: dict[str, list[dict[str, Any]]] = {}
+        for item in results:
+            if not isinstance(item, dict):
+                continue
+            query = str(item.get("query") or "").strip()
+            results_items = item.get("items")
+            if not query or not isinstance(results_items, list):
+                continue
+            items_by_query[query] = [record for record in results_items if isinstance(record, dict)]
+        if not items_by_query:
+            raise ValueError("github fixture_path must contain at least one query with item dictionaries")
+        return items_by_query
 
     def _rate_limit_suffix(self, headers: Any) -> str:
         if headers is None:
@@ -238,20 +295,27 @@ class GitHubAdapter:
 
     def collect(self) -> list[dict[str, Any]]:
         records_by_repo: dict[str, dict[str, Any]] = {}
+        fixture_items = self._fixture_items_by_query()
         for spec in self._query_specs():
-            params = urllib.parse.urlencode(
-                {
-                    "q": spec["query"],
-                    "sort": spec["sort"],
-                    "order": spec["order"],
-                    "per_page": spec["per_page"],
-                }
-            )
-            request = urllib.request.Request(f"{self._base_url()}?{params}", headers=self._headers())
-            payload = self._read_payload(request, spec)
-            items = payload.get("items")
-            if not isinstance(items, list):
-                items = []
+            items: list[dict[str, Any]]
+            if fixture_items:
+                items = fixture_items.get(spec["query"], [])
+                if not items:
+                    raise GitHubCollectError(f"fixture payload missing items for query '{spec['query']}'")
+            else:
+                params = urllib.parse.urlencode(
+                    {
+                        "q": spec["query"],
+                        "sort": spec["sort"],
+                        "order": spec["order"],
+                        "per_page": spec["per_page"],
+                    }
+                )
+                request = urllib.request.Request(f"{self._base_url()}?{params}", headers=self._headers())
+                payload = self._read_payload(request, spec)
+                items = payload.get("items")
+                if not isinstance(items, list):
+                    items = []
             for item in items:
                 if not isinstance(item, dict):
                     continue
