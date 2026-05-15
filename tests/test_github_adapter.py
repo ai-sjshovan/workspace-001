@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import io
 import socket
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 from unittest.mock import patch
 
@@ -81,6 +83,47 @@ class GitHubAdapterTests(unittest.TestCase):
             with self.subTest(payload=payload):
                 with patch("urllib.request.urlopen", return_value=FakeResponse(payload)):
                     self.assertEqual(adapter.collect(), [])
+
+    def test_collect_allows_empty_fixture_results_for_configured_query(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fixture_path = Path(tmpdir) / "github-fixture.json"
+            fixture_path.write_text(
+                '{"results":[{"query":"founder pain","items":[]}]}',
+                encoding="utf-8",
+            )
+            adapter = GitHubAdapter(
+                "github",
+                {
+                    "fixture_path": str(fixture_path),
+                    "queries": ["founder pain"],
+                },
+            )
+
+            self.assertEqual(adapter.collect(), [])
+
+    def test_collect_surfaces_rate_limit_from_headers_even_with_sparse_body(self) -> None:
+        adapter = GitHubAdapter(
+            "github",
+            {
+                "base_url": "https://api.github.com/search/repositories",
+                "queries": ["founder pain"],
+            },
+        )
+
+        error = urllib.error.HTTPError(
+            url="https://api.github.com/search/repositories?q=founder+pain",
+            code=403,
+            msg="Forbidden",
+            hdrs={"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1715774400"},
+            fp=io.BytesIO(b'{"message":"Forbidden"}'),
+        )
+
+        with patch("urllib.request.urlopen", side_effect=error):
+            with self.assertRaises(GitHubCollectError) as ctx:
+                adapter.collect()
+
+        self.assertIn("HTTP 403 rate limit exceeded", str(ctx.exception))
+        self.assertIn("rate limit resets at 2024-05-15T12:00:00Z", str(ctx.exception))
 
     def test_collect_dedupes_duplicate_repositories_and_merges_query_context(self) -> None:
         adapter = GitHubAdapter(
