@@ -255,7 +255,14 @@ class HackerNewsAdapter:
             *self._metadata_values(existing, "_wayfinder_categories", "_wayfinder_category"),
             *self._metadata_values(incoming, "_wayfinder_categories", "_wayfinder_category"),
         )
-        merged.update(incoming)
+        for key, value in incoming.items():
+            if value is None:
+                continue
+            if isinstance(value, str) and not value.strip():
+                continue
+            if isinstance(value, (list, dict)) and not value:
+                continue
+            merged[key] = value
         merged["_wayfinder_queries"] = queries
         merged["_wayfinder_categories"] = categories
         merged["_wayfinder_query"] = ", ".join(queries)
