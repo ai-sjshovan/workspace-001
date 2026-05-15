@@ -4,6 +4,7 @@ import hashlib
 import json
 import pathlib
 import sqlite3
+from datetime import timedelta
 from typing import Iterable
 
 from .models import Opportunity, ProductIntel, Signal, opportunity_from_row_data, parse_timestamp, score_opportunity, utc_now
@@ -341,8 +342,11 @@ def filtered_opportunities(
     limit: int = 50,
     offset: int = 0,
     min_score: float | None = None,
+    max_score: float | None = None,
     category: str = "",
     source: str = "",
+    freshness_days: int | None = None,
+    sort_by: str = "score",
 ) -> list[sqlite3.Row]:
     clauses: list[str] = []
     params: list[object] = []
@@ -350,21 +354,33 @@ def filtered_opportunities(
     if min_score is not None:
         clauses.append("opportunity_score >= ?")
         params.append(min_score)
+    if max_score is not None:
+        clauses.append("opportunity_score <= ?")
+        params.append(max_score)
     if category.strip():
         clauses.append("category = ?")
         params.append(category.strip())
     if source.strip():
         clauses.append("source = ?")
         params.append(source.strip())
+    if freshness_days is not None and freshness_days > 0:
+        cutoff = (parse_timestamp(utc_now()) - timedelta(days=freshness_days)).isoformat()
+        clauses.append("collected_at >= ?")
+        params.append(cutoff)
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    order_by = {
+        "freshest": "collected_at DESC, opportunity_score DESC, evidence_count DESC, fingerprint ASC",
+        "evidence": "evidence_count DESC, opportunity_score DESC, collected_at DESC, fingerprint ASC",
+        "score_asc": "opportunity_score ASC, evidence_count DESC, collected_at DESC, fingerprint ASC",
+    }.get(sort_by, "opportunity_score DESC, evidence_count DESC, collected_at DESC, fingerprint ASC")
     params.extend((limit, offset))
     return conn.execute(
         f"""
         SELECT *
         FROM opportunities
         {where}
-        ORDER BY opportunity_score DESC, evidence_count DESC, collected_at DESC, fingerprint ASC
+        ORDER BY {order_by}
         LIMIT ?
         OFFSET ?
         """,
@@ -505,6 +521,7 @@ def browse_signals(
     product: str = "",
     pain_type: str = "",
     feature_request: str = "",
+    freshness_days: int | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> list[sqlite3.Row]:
@@ -526,6 +543,10 @@ def browse_signals(
     if feature_request.strip():
         clauses.append("feature_request = ?")
         params.append(feature_request.strip())
+    if freshness_days is not None and freshness_days > 0:
+        cutoff = (parse_timestamp(utc_now()) - timedelta(days=freshness_days)).isoformat()
+        clauses.append("collected_at >= ?")
+        params.append(cutoff)
     if query.strip():
         like = f"%{query}%"
         clauses.append(
@@ -620,6 +641,7 @@ def opportunity_filter_values(conn: sqlite3.Connection) -> dict[str, list[str]]:
             )
         ],
         "min_scores": opportunity_score_filter_values(conn),
+        "max_scores": opportunity_score_filter_values(conn),
     }
 
 
