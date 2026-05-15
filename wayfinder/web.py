@@ -779,9 +779,9 @@ def opportunity_rows(rows: list[Any]) -> str:
         chips = " ".join(
             f'<span class="tag">{esc(label)} {esc(components.get(key, 0))}</span>'
             for key, label in (
-                ("evidence_count", "evidence"),
+                ("pain", "pain"),
                 ("freshness", "freshness"),
-                ("monetization_signal", "monetization"),
+                ("recurrence", "recurrence"),
                 ("source_quality", "source"),
                 ("build_fit", "fit"),
             )
@@ -855,9 +855,9 @@ def draft_preview_text(payload: dict[str, Any]) -> str:
             f"Score: {payload.get('opportunity_score', 0)}",
             (
                 "Score breakdown: "
-                f"evidence {score_components.get('evidence_count', 0)}, "
+                f"pain {score_components.get('pain', 0)}, "
                 f"freshness {score_components.get('freshness', 0)}, "
-                f"monetization {score_components.get('monetization_signal', 0)}, "
+                f"recurrence {score_components.get('recurrence', 0)}, "
                 f"source {score_components.get('source_quality', 0)}, "
                 f"fit {score_components.get('build_fit', 0)}"
             ),
@@ -955,9 +955,9 @@ def opportunity_detail_page(payload: dict[str, Any], related: dict[str, list[dic
       </div>
     </section>
     <div class="scan-grid">
-      <div class="metric"><strong>{esc(components.get('evidence_count', 0))}</strong><span>Evidence contribution · input {esc(inputs.get('evidence_count', 0))} · weight {esc(weights.get('evidence_count', 0))}</span></div>
+      <div class="metric"><strong>{esc(components.get('pain', 0))}</strong><span>Pain contribution · input {esc(inputs.get('pain', 0))} · weight {esc(weights.get('pain', 0))}</span></div>
       <div class="metric"><strong>{esc(components.get('freshness', 0))}</strong><span>Freshness contribution · input {esc(inputs.get('freshness', 0))} · weight {esc(weights.get('freshness', 0))}</span></div>
-      <div class="metric"><strong>{esc(components.get('monetization_signal', 0))}</strong><span>Monetization contribution · input {esc(inputs.get('monetization_signal', 0))} · weight {esc(weights.get('monetization_signal', 0))}</span></div>
+      <div class="metric"><strong>{esc(components.get('recurrence', 0))}</strong><span>Recurrence contribution · input {esc(inputs.get('recurrence', 0))} · weight {esc(weights.get('recurrence', 0))}</span></div>
       <div class="metric"><strong>{esc(components.get('source_quality', 0))}</strong><span>Source quality contribution · input {esc(inputs.get('source_quality', 0))} · weight {esc(weights.get('source_quality', 0))}</span></div>
       <div class="metric"><strong>{esc(components.get('build_fit', 0))}</strong><span>Build fit contribution · input {esc(inputs.get('build_fit', 0))} · weight {esc(weights.get('build_fit', 0))}</span></div>
     </div>

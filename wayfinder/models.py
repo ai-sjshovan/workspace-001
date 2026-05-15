@@ -83,11 +83,19 @@ class Opportunity:
 
 
 DEFAULT_SCORING_WEIGHTS = {
-    "evidence_count": 0.35,
+    "pain": 0.35,
     "freshness": 0.15,
-    "monetization_signal": 0.20,
+    "recurrence": 0.20,
     "source_quality": 0.15,
     "build_fit": 0.15,
+}
+
+LEGACY_SCORING_WEIGHT_ALIASES = {
+    "pain": ("evidence_count_weight",),
+    "freshness": (),
+    "recurrence": ("monetization_signal_weight",),
+    "source_quality": (),
+    "build_fit": (),
 }
 
 
@@ -101,7 +109,15 @@ def scoring_weights(config: dict[str, Any] | None = None) -> dict[str, float]:
     section = config.get("scoring") if isinstance(config, dict) else {}
     resolved: dict[str, float] = {}
     for key, default in DEFAULT_SCORING_WEIGHTS.items():
-        value = section.get(f"{key}_weight", default) if isinstance(section, dict) else default
+        value = default
+        if isinstance(section, dict):
+            if f"{key}_weight" in section:
+                value = section.get(f"{key}_weight", default)
+            else:
+                for legacy_key in LEGACY_SCORING_WEIGHT_ALIASES.get(key, ()):
+                    if legacy_key in section:
+                        value = section.get(legacy_key, default)
+                        break
         try:
             resolved[key] = max(float(value), 0.0)
         except (TypeError, ValueError):
@@ -121,8 +137,35 @@ def _keyword_hits(text: str, words: tuple[str, ...]) -> int:
     return sum(1 for word in words if word in haystack)
 
 
-def _evidence_input(opportunity: Opportunity) -> float:
-    return _clamp(opportunity.evidence_count / 5.0)
+def _pain_input(opportunity: Opportunity) -> float:
+    text = " ".join(
+        [
+            opportunity.title,
+            opportunity.problem,
+            opportunity.what_users_want_better,
+            opportunity.iteration_angle,
+            str(opportunity.raw.get("verdict") or ""),
+        ]
+    )
+    pain_terms = (
+        "pain",
+        "problem",
+        "need",
+        "friction",
+        "manual",
+        "slow",
+        "delay",
+        "urgent",
+        "bottleneck",
+        "blocked",
+        "better",
+        "faster",
+    )
+    soft_terms = ("inspect", "research", "review", "idea", "candidate")
+    score = 0.25 + min(opportunity.evidence_count, 5) * 0.08
+    score += _keyword_hits(text, pain_terms) * 0.06
+    score -= _keyword_hits(text, soft_terms) * 0.03
+    return _clamp(score)
 
 
 def _freshness_input(opportunity: Opportunity, reference_time: datetime | None = None) -> float:
@@ -133,27 +176,6 @@ def _freshness_input(opportunity: Opportunity, reference_time: datetime | None =
     baseline = reference_time or collected_at
     age_days = max((baseline - collected_at).total_seconds() / 86400.0, 0.0)
     return _clamp(1.0 - min(age_days, 180.0) / 180.0, 0.2, 1.0)
-
-
-def _monetization_input(opportunity: Opportunity) -> float:
-    text = " ".join(
-        [
-            opportunity.monetization_strategy,
-            opportunity.what_users_want_better,
-            str(opportunity.raw.get("verdict") or ""),
-            str(opportunity.raw.get("category") or ""),
-            " ".join(str(item) for item in opportunity.raw.get("useful_outputs", [])),
-        ]
-    )
-    positive = _keyword_hits(
-        text,
-        ("market", "competitor", "validation", "dashboard", "analytics", "research", "scoring", "subscription"),
-    )
-    negative = _keyword_hits(
-        text,
-        ("internal leverage", "no subscription", "hosted dependency", "third-party", "tokens", "provider"),
-    )
-    return _clamp(0.35 + positive * 0.08 - negative * 0.06)
 
 
 def _source_quality_input(opportunity: Opportunity) -> float:
@@ -201,6 +223,39 @@ def _build_fit_input(opportunity: Opportunity) -> float:
     return _clamp(score)
 
 
+def _recurrence_input(opportunity: Opportunity) -> float:
+    useful_outputs = opportunity.raw.get("useful_outputs") if isinstance(opportunity.raw.get("useful_outputs"), list) else []
+    text = " ".join(
+        [
+            opportunity.problem,
+            opportunity.what_users_want_better,
+            opportunity.iteration_angle,
+            opportunity.target_user,
+            str(opportunity.raw.get("verdict") or ""),
+            " ".join(str(item) for item in useful_outputs),
+        ]
+    )
+    recurrence_terms = (
+        "daily",
+        "weekly",
+        "recurring",
+        "repeat",
+        "workflow",
+        "teams",
+        "operators",
+        "monitor",
+        "reporting",
+        "alerts",
+    )
+    soft_terms = ("prototype", "one-off", "idea", "candidate")
+    score = 0.2 + min(opportunity.evidence_count, 5) * 0.11
+    score += _keyword_hits(text, recurrence_terms) * 0.05
+    if opportunity.target_user.strip():
+        score += 0.05
+    score -= _keyword_hits(text, soft_terms) * 0.03
+    return _clamp(score)
+
+
 def score_opportunity(
     opportunity: Opportunity,
     weights: dict[str, float],
@@ -208,9 +263,9 @@ def score_opportunity(
     reference_time: datetime | None = None,
 ) -> dict[str, Any]:
     inputs = {
-        "evidence_count": round(_evidence_input(opportunity), 4),
+        "pain": round(_pain_input(opportunity), 4),
         "freshness": round(_freshness_input(opportunity, reference_time=reference_time), 4),
-        "monetization_signal": round(_monetization_input(opportunity), 4),
+        "recurrence": round(_recurrence_input(opportunity), 4),
         "source_quality": round(_source_quality_input(opportunity), 4),
         "build_fit": round(_build_fit_input(opportunity), 4),
     }

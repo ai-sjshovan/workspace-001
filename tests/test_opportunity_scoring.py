@@ -131,4 +131,6 @@ class OpportunityScoringTests(unittest.TestCase):
 
         output = result.stdout
         self.assertIn("score=", output)
+        self.assertIn("pain=", output)
+        self.assertIn("recurrence=", output)
         self.assertLess(output.index("Higher evidence opportunity"), output.index("Lower evidence opportunity"))

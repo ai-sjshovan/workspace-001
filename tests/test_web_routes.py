@@ -199,6 +199,8 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertEqual(payload[0]["title"], "Source evidence drill-ins for research operators")
         self.assertIn("score_components", payload[0])
         self.assertIn("components", payload[0]["score_components"])
+        self.assertIn("pain", payload[0]["score_components"]["components"])
+        self.assertIn("recurrence", payload[0]["score_components"]["components"])
         self.assertEqual(payload[0]["source"], self.source_name)
         self.assertIn("draft_task", payload[0])
         self.assertEqual(payload[0]["source_context"]["detail_path"], f"/sources/{quote(self.source_name)}")
