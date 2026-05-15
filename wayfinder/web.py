@@ -16,6 +16,7 @@ from .db import (
     filtered_opportunities,
     filtered_products,
     opportunity_detail,
+    opportunity_related_context,
     opportunity_score_filter_values,
     opportunity_filter_values,
     product_filter_values,
@@ -59,6 +60,7 @@ main { padding: 28px 36px 48px; max-width: 1180px; }
 .metric span, .meta { color: #66746a; font-size: 13px; }
 form.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0; }
 input, select { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid #bfcab9; border-radius: 7px; font-size: 15px; background: #fff; box-sizing: border-box; }
+textarea { width: 100%; min-height: 260px; padding: 11px 12px; border: 1px solid #bfcab9; border-radius: 7px; font-size: 14px; background: #fff; box-sizing: border-box; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 button { padding: 11px 15px; border: 0; border-radius: 7px; background: #102523; color: #f6fbf2; font-weight: 800; cursor: pointer; }
 .toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
 .panel { background: #eef3e8; border: 1px solid #dbe2d4; border-radius: 10px; padding: 14px; }
@@ -780,7 +782,7 @@ def opportunity_rows(rows: list[Any]) -> str:
             f"""<article class="row">
   <div class="signal-head">
     <div>
-      <h2>{esc(row['title'])}</h2>
+      <h2><a href="/opportunities/{esc(row['id'])}">{esc(row['title'])}</a></h2>
       <div class="meta">{source_drill_in(str(row['source']), str(row['source']) or 'source')}<span class="tag">{esc(row['target_user'])}</span> evidence={esc(row['evidence_count'])}</div>
     </div>
     <div class="score">score {esc(row['opportunity_score'])}</div>
@@ -803,6 +805,157 @@ def opportunity_rows(rows: list[Any]) -> str:
 </article>"""
         )
     return "\n".join(chunks)
+
+
+def draft_preview_text(payload: dict[str, Any]) -> str:
+    draft_task = payload["draft_task"]
+    score_components = payload.get("score_components", {}).get("components", {})
+    return "\n".join(
+        [
+            f"Title: {draft_task['title']}",
+            f"Target user: {draft_task['target_user']}",
+            f"Category: {draft_task['category']}",
+            f"Source: {draft_task['source']}",
+            f"Problem: {draft_task['problem']}",
+            f"Evidence count: {draft_task['evidence_count']}",
+            f"Score: {payload.get('opportunity_score', 0)}",
+            (
+                "Score breakdown: "
+                f"evidence {score_components.get('evidence_count', 0)}, "
+                f"freshness {score_components.get('freshness', 0)}, "
+                f"monetization {score_components.get('monetization_signal', 0)}, "
+                f"source {score_components.get('source_quality', 0)}, "
+                f"fit {score_components.get('build_fit', 0)}"
+            ),
+            f"Iteration angle: {draft_task['iteration_angle']}",
+            f"Monetization strategy: {draft_task['monetization_strategy']}",
+            f"Build difficulty: {draft_task['build_difficulty']}",
+            f"Replication estimate: {draft_task['replication_time_estimate']}",
+            f"Competing products: {draft_task['competing_products']}",
+            f"What products do right: {draft_task['what_products_do_right']}",
+            f"What users want better: {draft_task['what_users_want_better']}",
+            f"Foundry task suggestion: {draft_task['foundry_task_suggestions']}",
+        ]
+    )
+
+
+def linked_signal_rows(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return '<p class="subtle">No linked signal evidence matched this opportunity.</p>'
+    chunks = []
+    for item in rows:
+        chunks.append(
+            f"""<article class="row">
+  <h2><a href="{esc(item['source_url'])}">{esc(item['title'])}</a></h2>
+  <p class="meta">{source_drill_in(str(item['source']))}<span class="tag">{esc(item['product'] or 'no product')}</span><span class="tag">{esc(item['category'] or 'uncategorized')}</span>score {esc(item['score'])}</p>
+  <p class="excerpt">{esc(item['body'] or 'No excerpt captured for this signal.')}</p>
+  <p class="subtle">Pain: {esc(item['pain_type'] or 'n/a')} · feature gap: {esc(item['feature_request'] or 'n/a')}</p>
+</article>"""
+        )
+    return "".join(chunks)
+
+
+def linked_product_rows(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return '<p class="subtle">No linked products matched this opportunity.</p>'
+    chunks = []
+    for item in rows:
+        chunks.append(
+            f"""<article class="row">
+  <h2><a href="{esc(item['url'])}">{esc(item['product_name'])}</a></h2>
+  <p class="meta"><span class="tag">{esc(item['category'] or 'uncategorized')}</span>{esc(item['pricing_model'] or 'pricing n/a')} · {esc(item['audience'] or 'audience n/a')}</p>
+  <p><strong>Strengths:</strong> {esc(item['strengths'] or 'No strengths captured.')}</p>
+  <p><strong>Feature gaps:</strong> {esc(item['feature_gaps'] or 'No feature gaps captured.')}</p>
+</article>"""
+        )
+    return "".join(chunks)
+
+
+def opportunity_detail_page(payload: dict[str, Any], related: dict[str, list[dict[str, Any]]]) -> str:
+    score_components = payload.get("score_components", {})
+    components = score_components.get("components", {})
+    inputs = score_components.get("inputs", {})
+    weights = score_components.get("weights", {})
+    draft_text = draft_preview_text(payload)
+    linked_source = payload.get("linked_source_context") or {}
+    source_context = payload["source_context"]
+    return f"""<div class="stack">
+  <section class="toolbar">
+    <p class="subtle"><a href="/opportunities">Opportunity list</a> / {esc(payload['title'])}</p>
+    <div class="toolbar-links">
+      <a href="{esc(source_context['detail_path'])}">Open source detail</a>
+      <a href="{esc(source_context['search_path'])}">Open source context</a>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="detail-grid">
+      <div>
+        <p class="list-head">Opportunity</p>
+        <h2>{esc(payload['title'])}</h2>
+        <p class="meta">{source_drill_in(str(payload['source']))}<span class="tag">{esc(payload['category'] or 'uncategorized')}</span><span class="tag">{esc(payload['target_user'] or 'no target user')}</span> evidence {esc(payload['evidence_count'])}</p>
+        <p>{esc(payload['problem'] or 'No problem statement captured.')}</p>
+        <div class="mini-list">
+          <div class="mini-item"><strong>Iteration angle</strong><div class="subtle">{esc(payload['iteration_angle'] or 'n/a')}</div></div>
+          <div class="mini-item"><strong>Monetization strategy</strong><div class="subtle">{esc(payload['monetization_strategy'] or 'n/a')}</div></div>
+          <div class="mini-item"><strong>Build difficulty</strong><div class="subtle">{esc(payload['build_difficulty'] or 'n/a')} · replication {esc(payload['replication_time_estimate'] or 'n/a')}</div></div>
+          <div class="mini-item"><strong>Products in play</strong><div class="subtle">{esc(payload['competing_products'] or 'No linked products captured.')}</div></div>
+        </div>
+      </div>
+      <div>
+        <p class="list-head">Evidence summary</p>
+        <div class="mini-list">
+          <div class="mini-item"><strong>Score</strong><div class="subtle">{esc(payload['opportunity_score'])}</div></div>
+          <div class="mini-item"><strong>Source context</strong><div class="subtle">{esc(linked_source.get('signal_count', 0))} signals · {esc(linked_source.get('opportunity_count', 0))} source-linked opportunities · avg signal score {esc(linked_source.get('avg_score', 0))}</div></div>
+          <div class="mini-item"><strong>What products do right</strong><div class="subtle">{esc(payload['what_products_do_right'] or 'n/a')}</div></div>
+          <div class="mini-item"><strong>What users want better</strong><div class="subtle">{esc(payload['what_users_want_better'] or 'n/a')}</div></div>
+          <div class="mini-item"><strong>Foundry task suggestion</strong><div class="subtle">{esc(payload['foundry_task_suggestions'] or 'n/a')}</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="row">
+    <section class="toolbar">
+      <div>
+        <p class="list-head">Score breakdown</p>
+        <p class="subtle">Read-only scoring inputs and weighted contribution for this opportunity.</p>
+      </div>
+    </section>
+    <div class="scan-grid">
+      <div class="metric"><strong>{esc(components.get('evidence_count', 0))}</strong><span>Evidence contribution · input {esc(inputs.get('evidence_count', 0))} · weight {esc(weights.get('evidence_count', 0))}</span></div>
+      <div class="metric"><strong>{esc(components.get('freshness', 0))}</strong><span>Freshness contribution · input {esc(inputs.get('freshness', 0))} · weight {esc(weights.get('freshness', 0))}</span></div>
+      <div class="metric"><strong>{esc(components.get('monetization_signal', 0))}</strong><span>Monetization contribution · input {esc(inputs.get('monetization_signal', 0))} · weight {esc(weights.get('monetization_signal', 0))}</span></div>
+      <div class="metric"><strong>{esc(components.get('source_quality', 0))}</strong><span>Source quality contribution · input {esc(inputs.get('source_quality', 0))} · weight {esc(weights.get('source_quality', 0))}</span></div>
+      <div class="metric"><strong>{esc(components.get('build_fit', 0))}</strong><span>Build fit contribution · input {esc(inputs.get('build_fit', 0))} · weight {esc(weights.get('build_fit', 0))}</span></div>
+    </div>
+  </section>
+  <section class="row">
+    <section class="toolbar">
+      <div>
+        <p class="list-head">Task draft preview</p>
+        <p class="subtle">Copy-ready read-only export built from the current opportunity details.</p>
+      </div>
+    </section>
+    <textarea readonly="readonly">{esc(draft_text)}</textarea>
+  </section>
+  <section class="row">
+    <section class="toolbar">
+      <div>
+        <p class="list-head">Linked evidence</p>
+        <p class="subtle">Signals and products matched from the current source, category, and referenced products.</p>
+      </div>
+    </section>
+    <div class="detail-grid">
+      <div>
+        <p class="list-head">Signals</p>
+        <section class="row-grid">{linked_signal_rows(related['signals'])}</section>
+      </div>
+      <div>
+        <p class="list-head">Products</p>
+        <section class="row-grid">{linked_product_rows(related['products'])}</section>
+      </div>
+    </div>
+  </section>
+</div>"""
 
 
 def min_score_options(values: list[str], selected: str) -> str:
@@ -1157,6 +1310,25 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 )
                 body = f'<div class="stack">{filters}{score_filter}{source_detail_panel(detail)}{browse_summary}<section class="row-grid">{opportunity_rows(rows)}</section></div>'
                 self.send_html("Opportunities", body)
+                return
+            if parsed.path.startswith("/opportunities/"):
+                identifier = unquote(parsed.path.removeprefix("/opportunities/")).strip()
+                row = opportunity_detail(conn, identifier)
+                if row is None:
+                    self.send_html(
+                        "Opportunity Not Found",
+                        (
+                            f'<div class="stack"><section class="row"><h2>Opportunity not found</h2>'
+                            f'<p class="subtle">No opportunity matches <code>{esc(identifier)}</code>.</p>'
+                            f'<p><a href="/opportunities">Return to opportunities</a></p></section></div>'
+                        ),
+                        HTTPStatus.NOT_FOUND,
+                    )
+                    return
+                payload = opportunity_export_payload(row)
+                payload["linked_source_context"] = source_detail(conn, str(payload.get("source") or ""))
+                related = opportunity_related_context(conn, row)
+                self.send_html("Opportunity Detail", opportunity_detail_page(payload, related))
                 return
             self.send_html("Not Found", "<p>Not found.</p>", HTTPStatus.NOT_FOUND)
         finally:

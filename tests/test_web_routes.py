@@ -220,9 +220,22 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         status, body = self.fetch(f"/opportunities?source={quote(self.source_name)}&category=market-research")
         self.assertEqual(status, 200)
         self.assertIn("Source evidence drill-ins for research operators", body)
+        self.assertIn(f"/opportunities/{opportunity_id}", body)
         self.assertIn(f"/sources/{quote(self.source_name)}", body)
         self.assertIn("source", body)
         self.assertIn("category", body)
+
+        status, body = self.fetch(f"/opportunities/{opportunity_id}")
+        self.assertEqual(status, 200)
+        self.assertIn("Score breakdown", body)
+        self.assertIn("Task draft preview", body)
+        self.assertIn("Linked evidence", body)
+        self.assertIn("Pain Radar", body)
+        self.assertIn("Wayfinder dashboard smoke signal", body)
+
+        status, body = self.fetch(f"/opportunities/{opportunity_fingerprint}")
+        self.assertEqual(status, 200)
+        self.assertIn("Source evidence drill-ins for research operators", body)
 
         status, body = self.fetch("/api/sources?source=missing-source")
         self.assertEqual(status, 404)
@@ -239,3 +252,7 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         status, body = self.fetch("/sources/missing-source")
         self.assertEqual(status, 404)
         self.assertIn("Source not found", body)
+
+        status, body = self.fetch("/opportunities/missing-opportunity")
+        self.assertEqual(status, 404)
+        self.assertIn("Opportunity not found", body)
