@@ -11,6 +11,8 @@ from urllib.parse import quote
 from urllib.request import urlopen
 
 from wayfinder.config import load_config, source_configs
+from wayfinder.db import connect, insert_signals
+from wayfinder.models import Signal
 from wayfinder.web import WayfinderHandler
 
 
@@ -26,6 +28,28 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
             **(base_config.get("wayfinder") if isinstance(base_config.get("wayfinder"), dict) else {}),
             "storage_path": str(cls.storage_path),
         }
+        conn = connect(cls.storage_path)
+        try:
+            insert_signals(
+                conn,
+                [
+                    Signal(
+                        source=cls.source_name,
+                        source_id="dashboard-smoke",
+                        source_url="https://example.com/dashboard-smoke",
+                        title="Wayfinder dashboard smoke signal",
+                        body="Signal fixture for dashboard browse filters.",
+                        score=7,
+                        product="Pain Radar",
+                        category="market-research",
+                        pain_type="reporting delays",
+                        feature_request="deeper source drill-ins",
+                    )
+                ],
+            )
+            conn.commit()
+        finally:
+            conn.close()
         WayfinderHandler.config = cls.config
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), WayfinderHandler)
         cls.server_thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
@@ -50,6 +74,17 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         status, body = self.fetch("/")
         self.assertEqual(status, 200)
         self.assertIn("Wayfinder", body)
+        self.assertIn('name="product"', body)
+        self.assertIn('name="market"', body)
+        self.assertIn('name="pain"', body)
+        self.assertIn('name="feature_gap"', body)
+
+        status, body = self.fetch(
+            f"/?source={quote(self.source_name)}&product=Pain%20Radar&market=market-research&pain=reporting%20delays&feature_gap=deeper%20source%20drill-ins"
+        )
+        self.assertEqual(status, 200)
+        self.assertIn("Wayfinder dashboard smoke signal", body)
+        self.assertIn("Open dedicated source view", body)
 
         status, body = self.fetch("/health")
         self.assertEqual(status, 200)

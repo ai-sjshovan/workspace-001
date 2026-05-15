@@ -54,7 +54,7 @@ main { padding: 28px 36px 48px; max-width: 1180px; }
 .metric, .row { background: #ffffff; border: 1px solid #dbe2d4; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 0 rgba(16, 37, 35, .06); }
 .metric strong { display: block; font-size: 26px; color: #102523; }
 .metric span, .meta { color: #66746a; font-size: 13px; }
-form.filters { display: grid; grid-template-columns: minmax(220px, 2.2fr) repeat(2, minmax(150px, 1fr)) auto; gap: 10px; margin: 0; }
+form.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 0; }
 input, select { width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid #bfcab9; border-radius: 7px; font-size: 15px; background: #fff; box-sizing: border-box; }
 button { padding: 11px 15px; border: 0; border-radius: 7px; background: #102523; color: #f6fbf2; font-weight: 800; cursor: pointer; }
 .toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
@@ -204,28 +204,43 @@ def filter_form(
     query: str = "",
     source: str = "",
     category: str = "",
+    product: str = "",
+    pain_type: str = "",
+    feature_request: str = "",
     values: dict[str, list[str]],
     placeholder: str = "Search titles, excerpts, products, categories",
     include_query: bool = True,
     include_source: bool = True,
     include_category: bool = True,
+    include_product: bool = False,
+    include_market: bool = False,
+    include_pain_type: bool = False,
+    include_feature_request: bool = False,
     submit_label: str = "Filter",
 ) -> str:
-    def options(items: list[str], selected: str, label: str) -> str:
+    def options(name: str, items: list[str], selected: str, label: str) -> str:
         html_options = [f'<option value="">{esc(label)}</option>']
         for item in items:
             active = ' selected="selected"' if item == selected else ""
             html_options.append(f'<option value="{esc(item)}"{active}>{esc(item)}</option>')
-        return "".join(html_options)
+        return f'<select name="{esc(name)}">{"".join(html_options)}</select>'
 
     controls: list[str] = []
     if include_query:
         controls.append(f'<input name="q" value="{esc(query)}" placeholder="{esc(placeholder)}">')
     if include_source:
-        controls.append(f'<select name="source">{options(values.get("sources", []), source, "All sources")}</select>')
+        controls.append(options("source", values.get("sources", []), source, "All sources"))
     if include_category:
+        controls.append(options("category", values.get("categories", []), category, "All categories"))
+    if include_product:
+        controls.append(options("product", values.get("products", []), product, "All products"))
+    if include_market:
+        controls.append(options("market", values.get("categories", []), category, "All markets"))
+    if include_pain_type:
+        controls.append(options("pain", values.get("pain_types", []), pain_type, "All pains"))
+    if include_feature_request:
         controls.append(
-            f'<select name="category">{options(values.get("categories", []), category, "All categories")}</select>'
+            options("feature_gap", values.get("feature_requests", []), feature_request, "All feature gaps")
         )
     controls.append(f"<button type=\"submit\">{esc(submit_label)}</button>")
     return f"""<section class="panel">
@@ -281,6 +296,10 @@ def source_detail_panel(detail: dict[str, Any] | None) -> str:
         for item in detail["opportunities"]
     ) or '<p class="subtle">No source-linked opportunities indexed yet.</p>'
     return f"""<section class="panel">
+  <section class="toolbar">
+    <p class="subtle">Source detail drill-in for {esc(detail['source'])}.</p>
+    <a href="{esc(source_path(str(detail['source'])))}">Open dedicated source view</a>
+  </section>
   <div class="detail-grid">
     <div>
       <p class="list-head">Selected source</p>
@@ -499,47 +518,97 @@ class WayfinderHandler(BaseHTTPRequestHandler):
             if parsed.path == "/":
                 query = params.get("q", [""])[0]
                 source = params.get("source", [""])[0]
-                category = params.get("category", [""])[0]
+                category = params.get("market", params.get("category", [""]))[0]
+                product = params.get("product", [""])[0]
+                pain_type = params.get("pain", [""])[0]
+                feature_request = params.get("feature_gap", [""])[0]
                 metric_html = "".join(
                     f'<div class="metric"><strong>{value}</strong><span>{esc(name)}</span></div>'
                     for name, value in counts(conn).items()
                 )
                 values = signal_filter_values(conn)
-                rows = browse_signals(conn, query=query, source=source, category=category, limit=30)
+                rows = browse_signals(
+                    conn,
+                    query=query,
+                    source=source,
+                    category=category,
+                    product=product,
+                    pain_type=pain_type,
+                    feature_request=feature_request,
+                    limit=30,
+                )
                 detail = source_detail(conn, source)
-                summary = f'<section class="toolbar"><p class="subtle">Showing {len(rows)} signal rows.</p><a href="/sources">Browse sources</a><a href="/search?q={esc(query)}">Open search results</a></section>'
-                body = f'<div class="stack"><section class="grid">{metric_html}</section>{filter_form("/", query=query, source=source, category=category, values=values)}{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>'
+                summary = (
+                    f'<section class="toolbar"><p class="subtle">Showing {len(rows)} signal rows across '
+                    f'product, market, pain, and feature-gap filters.</p><a href="/sources">Browse sources</a>'
+                    f'<a href="/search?q={esc(query)}">Open search results</a></section>'
+                )
+                body = (
+                    f'<div class="stack"><section class="grid">{metric_html}</section>'
+                    f'{filter_form("/", query=query, source=source, category=category, product=product, pain_type=pain_type, feature_request=feature_request, values=values, include_category=False, include_product=True, include_market=True, include_pain_type=True, include_feature_request=True)}'
+                    f'{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>'
+                )
                 self.send_html("Dashboard", body)
                 return
             if parsed.path == "/search":
                 query = params.get("q", [""])[0]
                 source = params.get("source", [""])[0]
-                category = params.get("category", [""])[0]
+                category = params.get("market", params.get("category", [""]))[0]
+                product = params.get("product", [""])[0]
+                pain_type = params.get("pain", [""])[0]
+                feature_request = params.get("feature_gap", [""])[0]
                 values = signal_filter_values(conn)
-                if not query.strip() and not source.strip() and not category.strip():
+                if (
+                    not query.strip()
+                    and not source.strip()
+                    and not category.strip()
+                    and not product.strip()
+                    and not pain_type.strip()
+                    and not feature_request.strip()
+                ):
                     rows = search_signals(conn, query, 30)
-                elif query.strip() and not source.strip() and not category.strip():
+                elif (
+                    query.strip()
+                    and not source.strip()
+                    and not category.strip()
+                    and not product.strip()
+                    and not pain_type.strip()
+                    and not feature_request.strip()
+                ):
                     rows = search_signals(conn, query, 30)
-                elif query.strip():
-                    rows = [
-                        row
-                        for row in search_signals(conn, query, 120)
-                        if (not source.strip() or row["source"] == source.strip())
-                        and (not category.strip() or row["category"] == category.strip())
-                    ][:30]
                 else:
-                    rows = browse_signals(conn, source=source, category=category, limit=30)
+                    rows = browse_signals(
+                        conn,
+                        query=query,
+                        source=source,
+                        category=category,
+                        product=product,
+                        pain_type=pain_type,
+                        feature_request=feature_request,
+                        limit=30,
+                    )
                 detail = source_detail(conn, source)
                 form = filter_form(
                     "/search",
                     query=query,
                     source=source,
                     category=category,
+                    product=product,
+                    pain_type=pain_type,
+                    feature_request=feature_request,
                     values=values,
                     placeholder="Search pains, products, markets",
+                    include_category=False,
+                    include_product=True,
+                    include_market=True,
+                    include_pain_type=True,
+                    include_feature_request=True,
                     submit_label="Search",
                 )
-                summary = f'<section class="toolbar"><p class="subtle">Search returned {len(rows)} rows.</p><a href="/?q={esc(query)}&source={quote_plus(source)}&category={quote_plus(category)}">Use dashboard browse view</a></section>'
+                summary = (
+                    f'<section class="toolbar"><p class="subtle">Search returned {len(rows)} rows.</p>'
+                    f'<a href="/?q={esc(query)}&source={quote_plus(source)}&market={quote_plus(category)}&product={quote_plus(product)}&pain={quote_plus(pain_type)}&feature_gap={quote_plus(feature_request)}">Use dashboard browse view</a></section>'
+                )
                 self.send_html(
                     "Search",
                     f'<div class="stack">{form}{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>',
@@ -569,14 +638,30 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 payload = source_catalog_payload(self.config)
                 query = params.get("q", [""])[0]
                 source = params.get("source", [""])[0]
-                category = params.get("category", [""])[0]
+                category = params.get("market", params.get("category", [""]))[0]
+                product = params.get("product", [""])[0]
+                pain_type = params.get("pain", [""])[0]
+                feature_request = params.get("feature_gap", [""])[0]
                 values = signal_filter_values(conn)
                 detail = source_detail(conn, source)
-                rows = browse_signals(conn, query=query, source=source, category=category, limit=30) if source.strip() else []
+                rows = (
+                    browse_signals(
+                        conn,
+                        query=query,
+                        source=source,
+                        category=category,
+                        product=product,
+                        pain_type=pain_type,
+                        feature_request=feature_request,
+                        limit=30,
+                    )
+                    if source.strip()
+                    else []
+                )
                 activity_by_source = {item["key"]: source_activity(conn, item["key"]) for item in payload["sources"]}
                 body = (
                     f'<div class="stack">{source_list_page(payload, activity_by_source, source, detail)}'
-                    f'{filter_form("/sources", query=query, source=source, category=category, values=values, submit_label="Inspect")}'
+                    f'{filter_form("/sources", query=query, source=source, category=category, product=product, pain_type=pain_type, feature_request=feature_request, values=values, include_category=False, include_product=True, include_market=True, include_pain_type=True, include_feature_request=True, submit_label="Inspect")}'
                     f'{source_detail_panel(detail)}'
                     f'<section class="toolbar"><p class="subtle">Showing {len(rows)} source-linked signal rows.</p><a href="/opportunities?source={quote_plus(source)}">Open source opportunities</a></section>'
                     f'<section class="row-grid">{signal_rows(rows) if source.strip() else "<p>Select a source to inspect its linked signals and opportunities.</p>"}</section></div>'
