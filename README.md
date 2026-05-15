@@ -51,12 +51,12 @@ Verified in `workspace-001` on the configured `project/wayfinder` branch.
 
 - Entrypoints: repo-local CLI via `python3 -m wayfinder` and the read-only dashboard via `python3 -m wayfinder serve --port 8766`
 - Confirmed routes: `/` renders the dashboard and `/health` returns a readiness payload with `ok`, `service`, `config`, `database`, and `storage_path`
-- Confirmed CLI smoke path: `sources list --health`, `ingest --source oss-ledger`, `search`, `products`, `opportunities`, and `stats`
+- Confirmed CLI smoke path from the repo root: `python3 -m wayfinder sources list --health`, `python3 -m wayfinder ingest --source oss-ledger`, `python3 -m wayfinder search saas`, `python3 -m wayfinder products --limit 20`, `python3 -m wayfinder opportunities --limit 20`, and `python3 -m wayfinder stats`
 - Current approved ingest baseline: `oss-ledger` is enabled; `hackernews` is `dry-run-only`; `github` is `dry-run-only`
 - Follow-on adapter gap: only `oss-ledger` is approved for normal writes today, so Hacker News and GitHub adapter work still needs safety/rate-limit promotion before unattended ingest
 - Setup drift to note: `.codex-foundry/REPO_PROFILE.md` can lag `HEAD`; treat it as a map and verify exact files before follow-on implementation
 
-The sample `search "reddit pain"` command is still a valid CLI smoke check, but it may return no rows after `oss-ledger` ingest alone because that phrase is not guaranteed to exist in the curated local ledger.
+The sample `search "reddit pain"` command remains useful for ad hoc exploration, but the supported repo-root smoke example is `python3 -m wayfinder search saas`. It may still return `No rows found.` after `oss-ledger` ingest alone, which is expected and still confirms that the command path works.
 
 ## Adapter Contract
 

@@ -42,7 +42,7 @@ Every configured source includes a review policy with:
 - `risk.pii_user_generated_content`
 - `risk.hosted_dependencies`
 
-`sources list --health` is the operator review surface for these fields. `ingest --all` only runs sources approved for the current mode:
+`python3 -m wayfinder sources list --health` is the operator review surface for these fields. `python3 -m wayfinder ingest --all` only runs sources approved for the current mode:
 
 - normal ingest: `enabled`
 - dry-run ingest: `enabled` and `dry-run-only`
