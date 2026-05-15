@@ -11,6 +11,17 @@ This guide is additive to the current source policies in `wayfinder.yaml`. It do
 - The source catalog in `wayfinder/web.py` exposes the same safety metadata under `policy_status`, `risk`, and `unattended_cron`.
 - `python3 -m wayfinder scheduled-ingest` is the unattended path and must stay blocked by `cron.enabled: false` until approval is complete.
 
+## Current Adapter Status
+
+Use this summary when deciding whether a source is safe for recurring cron today:
+
+| Source | Current status | Recurring cron stance | Why |
+| --- | --- | --- | --- |
+| `oss-ledger` | Healthy | Safe for recurring cron after the separate `cron.enabled` switch is explicitly approved | Curated local ledger, no credentials, no hosted dependency, and risk fields are already reviewed. |
+| `hackernews` | `dry-run-only` | Not safe for recurring cron yet | Manual dry runs are acceptable, but unattended live Algolia use still needs terms, rate-limit, and user-generated-content review. |
+| `github` | `dry-run-only` | Not safe for recurring cron yet | Anonymous public search is acceptable for manual dry runs, but unattended API use still needs hosted-dependency and rate-limit review. |
+| Reddit / app-store reviews / Product Hunt / broader crawl-search sources | Deferred | Do not add to recurring cron | These sources remain outside the current Wayfinder scope until source safety and terms review are completed. |
+
 ## Checklist
 
 Review and record each item for the source being evaluated:

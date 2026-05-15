@@ -134,11 +134,14 @@ The export is intentionally read-only: it prints editable Markdown, does not aut
 
 ## Current Sources
 
-- `oss-ledger`: `enabled`, curated open-source source/tool ledger, safe for offline ingest.
-- `hackernews`: `dry-run-only`, public HN Algolia search with user-generated content and external rate-limit considerations.
-- `github`: `dry-run-only`, anonymous public GitHub repository search with hosted dependency and API-rate review still required before unattended ingest.
+| Source | Adapter status | Recurring cron stance | Notes |
+| --- | --- | --- | --- |
+| `oss-ledger` | Healthy | Safe for recurring cron after separate approval of `cron.enabled` | Curated open-source source/tool ledger with offline local ingest. |
+| `hackernews` | `dry-run-only` | Not safe for recurring cron yet | Public HN Algolia search with user-generated content and external rate-limit review still required. |
+| `github` | `dry-run-only` | Not safe for recurring cron yet | Anonymous public GitHub repository search; hosted dependency and API-rate review still required before unattended ingest. |
+| Reddit / app-store reviews / Product Hunt / broader crawl/search sources | Deferred | Do not schedule | Out of the current Wayfinder scope until safety and terms review are complete. |
 
-Reddit, app-store reviews, Product Hunt, and broader crawl/search sources are deferred until safety and terms review.
+The source review checklist in `docs/source-review-checklist.md` is the canonical promotion guide for moving a source from manual testing into unattended cron eligibility.
 
 ## Web Smoke
 
