@@ -66,12 +66,15 @@ class GitHubAdapter:
         except (TypeError, ValueError):
             raise ValueError("github source per_page must be an integer between 1 and 100") from None
 
+    def _direct_token(self) -> str:
+        return str(self.config.get("token") or "").strip()
+
     def _token(self) -> str:
-        if not self._credentials_enabled():
-            return ""
-        direct = str(self.config.get("token") or "").strip()
+        direct = self._direct_token()
         if direct:
             return direct
+        if not self._credentials_enabled():
+            return ""
         env_name = str(self.config.get("token_env") or "GITHUB_TOKEN").strip()
         if not env_name:
             return ""
@@ -82,6 +85,8 @@ class GitHubAdapter:
         return value in {"1", "true", "yes", "on"}
 
     def _auth_mode(self) -> str:
+        if self._direct_token():
+            return "explicit token configured"
         if self._credentials_enabled():
             return "token enabled" if self._token() else "credential opt-in enabled, token not present"
         return "anonymous only"
@@ -237,7 +242,8 @@ class GitHubAdapter:
                 detail = str(payload.get("message") or "").strip()
             elif body.strip():
                 detail = body.strip()
-        if status_code in {403, 429} and "rate limit" in detail.lower():
+        rate_limit_remaining = str(headers.get("X-RateLimit-Remaining") or "").strip() if headers is not None else ""
+        if status_code in {403, 429} and ("rate limit" in detail.lower() or rate_limit_remaining == "0"):
             return f"HTTP {status_code} rate limit exceeded ({detail}){self._rate_limit_suffix(headers)}"
         if detail:
             return f"HTTP {status_code} {detail}"
@@ -334,9 +340,9 @@ class GitHubAdapter:
         for spec in self._query_specs():
             items: list[dict[str, Any]]
             if fixture_items:
-                items = fixture_items.get(spec["query"], [])
-                if not items:
+                if spec["query"] not in fixture_items:
                     raise GitHubCollectError(f"fixture payload missing items for query '{spec['query']}'")
+                items = fixture_items[spec["query"]]
             else:
                 params = urllib.parse.urlencode(
                     {
