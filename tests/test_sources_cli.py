@@ -44,6 +44,18 @@ class SourceStatusCliTests(unittest.TestCase):
                     "      scraping: official-api",
                     "      pii_user_generated_content: low-public-repo-metadata",
                     "      hosted_dependencies: github-api",
+                    "  disabled-source:",
+                    "    status: disabled",
+                    "    kind: static_ledger",
+                    "    path: research/open-source-intel-ledger.yaml",
+                    "    notes: Blocked until a fresh safety review is recorded.",
+                    "    risk:",
+                    "      credentials: none",
+                    "      terms: review-required",
+                    "      rate_limits: unknown",
+                    "      scraping: none",
+                    "      pii_user_generated_content: none",
+                    "      hosted_dependencies: none",
                     "",
                 ]
             ),
@@ -68,6 +80,21 @@ class SourceStatusCliTests(unittest.TestCase):
         self.assertIn("review-source status=dry-run-only", output)
         self.assertIn("review=pending unattended=blocked", output)
         self.assertIn("unresolved=terms,rate_limits", output)
+
+    def test_sources_list_health_marks_disabled_sources_explicitly(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = self.write_config(Path(tmpdir))
+            args = argparse.Namespace(config=str(config_path), json=False, health=True, no_color=True)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                rc = cmd_sources(args)
+
+        self.assertEqual(rc, 0)
+        output = stdout.getvalue()
+        self.assertIn("disabled-source status=disabled", output)
+        self.assertIn("review=blocked unattended=blocked", output)
+        self.assertIn("health=disabled Health checks are skipped while this adapter is disabled.", output)
 
 
 if __name__ == "__main__":

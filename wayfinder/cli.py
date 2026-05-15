@@ -132,7 +132,14 @@ def cmd_sources(args: argparse.Namespace) -> int:
         print(f"  review={review_state} unattended={unattended_state} why={review_reason}")
         if policy.notes:
             print(f"  notes={policy.notes}")
-        if args.health and policy.status != "disabled":
+        if args.health:
+            if policy.status == "disabled":
+                print(
+                    "  health="
+                    f"{color('disabled', RED, not args.no_color)} "
+                    "Health checks are skipped while this adapter is disabled."
+                )
+                continue
             try:
                 ok, message = build_adapter(name, cfg).healthcheck()
                 state = color("ok", GREEN, not args.no_color) if ok else color("fail", RED, not args.no_color)
