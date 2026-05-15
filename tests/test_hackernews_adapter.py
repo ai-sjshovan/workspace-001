@@ -155,6 +155,35 @@ class HackerNewsAdapterTests(unittest.TestCase):
             ["competitor analysis tool", "founder pain", "startup idea validation"],
         )
 
+    def test_normalize_keeps_sparse_public_hits_deterministic(self) -> None:
+        adapter = HackerNewsAdapter("hackernews", {"queries": ["startup idea validation"]})
+        raw_records = [
+            {
+                "story_id": 8055654,
+                "story_title": "",
+                "title": "",
+                "story_url": "http://cayenneapps.com",
+                "url": "",
+                "author": "sangria",
+                "points": None,
+                "created_at": "2014-07-18T21:10:54Z",
+                "comment_text": "startup idea validation in the wild",
+                "_wayfinder_query": "startup idea validation",
+                "_wayfinder_category": "validation",
+            }
+        ]
+
+        batch = adapter.normalize(raw_records)
+
+        self.assertEqual(len(batch.signals), 1)
+        signal = batch.signals[0]
+        self.assertEqual(signal.source_id, "8055654")
+        self.assertEqual(signal.title, "HN item 8055654")
+        self.assertEqual(signal.source_url, "http://cayenneapps.com")
+        self.assertEqual(signal.author, "sangria")
+        self.assertEqual(signal.category, "validation")
+        self.assertEqual(signal.raw["objectID"], "8055654")
+
     def test_dry_run_does_not_write_db_and_live_insert_is_searchable(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
