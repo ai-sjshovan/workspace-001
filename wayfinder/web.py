@@ -984,6 +984,27 @@ def opportunity_detail_page(payload: dict[str, Any], related: dict[str, list[dic
 </div>"""
 
 
+def api_pagination_value(raw: str, *, default: int, minimum: int = 0, maximum: int = 100) -> int:
+    try:
+        value = int((raw or "").strip() or str(default))
+    except ValueError:
+        return default
+    return max(minimum, min(value, maximum))
+
+
+def api_search_filters(params: dict[str, list[str]]) -> dict[str, object]:
+    return {
+        "query": params.get("q", [""])[0],
+        "source": params.get("source", [""])[0],
+        "category": params.get("market", params.get("category", [""]))[0],
+        "product": params.get("product", [""])[0],
+        "pain_type": params.get("pain", params.get("pain_type", [""]))[0],
+        "feature_request": params.get("feature_gap", params.get("feature_request", [""]))[0],
+        "limit": api_pagination_value(params.get("limit", ["50"])[0], default=50, minimum=1),
+        "offset": api_pagination_value(params.get("offset", ["0"])[0], default=0),
+    }
+
+
 def min_score_options(values: list[str], selected: str) -> str:
     options = ['<option value="">Any score</option>']
     for value in values:
@@ -1218,8 +1239,38 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 )
                 return
             if parsed.path == "/api/search":
-                query = params.get("q", [""])[0]
-                rows = search_signals(conn, query, 50)
+                filters = api_search_filters(params)
+                query = str(filters["query"])
+                if (
+                    not query.strip()
+                    and not str(filters["source"]).strip()
+                    and not str(filters["category"]).strip()
+                    and not str(filters["product"]).strip()
+                    and not str(filters["pain_type"]).strip()
+                    and not str(filters["feature_request"]).strip()
+                ):
+                    rows = search_signals(conn, query, int(filters["limit"]), offset=int(filters["offset"]))
+                elif (
+                    query.strip()
+                    and not str(filters["source"]).strip()
+                    and not str(filters["category"]).strip()
+                    and not str(filters["product"]).strip()
+                    and not str(filters["pain_type"]).strip()
+                    and not str(filters["feature_request"]).strip()
+                ):
+                    rows = search_signals(conn, query, int(filters["limit"]), offset=int(filters["offset"]))
+                else:
+                    rows = browse_signals(
+                        conn,
+                        query=query,
+                        source=str(filters["source"]),
+                        category=str(filters["category"]),
+                        product=str(filters["product"]),
+                        pain_type=str(filters["pain_type"]),
+                        feature_request=str(filters["feature_request"]),
+                        limit=int(filters["limit"]),
+                        offset=int(filters["offset"]),
+                    )
                 self.send_json([dict(row) for row in rows])
                 return
             if parsed.path == "/api/sources":
@@ -1237,20 +1288,31 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     return
                 self.send_json(payload)
                 return
+            if parsed.path == "/api/products":
+                category = params.get("category", params.get("market", [""]))[0]
+                limit = api_pagination_value(params.get("limit", ["50"])[0], default=50, minimum=1)
+                offset = api_pagination_value(params.get("offset", ["0"])[0], default=0)
+                rows = filtered_products(conn, category=category, limit=limit, offset=offset)
+                self.send_json([dict(row) for row in rows])
+                return
             if parsed.path == "/api/opportunities":
                 source = params.get("source", [""])[0]
-                category = params.get("category", [""])[0]
+                category = params.get("category", params.get("market", [""]))[0]
                 min_score_raw = params.get("min_score", [""])[0].strip()
-                limit_raw = params.get("limit", ["50"])[0].strip()
                 try:
                     min_score = float(min_score_raw) if min_score_raw else None
                 except ValueError:
                     min_score = None
-                try:
-                    limit = max(1, min(int(limit_raw or "50"), 100))
-                except ValueError:
-                    limit = 50
-                rows = filtered_opportunities(conn, source=source, category=category, min_score=min_score, limit=limit)
+                limit = api_pagination_value(params.get("limit", ["50"])[0], default=50, minimum=1)
+                offset = api_pagination_value(params.get("offset", ["0"])[0], default=0)
+                rows = filtered_opportunities(
+                    conn,
+                    source=source,
+                    category=category,
+                    min_score=min_score,
+                    limit=limit,
+                    offset=offset,
+                )
                 payload = []
                 for row in rows:
                     payload.append(opportunity_export_payload(row))

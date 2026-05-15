@@ -339,6 +339,7 @@ def filtered_opportunities(
     conn: sqlite3.Connection,
     *,
     limit: int = 50,
+    offset: int = 0,
     min_score: float | None = None,
     category: str = "",
     source: str = "",
@@ -357,7 +358,7 @@ def filtered_opportunities(
         params.append(source.strip())
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-    params.append(limit)
+    params.extend((limit, offset))
     return conn.execute(
         f"""
         SELECT *
@@ -365,6 +366,7 @@ def filtered_opportunities(
         {where}
         ORDER BY opportunity_score DESC, evidence_count DESC, collected_at DESC, id DESC
         LIMIT ?
+        OFFSET ?
         """,
         params,
     ).fetchall()
@@ -456,11 +458,16 @@ def rescore_opportunities(conn: sqlite3.Connection, weights: dict[str, float]) -
     return updated
 
 
-def search_signals(conn: sqlite3.Connection, query: str, limit: int = 20) -> list[sqlite3.Row]:
+def search_signals(
+    conn: sqlite3.Connection,
+    query: str,
+    limit: int = 20,
+    offset: int = 0,
+) -> list[sqlite3.Row]:
     if not query.strip():
         return conn.execute(
-            "SELECT * FROM signals ORDER BY collected_at DESC, id DESC LIMIT ?",
-            (limit,),
+            "SELECT * FROM signals ORDER BY collected_at DESC, id DESC LIMIT ? OFFSET ?",
+            (limit, offset),
         ).fetchall()
     try:
         return conn.execute(
@@ -471,8 +478,9 @@ def search_signals(conn: sqlite3.Connection, query: str, limit: int = 20) -> lis
             WHERE signals_fts MATCH ?
             ORDER BY rank
             LIMIT ?
+            OFFSET ?
             """,
-            (query, limit),
+            (query, limit, offset),
         ).fetchall()
     except sqlite3.OperationalError:
         like = f"%{query}%"
@@ -483,8 +491,9 @@ def search_signals(conn: sqlite3.Connection, query: str, limit: int = 20) -> lis
             WHERE title LIKE ? OR body LIKE ? OR source_url LIKE ? OR product LIKE ? OR category LIKE ?
             ORDER BY collected_at DESC, id DESC
             LIMIT ?
+            OFFSET ?
             """,
-            (like, like, like, like, like, limit),
+            (like, like, like, like, like, limit, offset),
         ).fetchall()
 
 
@@ -497,6 +506,7 @@ def browse_signals(
     pain_type: str = "",
     feature_request: str = "",
     limit: int = 50,
+    offset: int = 0,
 ) -> list[sqlite3.Row]:
     clauses: list[str] = []
     params: list[object] = []
@@ -527,7 +537,7 @@ def browse_signals(
         params.extend([like, like, like, like, like, like, like])
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-    params.append(limit)
+    params.extend((limit, offset))
     return conn.execute(
         f"""
         SELECT *
@@ -535,6 +545,7 @@ def browse_signals(
         {where}
         ORDER BY score DESC, collected_at DESC, id DESC
         LIMIT ?
+        OFFSET ?
         """,
         params,
     ).fetchall()
@@ -813,7 +824,13 @@ def list_rows(conn: sqlite3.Connection, table: str, limit: int = 50) -> list[sql
     return conn.execute(f"SELECT * FROM {table} ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
 
 
-def filtered_products(conn: sqlite3.Connection, *, category: str = "", limit: int = 50) -> list[sqlite3.Row]:
+def filtered_products(
+    conn: sqlite3.Connection,
+    *,
+    category: str = "",
+    limit: int = 50,
+    offset: int = 0,
+) -> list[sqlite3.Row]:
     clauses: list[str] = []
     params: list[object] = []
 
@@ -822,7 +839,7 @@ def filtered_products(conn: sqlite3.Connection, *, category: str = "", limit: in
         params.append(category.strip())
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-    params.append(limit)
+    params.extend((limit, offset))
     return conn.execute(
         f"""
         SELECT *
@@ -830,6 +847,7 @@ def filtered_products(conn: sqlite3.Connection, *, category: str = "", limit: in
         {where}
         ORDER BY id DESC
         LIMIT ?
+        OFFSET ?
         """,
         params,
     ).fetchall()

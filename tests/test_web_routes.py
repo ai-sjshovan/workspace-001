@@ -44,7 +44,19 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
                         category="market-research",
                         pain_type="reporting delays",
                         feature_request="deeper source drill-ins",
-                    )
+                    ),
+                    Signal(
+                        source=cls.source_name,
+                        source_id="dashboard-smoke-2",
+                        source_url="https://example.com/dashboard-smoke-2",
+                        title="Wayfinder dashboard smoke signal follow-up",
+                        body="Second signal fixture for API pagination checks.",
+                        score=5,
+                        product="Trend Mapper",
+                        category="analytics",
+                        pain_type="alert fatigue",
+                        feature_request="cleaner browse filters",
+                    ),
                 ],
             )
             insert_products(
@@ -58,7 +70,16 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
                         strengths="Turns browseable source evidence into product intel quickly.",
                         feature_gaps="Needs deeper source drill-ins in the read-only dashboard.",
                         audience="Local SEO operators",
-                    )
+                    ),
+                    ProductIntel(
+                        product_name="Trend Mapper",
+                        url="https://example.com/trend-mapper",
+                        category="analytics",
+                        pricing_model="usage-based",
+                        strengths="Summarizes changing demand signals.",
+                        feature_gaps="Needs easier API-side filtering for dashboards.",
+                        audience="Growth teams",
+                    ),
                 ],
             )
             insert_opportunities(
@@ -79,7 +100,23 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
                         monetization_strategy="Subscription research workflow",
                         foundry_task_suggestions="Add focused source detail browse views",
                         raw={"verdict": "high-leverage market research", "useful_outputs": ["dashboard", "analytics"]},
-                    )
+                    ),
+                    Opportunity(
+                        title="Filtered product browse API for operators",
+                        source=cls.source_name,
+                        category="analytics",
+                        target_user="Product analyst",
+                        problem="Dashboards need stable filtered browse endpoints without ad hoc query wiring.",
+                        evidence_count=2,
+                        competing_products="Trend Mapper",
+                        what_products_do_right="Expose categorized product intelligence.",
+                        what_users_want_better="Consistent API pagination for filtered lists.",
+                        build_difficulty="low",
+                        iteration_angle="Reuse dashboard filters across API routes.",
+                        monetization_strategy="Operator productivity subscription",
+                        foundry_task_suggestions="Add filterable API browse routes",
+                        raw={"verdict": "useful browse automation", "useful_outputs": ["api", "dashboard"]},
+                    ),
                 ],
                 scoring_weights(cls.config),
             )
@@ -169,6 +206,48 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         opportunity_id = payload[0]["id"]
         opportunity_fingerprint = payload[0]["fingerprint"]
 
+        status, body = self.fetch(
+            f"/api/search?q=Wayfinder&source={quote(self.source_name)}&market=market-research&product=Pain%20Radar&pain=reporting%20delays&feature_gap=deeper%20source%20drill-ins&limit=1&offset=0"
+        )
+        self.assertEqual(status, 200)
+        payload = json.loads(body)
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["source_id"], "dashboard-smoke")
+        self.assertEqual(payload[0]["product"], "Pain Radar")
+
+        status, body = self.fetch("/api/search?limit=1&offset=1")
+        self.assertEqual(status, 200)
+        payload = json.loads(body)
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["source_id"], "dashboard-smoke")
+
+        status, body = self.fetch("/api/products?market=analytics&limit=1&offset=0")
+        self.assertEqual(status, 200)
+        payload = json.loads(body)
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["product_name"], "Trend Mapper")
+        self.assertEqual(payload[0]["category"], "analytics")
+
+        status, body = self.fetch("/api/products?limit=1&offset=1")
+        self.assertEqual(status, 200)
+        payload = json.loads(body)
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["product_name"], "Pain Radar")
+
+        status, body = self.fetch(
+            f"/api/opportunities?source={quote(self.source_name)}&market=analytics&min_score=1&limit=1&offset=0"
+        )
+        self.assertEqual(status, 200)
+        payload = json.loads(body)
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["title"], "Filtered product browse API for operators")
+
+        status, body = self.fetch("/api/opportunities?limit=1&offset=1")
+        self.assertEqual(status, 200)
+        payload = json.loads(body)
+        self.assertEqual(len(payload), 1)
+        self.assertEqual(payload[0]["title"], "Filtered product browse API for operators")
+
         status, body = self.fetch(f"/api/opportunities/{opportunity_id}")
         self.assertEqual(status, 200)
         payload = json.loads(body)
@@ -184,7 +263,7 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertEqual(payload["source_context"]["search_path"], f"/search?source={quote(self.source_name)}&market=market-research")
         self.assertIsNotNone(payload["linked_source_context"])
         self.assertEqual(payload["linked_source_context"]["source"], self.source_name)
-        self.assertEqual(len(payload["linked_source_context"]["signals"]), 1)
+        self.assertEqual(len(payload["linked_source_context"]["signals"]), 2)
 
         status, body = self.fetch(f"/api/opportunities/{opportunity_fingerprint}")
         self.assertEqual(status, 200)
