@@ -362,6 +362,9 @@ def browse_signals(
     query: str = "",
     source: str = "",
     category: str = "",
+    product: str = "",
+    pain_type: str = "",
+    feature_request: str = "",
     limit: int = 50,
 ) -> list[sqlite3.Row]:
     clauses: list[str] = []
@@ -373,10 +376,24 @@ def browse_signals(
     if category.strip():
         clauses.append("category = ?")
         params.append(category.strip())
+    if product.strip():
+        clauses.append("product = ?")
+        params.append(product.strip())
+    if pain_type.strip():
+        clauses.append("pain_type = ?")
+        params.append(pain_type.strip())
+    if feature_request.strip():
+        clauses.append("feature_request = ?")
+        params.append(feature_request.strip())
     if query.strip():
         like = f"%{query}%"
-        clauses.append("(title LIKE ? OR body LIKE ? OR source_url LIKE ? OR product LIKE ? OR category LIKE ?)")
-        params.extend([like, like, like, like, like])
+        clauses.append(
+            "("
+            "title LIKE ? OR body LIKE ? OR source_url LIKE ? OR product LIKE ? OR category LIKE ? "
+            "OR pain_type LIKE ? OR feature_request LIKE ?"
+            ")"
+        )
+        params.extend([like, like, like, like, like, like, like])
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     params.append(limit)
@@ -398,10 +415,26 @@ def signal_filter_values(conn: sqlite3.Connection) -> dict[str, list[str]]:
             row[0]
             for row in conn.execute("SELECT DISTINCT source FROM signals WHERE source != '' ORDER BY source COLLATE NOCASE")
         ],
+        "products": [
+            row[0]
+            for row in conn.execute("SELECT DISTINCT product FROM signals WHERE product != '' ORDER BY product COLLATE NOCASE")
+        ],
         "categories": [
             row[0]
             for row in conn.execute(
                 "SELECT DISTINCT category FROM signals WHERE category != '' ORDER BY category COLLATE NOCASE"
+            )
+        ],
+        "pain_types": [
+            row[0]
+            for row in conn.execute(
+                "SELECT DISTINCT pain_type FROM signals WHERE pain_type != '' ORDER BY pain_type COLLATE NOCASE"
+            )
+        ],
+        "feature_requests": [
+            row[0]
+            for row in conn.execute(
+                "SELECT DISTINCT feature_request FROM signals WHERE feature_request != '' ORDER BY feature_request COLLATE NOCASE"
             )
         ],
     }
