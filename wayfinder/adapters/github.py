@@ -67,6 +67,8 @@ class GitHubAdapter:
             raise ValueError("github source per_page must be an integer between 1 and 100") from None
 
     def _token(self) -> str:
+        if not self._credentials_enabled():
+            return ""
         direct = str(self.config.get("token") or "").strip()
         if direct:
             return direct
@@ -75,8 +77,14 @@ class GitHubAdapter:
             return ""
         return str(os.environ.get(env_name) or "").strip()
 
+    def _credentials_enabled(self) -> bool:
+        value = str(self.config.get("allow_credentials") or "").strip().lower()
+        return value in {"1", "true", "yes", "on"}
+
     def _auth_mode(self) -> str:
-        return "token optional" if self._token() else "anonymous fallback"
+        if self._credentials_enabled():
+            return "token enabled" if self._token() else "credential opt-in enabled, token not present"
+        return "anonymous only"
 
     def _base_url(self) -> str:
         value = str(self.config.get("base_url") or self._DEFAULT_BASE_URL).strip() or self._DEFAULT_BASE_URL
@@ -238,6 +246,33 @@ class GitHubAdapter:
     def _collapse_text(self, value: Any) -> str:
         return " ".join(str(value or "").strip().split())
 
+    def _normalized_raw(self, item: dict[str, Any], *, query_context: str, normalized_category: str, license_name: str) -> dict[str, Any]:
+        full_name = self._collapse_text(item.get("full_name"))
+        stars = int(self._star_count(item.get("stargazers_count")) or 0)
+        language = self._collapse_text(item.get("language"))
+        description = self._collapse_text(item.get("description"))
+        topics = self._string_list(item.get("topics"))
+        useful_outputs = [f"repository:{full_name}", f"stars:{stars}"]
+        if language:
+            useful_outputs.append(f"language:{language}")
+        if topics:
+            useful_outputs.append(f"topics:{', '.join(topics[:8])}")
+        safety_risks = ["hosted dependency: GitHub public API"]
+        if not license_name or license_name == "NOASSERTION":
+            safety_risks.append("license unclear")
+        return {
+            **item,
+            "url": self._collapse_text(item.get("html_url")),
+            "license": license_name,
+            "category": normalized_category,
+            "verdict": "public open-source leverage signal",
+            "useful_outputs": useful_outputs,
+            "safety_risks": safety_risks,
+            "can_reuse_code": "inspect-first",
+            "can_reuse_ideas": "high" if description else "medium",
+            "query_context": query_context,
+        }
+
     def _string_list(self, value: Any) -> list[str]:
         if not isinstance(value, list):
             return []
@@ -372,6 +407,12 @@ class GitHubAdapter:
             homepage = self._collapse_text(item.get("homepage"))
             license_name = self._collapse_text((item.get("license") or {}).get("spdx_id") if isinstance(item.get("license"), dict) else "")
             query_context = ", ".join(matched_queries)
+            normalized_raw = self._normalized_raw(
+                item,
+                query_context=query_context,
+                normalized_category=normalized_category,
+                license_name=license_name,
+            )
             repo_facts = [
                 f"stars={int(stars)}",
                 f"updated={updated_at}",
@@ -395,7 +436,7 @@ class GitHubAdapter:
                     category=normalized_category,
                     feature_request=query_context,
                     monetization_signal=license_name,
-                    raw=item,
+                    raw=normalized_raw,
                 )
             )
             batch.products.append(
@@ -407,7 +448,7 @@ class GitHubAdapter:
                     feature_gaps=f"Matched GitHub queries: {query_context}" if query_context else "",
                     audience=", ".join(matched_categories or matched_queries),
                     monetization_notes=f"GitHub repo {full_name} topics={category or 'none'}",
-                    raw=item,
+                    raw=normalized_raw,
                 )
             )
             batch.opportunities.append(
@@ -426,7 +467,7 @@ class GitHubAdapter:
                     iteration_angle=f"Reuse repository patterns, docs, or architecture from {full_name} where safe.",
                     monetization_strategy="open-source leverage or competitor/tool intelligence for future product bets",
                     foundry_task_suggestions=f"Review {full_name} for reusable patterns and market adjacency signals.",
-                    raw=item,
+                    raw=normalized_raw,
                 )
             )
         return batch
