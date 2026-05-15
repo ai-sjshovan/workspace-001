@@ -195,6 +195,15 @@ class GitHubAdapter:
             values.append(text)
         return values
 
+    def _repo_key(self, value: Any) -> str:
+        return self._collapse_text(value).lower()
+
+    def _star_count(self, value: Any) -> float | None:
+        try:
+            return float(value or 0)
+        except (TypeError, ValueError):
+            return None
+
     def _merge_record(self, existing: dict[str, Any], incoming: dict[str, Any]) -> dict[str, Any]:
         merged = {**existing, **incoming}
         merged["_wayfinder_queries"] = self._string_list(
@@ -242,12 +251,15 @@ class GitHubAdapter:
             payload = self._read_payload(request, spec)
             items = payload.get("items")
             if not isinstance(items, list):
-                raise GitHubCollectError(f"GitHub payload missing repository items for query '{spec['query']}'")
+                items = []
             for item in items:
                 if not isinstance(item, dict):
                     continue
                 full_name = self._collapse_text(item.get("full_name"))
                 if not full_name:
+                    continue
+                repo_key = self._repo_key(full_name)
+                if not repo_key:
                     continue
                 normalized = {
                     **item,
@@ -256,8 +268,8 @@ class GitHubAdapter:
                     "_wayfinder_queries": [spec["query"]],
                     "_wayfinder_categories": [spec["label"]],
                 }
-                existing = records_by_repo.get(full_name)
-                records_by_repo[full_name] = self._merge_record(existing, normalized) if existing else normalized
+                existing = records_by_repo.get(repo_key)
+                records_by_repo[repo_key] = self._merge_record(existing, normalized) if existing else normalized
         records = list(records_by_repo.values())
         records.sort(
             key=lambda item: (
@@ -271,18 +283,23 @@ class GitHubAdapter:
         batch = NormalizedBatch()
         seen_ids: set[str] = set()
         for item in raw_records:
+            if not isinstance(item, dict):
+                continue
             repo_name = str(item.get("name") or "").strip()
             full_name = str(item.get("full_name") or "").strip()
             html_url = str(item.get("html_url") or "").strip()
             if not repo_name or not full_name or not html_url:
                 continue
-            if full_name in seen_ids:
+            repo_key = self._repo_key(full_name)
+            if not repo_key or repo_key in seen_ids:
                 continue
-            seen_ids.add(full_name)
+            stars = self._star_count(item.get("stargazers_count"))
+            if stars is None:
+                continue
+            seen_ids.add(repo_key)
             description = self._collapse_text(item.get("description"))
             topics = self._string_list(item.get("topics"))
             category = ", ".join(topics[:8])
-            stars = float(item.get("stargazers_count") or 0)
             updated_at = str(item.get("updated_at") or "unknown")
             matched_categories = self._string_list(item.get("_wayfinder_categories"))
             matched_queries = self._string_list(item.get("_wayfinder_queries"))

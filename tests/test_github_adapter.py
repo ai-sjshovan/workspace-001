@@ -47,6 +47,35 @@ class GitHubAdapterTests(unittest.TestCase):
 
         self.assertEqual(str(ctx.exception), "GitHub timeout for query 'founder pain' after 3s")
 
+    def test_collect_treats_missing_or_partial_items_payloads_as_empty(self) -> None:
+        adapter = GitHubAdapter(
+            "github",
+            {
+                "base_url": "https://api.github.com/search/repositories",
+                "queries": ["founder pain"],
+            },
+        )
+
+        class FakeResponse:
+            def __init__(self, payload: object) -> None:
+                self.payload = payload
+
+            def read(self) -> bytes:
+                import json
+
+                return json.dumps(self.payload).encode("utf-8")
+
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> bool:
+                return False
+
+        for payload in ({}, {"items": None}, {"items": "oops"}):
+            with self.subTest(payload=payload):
+                with patch("urllib.request.urlopen", return_value=FakeResponse(payload)):
+                    self.assertEqual(adapter.collect(), [])
+
     def test_collect_dedupes_duplicate_repositories_and_merges_query_context(self) -> None:
         adapter = GitHubAdapter(
             "github",
@@ -98,6 +127,47 @@ class GitHubAdapterTests(unittest.TestCase):
         self.assertEqual(record["topics"], ["analytics", "founder-tools"])
         self.assertEqual(record["_wayfinder_queries"], ["founder pain", "competitor analysis"])
         self.assertEqual(record["_wayfinder_categories"], ["pain-research", "competitor-research"])
+
+    def test_collect_dedupes_duplicate_repositories_case_insensitively(self) -> None:
+        adapter = GitHubAdapter(
+            "github",
+            {
+                "base_url": "https://api.github.com/search/repositories",
+                "queries": [
+                    {"query": "founder pain", "label": "pain-research"},
+                    {"query": "competitor analysis", "label": "competitor-research"},
+                ],
+            },
+        )
+
+        responses = iter(
+            [
+                {"items": [{"full_name": "Org/Acme", "description": "Short", "stargazers_count": 12, "updated_at": "2026-05-14T12:00:00Z"}]},
+                {"items": [{"full_name": "org/acme", "description": "Longer repository description", "stargazers_count": 30, "updated_at": "2026-05-14T12:30:00Z"}]},
+            ]
+        )
+
+        class FakeResponse:
+            def __init__(self, payload: dict[str, object]) -> None:
+                self.payload = payload
+
+            def read(self) -> bytes:
+                import json
+
+                return json.dumps(self.payload).encode("utf-8")
+
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, exc_type, exc, tb) -> bool:
+                return False
+
+        with patch("urllib.request.urlopen", side_effect=lambda request, timeout: FakeResponse(next(responses))):
+            records = adapter.collect()
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["full_name"], "org/acme")
+        self.assertEqual(records[0]["description"], "Longer repository description")
 
     def test_normalize_emits_searchable_signal_product_and_opportunity_records(self) -> None:
         adapter = GitHubAdapter("github", {"queries": ["founder pain"]})
@@ -156,6 +226,36 @@ class GitHubAdapterTests(unittest.TestCase):
         self.assertEqual(opportunity.evidence_count, 2)
         self.assertEqual(opportunity.competing_products, "org/acme")
         self.assertIn("Matched public GitHub demand: founder pain, competitor analysis", opportunity.what_users_want_better)
+
+    def test_normalize_skips_malformed_records_and_keeps_valid_items(self) -> None:
+        adapter = GitHubAdapter("github", {"queries": ["founder pain"]})
+        raw_records = [
+            "not-a-dict",
+            {"full_name": "org/missing-name", "html_url": "https://github.com/org/missing-name", "stargazers_count": 4},
+            {"name": "missing-url", "full_name": "org/missing-url", "stargazers_count": 4},
+            {
+                "name": "bad-stars",
+                "full_name": "org/bad-stars",
+                "html_url": "https://github.com/org/bad-stars",
+                "stargazers_count": "many",
+            },
+            {
+                "name": "acme",
+                "full_name": "org/acme",
+                "html_url": "https://github.com/org/acme",
+                "description": " Founder pain tracker ",
+                "stargazers_count": 12,
+                "_wayfinder_queries": ["founder pain"],
+                "_wayfinder_categories": ["pain-research"],
+            },
+        ]
+
+        batch = adapter.normalize(raw_records)  # type: ignore[arg-type]
+
+        self.assertEqual(len(batch.signals), 1)
+        self.assertEqual(len(batch.products), 1)
+        self.assertEqual(len(batch.opportunities), 1)
+        self.assertEqual(batch.signals[0].source_id, "org/acme")
 
 
 if __name__ == "__main__":
