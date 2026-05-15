@@ -625,6 +625,76 @@ def source_safety_panel(payload: dict[str, Any]) -> str:
 </section>"""
 
 
+def source_review_checklist_panel(payload: dict[str, Any]) -> str:
+    pending_sources = [
+        item["key"]
+        for item in payload["sources"]
+        if str(item["policy_status"]).strip().lower() != "enabled"
+    ]
+    pending_summary = ", ".join(str(name) for name in pending_sources) if pending_sources else "none"
+    return f"""<section class="panel">
+  <section class="toolbar">
+    <div>
+      <p class="list-head">Source review checklist</p>
+      <h2>Review before unattended ingest</h2>
+      <p class="subtle">Use this checklist to decide whether a source can move from manual-only review into an explicitly approved unattended state.</p>
+    </div>
+    <div class="toolbar-links">
+      {health_status_badge('warning' if pending_sources else 'ok')}
+      {source_status_tag(f"pending: {len(pending_sources)}")}
+    </div>
+  </section>
+  <div class="detail-grid">
+    <div>
+      <div class="mini-list">
+        <div class="mini-item"><strong>1. Confirm policy status</strong><div class="subtle">Only <code>enabled</code> sources are eligible. <code>dry-run-only</code>, <code>needs-review</code>, and <code>disabled</code> remain blocked.</div></div>
+        <div class="mini-item"><strong>2. Clear risk flags</strong><div class="subtle">Resolve any risk fields still marked <code>unknown</code> or <code>review-required</code>, especially terms, rate limits, and credentials handling.</div></div>
+        <div class="mini-item"><strong>3. Verify adapter health</strong><div class="subtle">The adapter health check should pass before any unattended run is considered.</div></div>
+        <div class="mini-item"><strong>4. Re-check cron guardrails</strong><div class="subtle">This page does not enable cron. Global scheduling must stay an explicit later operator choice.</div></div>
+      </div>
+    </div>
+    <div>
+      <p class="list-head">Still pending</p>
+      <div class="mini-list">
+        <div class="mini-item"><strong>Sources awaiting review</strong><div class="subtle">{esc(pending_summary)}</div></div>
+        <div class="mini-item"><strong>Global cron switch</strong><div class="subtle">{esc('enabled' if payload['cron']['enabled'] else 'disabled')}</div></div>
+        <div class="mini-item"><strong>Read-only reminder</strong><div class="subtle">No controls on this page modify config, policy, or scheduling state.</div></div>
+      </div>
+    </div>
+  </div>
+</section>"""
+
+
+def adapter_status_panel(payload: dict[str, Any]) -> str:
+    items = []
+    for item in payload["sources"]:
+        unresolved = item["risk_summary"]["unresolved"]
+        unresolved_text = ", ".join(str(flag) for flag in unresolved) if unresolved else "none"
+        unattended = "eligible" if item["unattended_cron"]["eligible"] else "blocked"
+        items.append(
+            f"""<article class="row">
+  <div class="source-title">
+    <div>
+      <p class="list-head">Adapter</p>
+      <h2><a href="{esc(source_path(item['key']))}">{esc(item['key'])}</a></h2>
+      <p class="meta">{policy_status_badge(str(item['policy_status']))}{health_status_badge(str(item['health']['label']))}<span class="tag">{esc(item['kind'])}</span></p>
+    </div>
+    <div class="subtle">Scheduled-ingest eligibility: {esc(unattended)}</div>
+  </div>
+  <p class="subtle">Risk flags: {esc(unresolved_text)}</p>
+  <p class="subtle">Review state: {esc(item['review'])} · {esc(item['why'])}</p>
+  <p class="subtle">Adapter health: {esc(item['health']['message'])}</p>
+</article>"""
+        )
+    return (
+        '<section class="panel"><section class="toolbar"><div><p class="list-head">Adapter status panel</p>'
+        '<h2>Configured source adapters</h2>'
+        '<p class="subtle">Each adapter shows policy status, unresolved review flags, live health, and whether unattended scheduling would still be blocked.</p>'
+        '</div></section>'
+        f'<section class="card-grid">{"".join(items) if items else "<p>No configured sources found.</p>"}</section></section>'
+    )
+
+
 def source_list_page(
     payload: dict[str, Any],
     activity_by_source: dict[str, dict[str, Any]],
@@ -662,6 +732,8 @@ def source_list_page(
     return (
         '<div class="stack">'
         f'{source_safety_panel(payload)}'
+        f'{source_review_checklist_panel(payload)}'
+        f'{adapter_status_panel(payload)}'
         '<section class="toolbar"><p class="subtle">Configured sources with current policy, live adapter health, and activity summaries.</p></section>'
         f"{selected_html}"
         f'<section class="card-grid">{"".join(cards) if cards else "<p>No configured sources found.</p>"}</section>'
