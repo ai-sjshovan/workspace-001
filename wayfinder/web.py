@@ -90,6 +90,11 @@ button { padding: 11px 15px; border: 0; border-radius: 7px; background: #102523;
 .source-title { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
 .source-card { display: block; color: inherit; }
 .source-card.active { border-color: #102523; box-shadow: 0 0 0 2px rgba(16, 37, 35, .12); }
+.status-card { border-left: 6px solid #bfcab9; }
+.status-card.good { border-left-color: #215228; background: #f4fbf2; }
+.status-card.warn { border-left-color: #a66b00; background: #fff8e6; }
+.status-card.bad { border-left-color: #7a1f1a; background: #fff1f0; }
+.status-kicker { margin: 0 0 6px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #66746a; }
 .source-card h2 { color: #102523; }
 .toolbar-links { display: flex; gap: 10px; flex-wrap: wrap; }
 .run-list { display: grid; gap: 10px; }
@@ -125,6 +130,7 @@ def layout(title: str, body: str) -> bytes:
     <nav>
       <a href="/">Dashboard</a>
       <a href="/sources">Sources</a>
+      <a href="/source-safety">Source Safety</a>
       <a href="/search">Search</a>
       <a href="/products">Products</a>
       <a href="/opportunities">Opportunities</a>
@@ -604,6 +610,15 @@ def health_status_badge(status: str) -> str:
     return f'<span class="{class_name}">{esc(status or "unknown")}</span>'
 
 
+def safety_tone(status: str) -> str:
+    return {
+        "enabled": "good",
+        "dry-run-only": "warn",
+        "needs-review": "warn",
+        "disabled": "bad",
+    }.get(status.strip().lower(), "")
+
+
 def source_safety_panel(payload: dict[str, Any]) -> str:
     cron = payload["cron"]
     counts = payload["counts"]
@@ -646,6 +661,36 @@ def source_safety_panel(payload: dict[str, Any]) -> str:
     </div>
   </div>
 </section>"""
+
+
+def source_safety_status_board(payload: dict[str, Any]) -> str:
+    cards: list[str] = []
+    for item in payload["sources"]:
+        tone = safety_tone(str(item["policy_status"]))
+        review_summary = "Safe for unattended ingest once cron is explicitly enabled." if item["unattended_cron"]["eligible"] else "Manual-only pending review or disabled."
+        cards.append(
+            f"""<article class="row status-card {esc(tone)}">
+  <div class="source-title">
+    <div>
+      <p class="status-kicker">Source safety</p>
+      <h2><a href="{esc(source_path(item['key']))}">{esc(item['key'])}</a></h2>
+      <p class="meta">{policy_status_badge(str(item['policy_status']))}<span class="tag">{esc(item['review'])}</span>{health_status_badge(str(item['health']['label']))}</p>
+    </div>
+    <div class="subtle">{esc('unattended eligible' if item['unattended_cron']['eligible'] else 'unattended blocked')}</div>
+  </div>
+  <p>{esc(review_summary)}</p>
+  <p class="subtle">Why: {esc(item['why'])}</p>
+  <p class="subtle">Outstanding risk flags: {esc(', '.join(item['risk_summary']['unresolved']) if item['risk_summary']['unresolved'] else 'none')}</p>
+  <p class="subtle">Health: {esc(item['health']['message'])}</p>
+</article>"""
+        )
+    return (
+        '<section class="panel"><section class="toolbar"><div><p class="list-head">Source safety status</p>'
+        '<h2>Safe, blocked, and review-required adapters</h2>'
+        '<p class="subtle">Green cards are eligible for unattended ingest only after the global cron switch is explicitly enabled. Yellow and red cards remain manual-only.</p>'
+        '</div><div class="toolbar-links"><a href="/sources">Browse sources</a></div></section>'
+        f'<section class="card-grid">{"".join(cards) if cards else "<p>No configured sources found.</p>"}</section></section>'
+    )
 
 
 def source_review_checklist_panel(payload: dict[str, Any]) -> str:
@@ -761,6 +806,17 @@ def source_list_page(
         f"{selected_html}"
         f'<section class="card-grid">{"".join(cards) if cards else "<p>No configured sources found.</p>"}</section>'
         '</div>'
+    )
+
+
+def source_safety_page(payload: dict[str, Any]) -> str:
+    return (
+        '<div class="stack">'
+        f"{source_safety_panel(payload)}"
+        f"{source_safety_status_board(payload)}"
+        f"{source_review_checklist_panel(payload)}"
+        f"{adapter_status_panel(payload)}"
+        "</div>"
     )
 
 
@@ -1559,6 +1615,10 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     f'<section class="row-grid">{signal_rows(rows) if source.strip() else "<p>Select a source to inspect its linked signals and opportunities.</p>"}</section></div>'
                 )
                 self.send_html("Sources", body)
+                return
+            if parsed.path == "/source-safety":
+                payload = source_status_overview(self.config)
+                self.send_html("Source Safety", source_safety_page(payload))
                 return
             if parsed.path.startswith("/sources/"):
                 source_name = unquote(parsed.path.removeprefix("/sources/")).strip()
