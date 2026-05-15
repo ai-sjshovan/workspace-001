@@ -379,6 +379,64 @@ def opportunity_detail(conn: sqlite3.Connection, identifier: str) -> sqlite3.Row
     return conn.execute("SELECT * FROM opportunities WHERE fingerprint = ?", (selected,)).fetchone()
 
 
+def opportunity_related_context(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, list[dict[str, object]]]:
+    source = str(row["source"] or "").strip()
+    category = str(row["category"] or "").strip()
+    product_names = [item.strip() for item in str(row["competing_products"] or "").split(",") if item.strip()]
+
+    signal_clauses: list[str] = []
+    signal_params: list[object] = []
+    if source:
+        signal_clauses.append("source = ?")
+        signal_params.append(source)
+    if category:
+        signal_clauses.append("category = ?")
+        signal_params.append(category)
+    if product_names:
+        placeholders = ", ".join("?" for _ in product_names)
+        signal_clauses.append(f"(product IN ({placeholders}) OR product = '')")
+        signal_params.extend(product_names)
+    signal_where = f"WHERE {' AND '.join(signal_clauses)}" if signal_clauses else ""
+    signal_params.append(5)
+    signals = conn.execute(
+        f"""
+        SELECT source, source_id, source_url, title, body, score, product, category, pain_type, feature_request, collected_at
+        FROM signals
+        {signal_where}
+        ORDER BY score DESC, collected_at DESC, id DESC
+        LIMIT ?
+        """,
+        signal_params,
+    ).fetchall()
+
+    product_clauses: list[str] = []
+    product_params: list[object] = []
+    if category:
+        product_clauses.append("category = ?")
+        product_params.append(category)
+    if product_names:
+        placeholders = ", ".join("?" for _ in product_names)
+        product_clauses.append(f"product_name IN ({placeholders})")
+        product_params.extend(product_names)
+    product_where = f"WHERE {' AND '.join(product_clauses)}" if product_clauses else ""
+    product_params.append(5)
+    products = conn.execute(
+        f"""
+        SELECT product_name, url, category, pricing_model, strengths, feature_gaps, audience
+        FROM products
+        {product_where}
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        product_params,
+    ).fetchall()
+
+    return {
+        "signals": [dict(item) for item in signals],
+        "products": [dict(item) for item in products],
+    }
+
+
 def opportunity_score_filter_values(conn: sqlite3.Connection) -> list[str]:
     rows = conn.execute(
         """
