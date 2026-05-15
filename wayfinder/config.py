@@ -80,3 +80,38 @@ def source_policy(config: dict[str, Any]) -> SourceReviewPolicy:
             hosted_dependencies=str(risk_map.get("hosted_dependencies") or "none"),
         ),
     )
+
+
+def unresolved_risk_fields(policy: SourceReviewPolicy) -> list[str]:
+    checks = {
+        "credentials": policy.risk.credentials,
+        "terms": policy.risk.terms,
+        "rate_limits": policy.risk.rate_limits,
+        "scraping": policy.risk.scraping,
+        "pii_ugc": policy.risk.pii_user_generated_content,
+        "hosted_dependencies": policy.risk.hosted_dependencies,
+    }
+    unresolved: list[str] = []
+    for field, value in checks.items():
+        normalized = str(value).strip().lower()
+        if normalized == "unknown" or "review" in normalized:
+            unresolved.append(field)
+    return unresolved
+
+
+def source_review_summary(policy: SourceReviewPolicy) -> tuple[str, str, str]:
+    unresolved = unresolved_risk_fields(policy)
+    if policy.status == "enabled":
+        reason = policy.notes or "Reviewed for unattended ingest with configured risk fields."
+        return "approved", "eligible", reason
+    if policy.status == "disabled":
+        reason = policy.notes or "Disabled in config until an operator re-enables it."
+        return "blocked", "blocked", reason
+    base_reason = "Manual testing only until review items are cleared." if policy.status == "dry-run-only" else "Source remains pending explicit review."
+    if unresolved:
+        reason = f"{base_reason} unresolved={','.join(unresolved)}"
+    else:
+        reason = base_reason
+    if policy.notes:
+        reason = f"{reason} notes={policy.notes}"
+    return "pending", "blocked", reason
