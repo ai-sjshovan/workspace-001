@@ -11,8 +11,8 @@ from urllib.parse import quote
 from urllib.request import urlopen
 
 from wayfinder.config import load_config, source_configs
-from wayfinder.db import connect, insert_signals
-from wayfinder.models import Signal
+from wayfinder.db import connect, insert_opportunities, insert_products, insert_signals
+from wayfinder.models import Opportunity, ProductIntel, Signal, scoring_weights
 from wayfinder.web import WayfinderHandler
 
 
@@ -46,6 +46,42 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
                         feature_request="deeper source drill-ins",
                     )
                 ],
+            )
+            insert_products(
+                conn,
+                [
+                    ProductIntel(
+                        product_name="Pain Radar",
+                        url="https://example.com/pain-radar",
+                        category="market-research",
+                        pricing_model="subscription",
+                        strengths="Turns browseable source evidence into product intel quickly.",
+                        feature_gaps="Needs deeper source drill-ins in the read-only dashboard.",
+                        audience="Local SEO operators",
+                    )
+                ],
+            )
+            insert_opportunities(
+                conn,
+                [
+                    Opportunity(
+                        title="Source evidence drill-ins for research operators",
+                        source=cls.source_name,
+                        category="market-research",
+                        target_user="Agency research lead",
+                        problem="Operators need source-specific evidence to validate product bets.",
+                        evidence_count=4,
+                        competing_products="Pain Radar",
+                        what_products_do_right="Keeps a focused read-only dashboard workflow.",
+                        what_users_want_better="Faster source-specific evidence review.",
+                        build_difficulty="low",
+                        iteration_angle="Add source detail pages with recent records and status.",
+                        monetization_strategy="Subscription research workflow",
+                        foundry_task_suggestions="Add focused source detail browse views",
+                        raw={"verdict": "high-leverage market research", "useful_outputs": ["dashboard", "analytics"]},
+                    )
+                ],
+                scoring_weights(cls.config),
             )
             conn.commit()
         finally:
@@ -125,6 +161,23 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertIn("URL-backed filters", body)
         self.assertIn("Wayfinder dashboard smoke signal", body)
         self.assertIn(f'/sources/{quote(self.source_name)}', body)
+
+        status, body = self.fetch("/products")
+        self.assertEqual(status, 200)
+        self.assertIn("Pain Radar", body)
+        self.assertIn('name="category"', body)
+
+        status, body = self.fetch("/products?category=market-research")
+        self.assertEqual(status, 200)
+        self.assertIn("Pain Radar", body)
+        self.assertIn('selected="selected">market-research</option>', body)
+
+        status, body = self.fetch(f"/opportunities?source={quote(self.source_name)}&category=market-research")
+        self.assertEqual(status, 200)
+        self.assertIn("Source evidence drill-ins for research operators", body)
+        self.assertIn(f"/sources/{quote(self.source_name)}", body)
+        self.assertIn("source", body)
+        self.assertIn("category", body)
 
         status, body = self.fetch("/api/sources?source=missing-source")
         self.assertEqual(status, 404)
