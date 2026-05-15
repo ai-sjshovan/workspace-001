@@ -115,6 +115,46 @@ class HackerNewsAdapterTests(unittest.TestCase):
             "hackernews fixture_path is missing hits for configured queries: startup idea validation",
         )
 
+    def test_collect_keeps_multi_query_metadata_stable_across_repeated_merges(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fixture_path = Path(tmpdir) / "hn-fixture.json"
+            fixture_path.write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {"query": "founder pain", "hits": [{"objectID": "42", "title": "Ask HN: Founder pain"}]},
+                            {"query": "startup idea validation", "hits": [{"objectID": "42", "title": "Ask HN: Founder pain"}]},
+                            {"query": "competitor analysis tool", "hits": [{"objectID": "42", "story_title": "Ask HN: Founder pain"}]},
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            adapter = HackerNewsAdapter(
+                "hackernews",
+                {
+                    "fixture_path": str(fixture_path),
+                    "queries": [
+                        {"query": "founder pain", "label": "zeta"},
+                        {"query": "startup idea validation", "label": "alpha"},
+                        {"query": "competitor analysis tool", "label": "beta"},
+                    ],
+                },
+            )
+
+            records = adapter.collect()
+            batch = adapter.normalize(records)
+
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["_wayfinder_queries"], ["founder pain", "startup idea validation", "competitor analysis tool"])
+        self.assertEqual(records[0]["_wayfinder_categories"], ["zeta", "alpha", "beta"])
+        self.assertEqual(len(batch.signals), 1)
+        self.assertEqual(batch.signals[0].category, "alpha")
+        self.assertEqual(
+            batch.signals[0].raw["_wayfinder_queries"],
+            ["competitor analysis tool", "founder pain", "startup idea validation"],
+        )
+
     def test_dry_run_does_not_write_db_and_live_insert_is_searchable(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
