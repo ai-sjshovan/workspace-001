@@ -1,0 +1,55 @@
+{
+  "results": [
+    {
+      "query": "startup ideas pain points",
+      "items": [
+        {
+          "name": "pain-radar",
+          "full_name": "acme/pain-radar",
+          "html_url": "https://github.com/acme/pain-radar",
+          "description": "Search-friendly repository for founder pain and demand tracking.",
+          "topics": ["market-research", "founder-tools", "analytics"],
+          "stargazers_count": 42,
+          "updated_at": "2026-05-10T12:00:00Z",
+          "language": "Python",
+          "homepage": "https://pain-radar.example",
+          "license": {"spdx_id": "MIT"}
+        }
+      ]
+    },
+    {
+      "query": "market research SaaS ideas",
+      "items": [
+        {
+          "name": "pain-radar",
+          "full_name": "acme/pain-radar",
+          "html_url": "https://github.com/acme/pain-radar",
+          "description": "Longer normalized repository description for market research reuse.",
+          "topics": ["analytics", "saas-research"],
+          "stargazers_count": 58,
+          "updated_at": "2026-05-11T09:15:00Z",
+          "language": "Python",
+          "homepage": "https://pain-radar.example",
+          "license": {"spdx_id": "MIT"}
+        }
+      ]
+    },
+    {
+      "query": "competitor analysis startup validation",
+      "items": [
+        {
+          "name": "competitor-scout",
+          "full_name": "acme/competitor-scout",
+          "html_url": "https://github.com/acme/competitor-scout",
+          "description": "Indexes public startup positioning and feature comparisons.",
+          "topics": ["competitor-analysis", "research-ops"],
+          "stargazers_count": 27,
+          "updated_at": "2026-05-12T08:30:00Z",
+          "language": "TypeScript",
+          "homepage": "",
+          "license": {"spdx_id": "Apache-2.0"}
+        }
+      ]
+    }
+  ]
+}

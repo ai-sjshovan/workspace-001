@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import argparse
 import socket
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from wayfinder.adapters.github import GitHubAdapter, GitHubCollectError
+from wayfinder.cli import ingest_source
+from wayfinder.config import load_config, source_configs
+from wayfinder.db import connect, counts, insert_opportunities, insert_products, insert_signals, search_signals
 
 
 class GitHubAdapterTests(unittest.TestCase):
@@ -169,6 +175,29 @@ class GitHubAdapterTests(unittest.TestCase):
         self.assertEqual(records[0]["full_name"], "org/acme")
         self.assertEqual(records[0]["description"], "Longer repository description")
 
+    def test_healthcheck_fails_when_fixture_misses_configured_query(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fixture_path = Path(tmpdir) / "github-fixture.json"
+            fixture_path.write_text(
+                '{"results":[{"query":"startup ideas pain points","items":[{"full_name":"org/acme"}]}]}',
+                encoding="utf-8",
+            )
+            adapter = GitHubAdapter(
+                "github",
+                {
+                    "fixture_path": str(fixture_path),
+                    "queries": ["startup ideas pain points", "market research SaaS ideas"],
+                },
+            )
+
+            ok, message = adapter.healthcheck()
+
+        self.assertFalse(ok)
+        self.assertEqual(
+            message,
+            "github fixture_path is missing items for configured queries: market research SaaS ideas",
+        )
+
     def test_normalize_emits_searchable_signal_product_and_opportunity_records(self) -> None:
         adapter = GitHubAdapter("github", {"queries": ["founder pain"]})
         raw_records = [
@@ -226,6 +255,89 @@ class GitHubAdapterTests(unittest.TestCase):
         self.assertEqual(opportunity.evidence_count, 2)
         self.assertEqual(opportunity.competing_products, "org/acme")
         self.assertIn("Matched public GitHub demand: founder pain, competitor analysis", opportunity.what_users_want_better)
+
+    def test_dry_run_does_not_write_db_and_normalized_rows_are_searchable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            fixture_path = root / "github-fixture.json"
+            storage_path = root / "wayfinder.db"
+            audit_path = root / "audit.log"
+            fixture_path.write_text(
+                """
+                {
+                  "results": [
+                    {
+                      "query": "startup ideas pain points",
+                      "items": [
+                        {
+                          "name": "pain-radar",
+                          "full_name": "acme/pain-radar",
+                          "html_url": "https://github.com/acme/pain-radar",
+                          "description": "Founder pain search workflow for B2B SaaS teams.",
+                          "topics": ["market-research", "founder-tools"],
+                          "stargazers_count": 58,
+                          "updated_at": "2026-05-11T09:15:00Z",
+                          "language": "Python",
+                          "homepage": "https://pain-radar.example",
+                          "license": {"spdx_id": "MIT"}
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """.strip(),
+                encoding="utf-8",
+            )
+            config_path = root / "wayfinder.yaml"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "wayfinder:",
+                        f"  storage_path: {storage_path.name}",
+                        f"  audit_log: {audit_path.name}",
+                        "sources:",
+                        "  github:",
+                        "    status: dry-run-only",
+                        "    kind: github",
+                        f"    fixture_path: {fixture_path.name}",
+                        "    queries:",
+                        '      - "startup ideas pain points"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            config = load_config(config_path)
+            cfg = source_configs(config)["github"]
+            args = argparse.Namespace(dry_run=True, config=str(config_path), no_color=True)
+
+            rc, message = ingest_source("github", cfg, args, config)
+
+            self.assertEqual(rc, 0)
+            self.assertIn("github: dry-run queries=1 collected=1 normalized=3 signals=1 products=1 opportunities=1", message)
+            self.assertFalse(storage_path.exists())
+
+            adapter = GitHubAdapter("github", cfg)
+            batch = adapter.normalize(adapter.collect())
+            conn = connect(storage_path)
+            try:
+                inserted_signals = insert_signals(conn, batch.signals)
+                inserted_products = insert_products(conn, batch.products)
+                inserted_opportunities = insert_opportunities(conn, batch.opportunities, {})
+                totals = counts(conn)
+                rows = search_signals(conn, "founder pain search workflow", limit=5)
+            finally:
+                conn.close()
+
+            self.assertEqual(inserted_signals, 1)
+            self.assertEqual(inserted_products, 1)
+            self.assertEqual(inserted_opportunities, 1)
+            self.assertEqual(
+                totals,
+                {"signals": 1, "products": 1, "opportunities": 1, "ingest_runs": 0},
+            )
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["source"], "github")
+            self.assertEqual(rows[0]["source_id"], "acme/pain-radar")
 
     def test_normalize_skips_malformed_records_and_keeps_valid_items(self) -> None:
         adapter = GitHubAdapter("github", {"queries": ["founder pain"]})
