@@ -13,7 +13,7 @@ The first user is the Codex Foundry operator. Later users may be builders who wa
 - The current acceptance target for `project/wayfinder` is the completed V1 local-first research workflow that already exists on this branch.
 - V1 remains the active gate until an operator explicitly reopens the project for V2 work.
 - Authorized work at this stage is limited to preserving and documenting the existing deterministic, token-free ingest model, read-only dashboard, task export, and source-safety surfaces.
-- Preserve the existing smoke surface, including `/`, `/health`, `python3 -m wayfinder sources list --health`, `python3 -m wayfinder ingest --source oss-ledger`, `search`, `products`, `opportunities`, `score`, `export`, and `scheduled-ingest --allow-disabled`.
+- Preserve the existing smoke surface, including `/`, `/health`, `python3 -m wayfinder sources list --health`, `python3 -m wayfinder ingest --source oss-ledger`, `python3 -m wayfinder search saas`, `python3 -m wayfinder products --limit 20`, `python3 -m wayfinder opportunities --limit 20`, `python3 -m wayfinder score --limit 10`, `python3 -m wayfinder export --min-score 40 --source oss-ledger`, and `python3 -m wayfinder scheduled-ingest --allow-disabled`.
 
 ## V2 Status
 
@@ -48,7 +48,7 @@ The first user is the Codex Foundry operator. Later users may be builders who wa
 
 ## Validation Strategy
 
-- CLI smoke: `sources list`, `ingest --source oss-ledger`, `search`, `products`, `opportunities`, `stats`.
+- CLI smoke from the repo root: `python3 -m wayfinder sources list --health`, `python3 -m wayfinder ingest --source oss-ledger`, `python3 -m wayfinder search saas`, `python3 -m wayfinder products --limit 20`, `python3 -m wayfinder opportunities --limit 20`, `python3 -m wayfinder stats`.
 - Web smoke: `/`, `/search?q=...`, `/api/search?q=...`, `/products`, `/opportunities`.
 - Network adapters should support dry-run before DB writes.
 - Every implementation task should preserve existing `/` and `/health` smoke checks once the app baseline exists.

@@ -20,11 +20,11 @@
 - Preserve the existing V1 smoke path:
   - `python3 -m wayfinder sources list --health`
   - `python3 -m wayfinder ingest --source oss-ledger`
-  - `python3 -m wayfinder search ...`
-  - `python3 -m wayfinder products ...`
-  - `python3 -m wayfinder opportunities ...`
-  - `python3 -m wayfinder score ...`
-  - `python3 -m wayfinder export ...`
+  - `python3 -m wayfinder search saas`
+  - `python3 -m wayfinder products --limit 20`
+  - `python3 -m wayfinder opportunities --limit 20`
+  - `python3 -m wayfinder score --limit 10`
+  - `python3 -m wayfinder export --min-score 40 --source oss-ledger`
   - `python3 -m wayfinder scheduled-ingest --allow-disabled`
   - `/`
   - `/health`
