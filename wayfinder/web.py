@@ -15,6 +15,7 @@ from .db import (
     counts,
     filtered_opportunities,
     filtered_products,
+    opportunity_detail,
     opportunity_score_filter_values,
     opportunity_filter_values,
     product_filter_values,
@@ -267,6 +268,57 @@ def source_context_path(source_name: str, signal_id: str = "", source_url: str =
         query_parts.append(f"record={quote_plus(source_url.strip())}")
     suffix = f"?{'&'.join(query_parts)}" if query_parts else ""
     return f"{source_path(source_name)}{suffix}"
+
+
+def opportunity_source_context_path(source_name: str, category: str = "") -> str:
+    source = source_name.strip()
+    query_parts: list[str] = []
+    if source:
+        query_parts.append(f"source={quote_plus(source)}")
+    if category.strip():
+        query_parts.append(f"market={quote_plus(category.strip())}")
+    suffix = f"?{'&'.join(query_parts)}" if query_parts else ""
+    return f"/search{suffix}"
+
+
+def parse_score_components(raw_value: str) -> dict[str, Any]:
+    try:
+        parsed = json.loads(raw_value or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def opportunity_export_payload(row: Any) -> dict[str, Any]:
+    item = dict(row)
+    score_components = parse_score_components(str(item.pop("score_components_json", "{}")))
+    source_name = str(item.get("source") or "")
+    category = str(item.get("category") or "")
+    return {
+        **item,
+        "score_components": score_components,
+        "source_context": {
+            "source": source_name,
+            "detail_path": source_path(source_name) if source_name else "",
+            "search_path": opportunity_source_context_path(source_name, category),
+        },
+        "draft_task": {
+            "title": str(item.get("title") or ""),
+            "target_user": str(item.get("target_user") or ""),
+            "problem": str(item.get("problem") or ""),
+            "category": category,
+            "source": source_name,
+            "evidence_count": int(item.get("evidence_count") or 0),
+            "iteration_angle": str(item.get("iteration_angle") or ""),
+            "monetization_strategy": str(item.get("monetization_strategy") or ""),
+            "foundry_task_suggestions": str(item.get("foundry_task_suggestions") or ""),
+            "build_difficulty": str(item.get("build_difficulty") or ""),
+            "replication_time_estimate": str(item.get("replication_time_estimate") or ""),
+            "competing_products": str(item.get("competing_products") or ""),
+            "what_products_do_right": str(item.get("what_products_do_right") or ""),
+            "what_users_want_better": str(item.get("what_users_want_better") or ""),
+        },
+    }
 
 
 def active_filter_summary(filters: list[tuple[str, str]]) -> str:
@@ -984,12 +1036,26 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 rows = filtered_opportunities(conn, source=source, category=category, min_score=min_score, limit=limit)
                 payload = []
                 for row in rows:
-                    item = dict(row)
-                    try:
-                        item["score_components"] = json.loads(item.pop("score_components_json", "{}"))
-                    except json.JSONDecodeError:
-                        item["score_components"] = {}
-                    payload.append(item)
+                    payload.append(opportunity_export_payload(row))
+                self.send_json(payload)
+                return
+            if parsed.path.startswith("/api/opportunities/"):
+                identifier = unquote(parsed.path.removeprefix("/api/opportunities/")).strip()
+                row = opportunity_detail(conn, identifier)
+                if row is None:
+                    self.send_json(
+                        {
+                            "error": "opportunity_not_found",
+                            "requested_identifier": identifier,
+                        },
+                        HTTPStatus.NOT_FOUND,
+                    )
+                    return
+                payload = opportunity_export_payload(row)
+                payload["linked_source_context"] = source_detail(
+                    conn,
+                    str(payload.get("source") or ""),
+                )
                 self.send_json(payload)
                 return
             if parsed.path == "/sources":
