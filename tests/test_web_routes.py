@@ -104,6 +104,18 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         status, body = self.fetch(f"/sources/{quote(self.source_name)}")
         self.assertEqual(status, 200)
         self.assertIn(self.source_name, body)
+        self.assertIn("Recent source records", body)
+        self.assertIn("Wayfinder dashboard smoke signal", body)
+
+        status, body = self.fetch(
+            f"/search?source={quote(self.source_name)}&category=market-research&product=Pain%20Radar"
+        )
+        self.assertEqual(status, 200)
+        self.assertIn('name="source"', body)
+        self.assertIn('name="category"', body)
+        self.assertIn("URL-backed filters", body)
+        self.assertIn("Wayfinder dashboard smoke signal", body)
+        self.assertIn(f'/sources/{quote(self.source_name)}', body)
 
         status, body = self.fetch("/api/sources?source=missing-source")
         self.assertEqual(status, 404)
