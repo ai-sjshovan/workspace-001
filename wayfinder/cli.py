@@ -13,6 +13,7 @@ from .adapters.github import GitHubCollectError
 from .adapters.hackernews import HackerNewsCollectError
 from .audit import write_event
 from .config import audit_log_path, load_config, source_configs, source_policy, source_review_summary, storage_path
+from .drafts import format_task_draft
 from .db import (
     connect,
     counts,
@@ -102,96 +103,6 @@ def print_opportunities(rows: list[sqlite3.Row], no_color: bool = False) -> None
                 if len(value) > 220:
                     value = value[:217] + "..."
                 print(f"   {color(field + ':', DIM, not no_color)} {value}")
-
-
-def draft_title(row: sqlite3.Row) -> str:
-    category = str(row["category"] or "").replace("-", " ").strip()
-    if category:
-        return f"{row['title']} for {category}"
-    return str(row["title"])
-
-
-def draft_goal(row: sqlite3.Row) -> str:
-    parts = [str(row["problem"] or "").strip(), str(row["iteration_angle"] or "").strip()]
-    return " ".join(part for part in parts if part) or f"Review {row['title']} and decide whether it merits a follow-on Foundry task."
-
-
-def draft_acceptance_criteria(row: sqlite3.Row) -> list[str]:
-    criteria = [
-        f"Review the opportunity context for `{row['title']}` and capture the concrete reuse angle for `{row['target_user'] or 'the operator'}`.",
-        f"Use the existing evidence, competition, and user-want signals to decide whether this should become a follow-on Foundry task.",
-    ]
-    if row["foundry_task_suggestions"]:
-        criteria.append(f"Translate the existing suggestion into an operator-ready next step: {row['foundry_task_suggestions']}.")
-    else:
-        criteria.append("Produce a specific next step that can be reviewed by Hermes or pasted into Linear without further rewriting.")
-    return criteria
-
-
-def draft_validation(row: sqlite3.Row) -> list[str]:
-    return [
-        f"Confirm the draft references the source opportunity score (`{row['opportunity_score']}`) and the relevant evidence fields.",
-        "Confirm the draft is specific enough for Hermes review or direct paste into Linear.",
-    ]
-
-
-def draft_scope_boundaries(row: sqlite3.Row) -> list[str]:
-    boundaries = [
-        "Do not auto-stage follow-on tasks.",
-        "Do not call LLMs.",
-        "Do not create Linear issues directly from this command.",
-    ]
-    if row["source"]:
-        boundaries.append(f"Do not broaden this draft beyond the `{row['source']}` source material without explicit operator review.")
-    return boundaries
-
-
-def draft_delivery_expectation() -> list[str]:
-    return [
-        "Keep the output Markdown-only and operator-editable.",
-        "Hand the draft to Hermes for review or paste it into Linear manually when ready.",
-    ]
-
-
-def format_task_draft(row: sqlite3.Row, index: int) -> str:
-    metadata = [
-        f"source={row['source'] or 'unknown'}",
-        f"category={row['category'] or 'uncategorized'}",
-        f"score={row['opportunity_score']}",
-    ]
-    lines = [
-        f"## Task Draft {index}: {draft_title(row)}",
-        "",
-        f"Metadata: {' | '.join(metadata)}",
-        "",
-        "### Goal",
-        draft_goal(row),
-        "",
-        "### Acceptance Criteria",
-    ]
-    lines.extend(f"- {item}" for item in draft_acceptance_criteria(row))
-    lines.extend(
-        [
-            "",
-            "### Validation",
-        ]
-    )
-    lines.extend(f"- {item}" for item in draft_validation(row))
-    lines.extend(
-        [
-            "",
-            "### Scope Boundaries",
-        ]
-    )
-    lines.extend(f"- {item}" for item in draft_scope_boundaries(row))
-    lines.extend(
-        [
-            "",
-            "### Delivery Expectation",
-        ]
-    )
-    lines.extend(f"- {item}" for item in draft_delivery_expectation())
-    return "\n".join(lines)
 
 
 def cmd_sources(args: argparse.Namespace) -> int:

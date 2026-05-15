@@ -25,6 +25,7 @@ from .db import (
     source_activity,
     source_detail,
 )
+from .drafts import format_task_draft
 
 
 SENSITIVE_CONFIG_KEYS = {
@@ -92,6 +93,10 @@ button { padding: 11px 15px; border: 0; border-radius: 7px; background: #102523;
 .source-card h2 { color: #102523; }
 .toolbar-links { display: flex; gap: 10px; flex-wrap: wrap; }
 .run-list { display: grid; gap: 10px; }
+.copy-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.copy-status[data-state="ready"] { color: #66746a; }
+.copy-status[data-state="success"] { color: #215228; font-weight: 700; }
+.copy-status[data-state="error"] { color: #7a1f1a; font-weight: 700; }
 @media (max-width: 760px) {
   header, main { padding-left: 18px; padding-right: 18px; }
   form.filters, .signal-head, .detail-grid { grid-template-columns: 1fr; }
@@ -936,39 +941,6 @@ def shortlist_rows(rows: list[Any]) -> str:
         )
     return "".join(chunks)
 
-
-def draft_preview_text(payload: dict[str, Any]) -> str:
-    draft_task = payload["draft_task"]
-    score_components = payload.get("score_components", {}).get("components", {})
-    return "\n".join(
-        [
-            f"Title: {draft_task['title']}",
-            f"Target user: {draft_task['target_user']}",
-            f"Category: {draft_task['category']}",
-            f"Source: {draft_task['source']}",
-            f"Problem: {draft_task['problem']}",
-            f"Evidence count: {draft_task['evidence_count']}",
-            f"Score: {payload.get('opportunity_score', 0)}",
-            (
-                "Score breakdown: "
-                f"pain {score_components.get('pain', 0)}, "
-                f"freshness {score_components.get('freshness', 0)}, "
-                f"recurrence {score_components.get('recurrence', 0)}, "
-                f"source {score_components.get('source_quality', 0)}, "
-                f"fit {score_components.get('build_fit', 0)}"
-            ),
-            f"Iteration angle: {draft_task['iteration_angle']}",
-            f"Monetization strategy: {draft_task['monetization_strategy']}",
-            f"Build difficulty: {draft_task['build_difficulty']}",
-            f"Replication estimate: {draft_task['replication_time_estimate']}",
-            f"Competing products: {draft_task['competing_products']}",
-            f"What products do right: {draft_task['what_products_do_right']}",
-            f"What users want better: {draft_task['what_users_want_better']}",
-            f"Foundry task suggestion: {draft_task['foundry_task_suggestions']}",
-        ]
-    )
-
-
 def linked_signal_rows(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return '<p class="subtle">No linked signal evidence matched this opportunity.</p>'
@@ -1006,7 +978,7 @@ def opportunity_detail_page(payload: dict[str, Any], related: dict[str, list[dic
     components = score_components.get("components", {})
     inputs = score_components.get("inputs", {})
     weights = score_components.get("weights", {})
-    draft_text = draft_preview_text(payload)
+    draft_text = format_task_draft(payload, 1)
     linked_source = payload.get("linked_source_context") or {}
     source_context = payload["source_context"]
     return f"""<div class="stack">
@@ -1062,10 +1034,14 @@ def opportunity_detail_page(payload: dict[str, Any], related: dict[str, list[dic
     <section class="toolbar">
       <div>
         <p class="list-head">Task draft preview</p>
-        <p class="subtle">Copy-ready read-only export built from the current opportunity details.</p>
+        <p class="subtle">Copy-ready read-only export built from the same Markdown formatter as <code>wayfinder export</code>.</p>
+      </div>
+      <div class="copy-actions">
+        <button type="button" data-copy-target="task-draft-markdown">Copy Markdown draft</button>
+        <span class="copy-status subtle" data-copy-status="task-draft-markdown" data-state="ready">Ready to copy</span>
       </div>
     </section>
-    <textarea readonly="readonly">{esc(draft_text)}</textarea>
+    <textarea id="task-draft-markdown" readonly="readonly">{esc(draft_text)}</textarea>
   </section>
   <section class="row">
     <section class="toolbar">
@@ -1085,6 +1061,26 @@ def opportunity_detail_page(payload: dict[str, Any], related: dict[str, list[dic
       </div>
     </div>
   </section>
+  <script>
+    (() => {{
+      const button = document.querySelector('[data-copy-target="task-draft-markdown"]');
+      const field = document.getElementById('task-draft-markdown');
+      const status = document.querySelector('[data-copy-status="task-draft-markdown"]');
+      if (!button || !field || !status) return;
+      button.addEventListener('click', async () => {{
+        field.focus();
+        field.select();
+        try {{
+          await navigator.clipboard.writeText(field.value);
+          status.textContent = 'Copied';
+          status.dataset.state = 'success';
+        }} catch (error) {{
+          status.textContent = 'Copy failed, use manual select';
+          status.dataset.state = 'error';
+        }}
+      }});
+    }})();
+  </script>
 </div>"""
 
 
