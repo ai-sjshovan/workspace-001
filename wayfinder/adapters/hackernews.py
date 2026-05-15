@@ -31,7 +31,11 @@ class HackerNewsAdapter:
             specs = self._query_specs()
             fixture_path = self._fixture_path()
             if fixture_path is not None:
-                self._fixture_hits_by_query()
+                hits_by_query = self._fixture_hits_by_query()
+                missing = [spec["query"] for spec in specs if spec["query"] not in hits_by_query]
+                if missing:
+                    missing_text = ", ".join(sorted(missing))
+                    raise ValueError(f"hackernews fixture_path is missing hits for configured queries: {missing_text}")
             else:
                 self._base_url()
                 self._timeout_seconds()

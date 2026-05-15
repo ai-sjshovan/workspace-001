@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import argparse
+import json
 import socket
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from wayfinder.adapters.hackernews import HackerNewsAdapter, HackerNewsCollectError
+from wayfinder.cli import ingest_source
+from wayfinder.config import load_config, source_configs
+from wayfinder.db import connect, insert_signals, search_signals
 
 
 class HackerNewsAdapterTests(unittest.TestCase):
@@ -75,6 +82,111 @@ class HackerNewsAdapterTests(unittest.TestCase):
             signal.body,
             "Need a better workflow\nhttps://example.com/founder-pain\nhttps://news.ycombinator.com/item?id=42",
         )
+
+    def test_healthcheck_fails_when_fixture_misses_configured_query(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fixture_path = Path(tmpdir) / "hn-fixture.json"
+            fixture_path.write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {
+                                "query": "SaaS pain points",
+                                "hits": [{"objectID": "4001", "title": "Example"}],
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            adapter = HackerNewsAdapter(
+                "hackernews",
+                {
+                    "fixture_path": str(fixture_path),
+                    "queries": ["SaaS pain points", "startup idea validation"],
+                },
+            )
+
+            ok, message = adapter.healthcheck()
+
+        self.assertFalse(ok)
+        self.assertEqual(
+            message,
+            "hackernews fixture_path is missing hits for configured queries: startup idea validation",
+        )
+
+    def test_dry_run_does_not_write_db_and_live_insert_is_searchable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            fixture_path = root / "hn-fixture.json"
+            storage_path = root / "wayfinder.db"
+            audit_path = root / "audit.log"
+            fixture_path.write_text(
+                json.dumps(
+                    {
+                        "results": [
+                            {
+                                "query": "SaaS pain points",
+                                "hits": [
+                                    {
+                                        "objectID": "4001",
+                                        "title": "Founders keep paying for SaaS pain twice",
+                                        "story_title": "Founders keep paying for SaaS pain twice",
+                                        "story_text": "B2B teams still glue together point solutions instead of one reporting workflow.",
+                                        "comment_text": "",
+                                        "url": "https://example.com/founders-paying-for-saas-pain",
+                                        "author": "atlas",
+                                        "points": 84,
+                                        "created_at": "2026-05-10T12:00:00Z",
+                                    }
+                                ],
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            config_path = root / "wayfinder.yaml"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "wayfinder:",
+                        f"  storage_path: {storage_path.name}",
+                        f"  audit_log: {audit_path.name}",
+                        "sources:",
+                        "  hackernews:",
+                        "    status: dry-run-only",
+                        "    kind: hackernews",
+                        f"    fixture_path: {fixture_path.name}",
+                        "    queries:",
+                        '      - "SaaS pain points"',
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            config = load_config(config_path)
+            cfg = source_configs(config)["hackernews"]
+            args = argparse.Namespace(dry_run=True, config=str(config_path), no_color=True)
+
+            rc, message = ingest_source("hackernews", cfg, args, config)
+
+            self.assertEqual(rc, 0)
+            self.assertIn("hackernews: dry-run queries=1 collected=1 normalized=1 signals=1", message)
+            self.assertFalse(storage_path.exists())
+
+            adapter = HackerNewsAdapter("hackernews", cfg)
+            batch = adapter.normalize(adapter.collect())
+            conn = connect(storage_path)
+            try:
+                inserted = insert_signals(conn, batch.signals)
+                rows = search_signals(conn, "reporting workflow", limit=5)
+            finally:
+                conn.close()
+
+            self.assertEqual(inserted, 1)
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["source"], "hackernews")
+            self.assertEqual(rows[0]["source_id"], "4001")
 
 
 if __name__ == "__main__":
