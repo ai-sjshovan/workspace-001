@@ -281,7 +281,8 @@ class HackerNewsAdapter:
         )
         categories = self._pick_categories(records)
         queries = self._pick_queries(records)
-        canonical_raw["_wayfinder_category"] = ", ".join(categories) or self._pick_category(records)
+        canonical_category = self._pick_category(records)
+        canonical_raw["_wayfinder_category"] = canonical_category
         canonical_raw["_wayfinder_categories"] = categories
         canonical_raw["_wayfinder_query"] = ", ".join(queries)
         canonical_raw["_wayfinder_queries"] = queries
@@ -298,7 +299,7 @@ class HackerNewsAdapter:
             body=body,
             author=author,
             score=self._pick_score(records),
-            category=canonical_raw["_wayfinder_category"],
+            category=canonical_category,
             raw=canonical_raw,
         )
 
