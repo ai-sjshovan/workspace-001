@@ -533,7 +533,44 @@ def opportunity_filter_values(conn: sqlite3.Connection) -> dict[str, list[str]]:
     }
 
 
-def source_detail(conn: sqlite3.Connection, source: str) -> dict[str, object] | None:
+def _selected_signal_detail(
+    conn: sqlite3.Connection,
+    source: str,
+    *,
+    signal_id: str = "",
+    source_url: str = "",
+) -> dict[str, object] | None:
+    clauses = ["source = ?"]
+    params: list[object] = [source]
+    if signal_id.strip():
+        clauses.append("source_id = ?")
+        params.append(signal_id.strip())
+    elif source_url.strip():
+        clauses.append("source_url = ?")
+        params.append(source_url.strip())
+    else:
+        return None
+    row = conn.execute(
+        f"""
+        SELECT source, source_id, source_url, title, body, score, product, category,
+               pain_type, feature_request, collected_at
+        FROM signals
+        WHERE {' AND '.join(clauses)}
+        ORDER BY collected_at DESC, id DESC
+        LIMIT 1
+        """,
+        params,
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def source_detail(
+    conn: sqlite3.Connection,
+    source: str,
+    *,
+    signal_id: str = "",
+    source_url: str = "",
+) -> dict[str, object] | None:
     selected = source.strip()
     if not selected:
         return None
@@ -602,6 +639,7 @@ def source_detail(conn: sqlite3.Connection, source: str) -> dict[str, object] | 
     latest_run = recent_runs[0] if recent_runs else None
     return {
         "source": selected,
+        "selected_signal": _selected_signal_detail(conn, selected, signal_id=signal_id, source_url=source_url),
         "signal_count": int(signal_summary["signal_count"]),
         "avg_score": signal_summary["avg_score"],
         "latest_signal_at": signal_summary["latest_signal_at"] or "",
@@ -616,7 +654,13 @@ def source_detail(conn: sqlite3.Connection, source: str) -> dict[str, object] | 
     }
 
 
-def source_activity(conn: sqlite3.Connection, source: str) -> dict[str, object]:
+def source_activity(
+    conn: sqlite3.Connection,
+    source: str,
+    *,
+    signal_id: str = "",
+    source_url: str = "",
+) -> dict[str, object]:
     selected = source.strip()
     signal_summary = conn.execute(
         """
@@ -679,6 +723,7 @@ def source_activity(conn: sqlite3.Connection, source: str) -> dict[str, object]:
     latest_run = recent_runs[0] if recent_runs else None
     return {
         "source": selected,
+        "selected_signal": _selected_signal_detail(conn, selected, signal_id=signal_id, source_url=source_url),
         "signal_count": int(signal_summary["signal_count"]) if signal_summary else 0,
         "avg_score": signal_summary["avg_score"] if signal_summary else 0,
         "latest_signal_at": signal_summary["latest_signal_at"] or "" if signal_summary else "",

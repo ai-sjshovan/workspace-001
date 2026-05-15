@@ -208,6 +208,16 @@ def source_path(source_name: str) -> str:
     return f"/sources/{quote(source_name.strip(), safe='')}"
 
 
+def source_context_path(source_name: str, signal_id: str = "", source_url: str = "") -> str:
+    query_parts: list[str] = []
+    if signal_id.strip():
+        query_parts.append(f"signal={quote_plus(signal_id.strip())}")
+    elif source_url.strip():
+        query_parts.append(f"record={quote_plus(source_url.strip())}")
+    suffix = f"?{'&'.join(query_parts)}" if query_parts else ""
+    return f"{source_path(source_name)}{suffix}"
+
+
 def active_filter_summary(filters: list[tuple[str, str]]) -> str:
     active = [(label, value.strip()) for label, value in filters if value.strip()]
     if not active:
@@ -303,6 +313,7 @@ def signal_rows(rows: list[Any]) -> str:
         if len(body) > 320:
             body = body[:317] + "..."
         source_url = row["source_url"] or ""
+        source_context = source_context_path(str(row["source"]), str(row["source_id"] or ""), source_url)
         chunks.append(
             f"""<article class="row">
   <div class="signal-head">
@@ -313,10 +324,32 @@ def signal_rows(rows: list[Any]) -> str:
     <div class="score">score {esc(row['score'])}</div>
   </div>
   <p class="source-link"><a href="{esc(source_url)}">{esc(source_url)}</a></p>
+  <p class="subtle"><a href="{esc(source_context)}">View source context</a></p>
   <p class="excerpt">{body}</p>
 </article>"""
         )
     return "\n".join(chunks)
+
+
+def selected_source_record_panel(detail: dict[str, Any] | None) -> str:
+    if not detail:
+        return ""
+    selected = detail.get("selected_signal")
+    if not isinstance(selected, dict):
+        return ""
+    source_url = str(selected.get("source_url") or "").strip()
+    return f"""<section class="panel">
+  <section class="toolbar">
+    <div>
+      <p class="list-head">Selected record</p>
+      <h2>{esc(selected.get('title') or 'Untitled record')}</h2>
+    </div>
+    <a href="{esc(source_url)}">Open original record</a>
+  </section>
+  <p class="meta"><span class="tag">{esc(selected.get('category') or 'uncategorized')}</span><span class="tag">{esc(selected.get('product') or 'no product')}</span>score {esc(selected.get('score') or 0)} · captured {esc(selected.get('collected_at') or 'unknown')}</p>
+  <p class="excerpt">{esc(selected.get('body') or 'No excerpt captured for this record.')}</p>
+  <p class="subtle">Pain: {esc(selected.get('pain_type') or 'n/a')} · feature gap: {esc(selected.get('feature_request') or 'n/a')}</p>
+</section>"""
 
 
 def source_detail_panel(detail: dict[str, Any] | None) -> str:
@@ -504,6 +537,7 @@ def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> 
     </div>
   </section>
   {source_detail_panel(detail)}
+  {selected_source_record_panel(detail)}
   <section class="row">
     <section class="toolbar">
       <div>
@@ -669,6 +703,8 @@ class WayfinderHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         params = parse_qs(parsed.query)
+        selected_signal = params.get("signal", [""])[0]
+        selected_record = params.get("record", [""])[0]
         if parsed.path == "/health":
             status, payload = self.health_payload()
             self.send_json(payload, status)
@@ -700,7 +736,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     feature_request=feature_request,
                     limit=30,
                 )
-                detail = source_detail(conn, source)
+                detail = source_detail(conn, source, signal_id=selected_signal, source_url=selected_record)
                 active_filters = active_filter_summary(
                     [
                         ("product", product),
@@ -761,7 +797,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                         feature_request=feature_request,
                         limit=30,
                     )
-                detail = source_detail(conn, source)
+                detail = source_detail(conn, source, signal_id=selected_signal, source_url=selected_record)
                 form = filter_form(
                     "/search",
                     query=query,
@@ -831,7 +867,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 pain_type = params.get("pain", [""])[0]
                 feature_request = params.get("feature_gap", [""])[0]
                 values = signal_filter_values(conn)
-                detail = source_detail(conn, source)
+                detail = source_detail(conn, source, signal_id=selected_signal, source_url=selected_record)
                 rows = (
                     browse_signals(
                         conn,
@@ -871,7 +907,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                         HTTPStatus.NOT_FOUND,
                     )
                     return
-                detail = source_activity(conn, source_name)
+                detail = source_activity(conn, source_name, signal_id=selected_signal, source_url=selected_record)
                 self.send_html("Source Detail", source_detail_page(source_entry, detail))
                 return
             if parsed.path == "/products":
@@ -898,7 +934,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     min_score = None
                 values = opportunity_filter_values(conn)
                 rows = filtered_opportunities(conn, source=source, category=category, min_score=min_score, limit=50)
-                detail = source_detail(conn, source)
+                detail = source_detail(conn, source, signal_id=selected_signal, source_url=selected_record)
                 filters = filter_form(
                     "/opportunities",
                     source=source,
