@@ -440,6 +440,34 @@ def source_list_page(
     )
 
 
+def source_signal_rows(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return "<p>No source-linked signals recorded yet.</p>"
+    chunks = []
+    for item in rows:
+        chunks.append(
+            f"""<article class="row">
+  <h2><a href="{esc(item['source_url'])}">{esc(item['title'])}</a></h2>
+  <p class="meta"><span class="tag">{esc(item['category'] or 'uncategorized')}</span>score {esc(item['score'])} · captured {esc(item['collected_at'] or 'unknown')}</p>
+</article>"""
+        )
+    return "".join(chunks)
+
+
+def source_opportunity_rows(rows: list[dict[str, Any]]) -> str:
+    if not rows:
+        return "<p>No source-linked opportunities indexed yet.</p>"
+    chunks = []
+    for item in rows:
+        chunks.append(
+            f"""<article class="row">
+  <h2>{esc(item['title'])}</h2>
+  <p class="meta"><span class="tag">{esc(item['category'] or 'uncategorized')}</span>{esc(item['target_user'])} · score {esc(item['opportunity_score'])} · evidence {esc(item['evidence_count'])}</p>
+</article>"""
+        )
+    return "".join(chunks)
+
+
 def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> str:
     risk = source_entry["risk"]
     config_items = "".join(
@@ -476,6 +504,28 @@ def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> 
     </div>
   </section>
   {source_detail_panel(detail)}
+  <section class="row">
+    <section class="toolbar">
+      <div>
+        <p class="list-head">Recent source records</p>
+        <p class="subtle">Review the latest source-linked signals and opportunity records without leaving the dashboard.</p>
+      </div>
+      <div class="toolbar-links">
+        <a href="/search?source={quote_plus(source_entry['key'])}">Open search results</a>
+        <a href="/opportunities?source={quote_plus(source_entry['key'])}">Open opportunity view</a>
+      </div>
+    </section>
+    <div class="detail-grid">
+      <div>
+        <p class="list-head">Recent signals</p>
+        <section class="row-grid">{source_signal_rows(detail["signals"])}</section>
+      </div>
+      <div>
+        <p class="list-head">Recent opportunities</p>
+        <section class="row-grid">{source_opportunity_rows(detail["opportunities"])}</section>
+      </div>
+    </div>
+  </section>
   <section class="row">
     <p class="list-head">Config snapshot</p>
     <div class="mini-list">{config_items}</div>
@@ -694,20 +744,34 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     feature_request=feature_request,
                     values=values,
                     placeholder="Search pains, products, markets",
-                    include_category=False,
+                    include_category=True,
                     include_product=True,
-                    include_market=True,
                     include_pain_type=True,
                     include_feature_request=True,
                     submit_label="Search",
                 )
+                active_filters = active_filter_summary(
+                    [
+                        ("query", query),
+                        ("source", source),
+                        ("category", category),
+                        ("product", product),
+                        ("pain", pain_type),
+                        ("feature gap", feature_request),
+                    ]
+                )
+                source_payload = source_catalog_payload(self.config)
+                search_sources = [item["key"] for item in source_payload["sources"]]
+                activity_by_source = {name: source_activity(conn, name) for name in search_sources}
                 summary = (
-                    f'<section class="toolbar"><p class="subtle">Search returned {len(rows)} rows.</p>'
-                    f'<a href="/?q={esc(query)}&source={quote_plus(source)}&market={quote_plus(category)}&product={quote_plus(product)}&pain={quote_plus(pain_type)}&feature_gap={quote_plus(feature_request)}">Use dashboard browse view</a></section>'
+                    f'<section class="toolbar"><div><p class="subtle">Search returned {len(rows)} rows with URL-backed filters.</p>'
+                    f'{active_filters}</div><div class="toolbar-links">'
+                    f'<a href="/?q={esc(query)}&source={quote_plus(source)}&market={quote_plus(category)}&product={quote_plus(product)}&pain={quote_plus(pain_type)}&feature_gap={quote_plus(feature_request)}">Use dashboard browse view</a>'
+                    f'<a href="/search">Clear filters</a></div></section>'
                 )
                 self.send_html(
                     "Search",
-                    f'<div class="stack">{form}{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>',
+                    f'<div class="stack">{form}{source_directory(search_sources, source, activity_by_source)}{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>',
                 )
                 return
             if parsed.path == "/api/search":
