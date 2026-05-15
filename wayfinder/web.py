@@ -7,6 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, quote, quote_plus, unquote, urlparse
 
+from .adapters import build_adapter
 from .config import source_configs, source_policy, storage_path
 from .db import (
     browse_signals,
@@ -98,7 +99,7 @@ button { padding: 11px 15px; border: 0; border-radius: 7px; background: #102523;
 
 
 def esc(value: Any) -> str:
-    return html.escape(str(value or ""), quote=True)
+    return html.escape("" if value is None else str(value), quote=True)
 
 
 def layout(title: str, body: str) -> bytes:
@@ -115,6 +116,7 @@ def layout(title: str, body: str) -> bytes:
     <h1>Wayfinder</h1>
     <nav>
       <a href="/">Dashboard</a>
+      <a href="/sources">Sources</a>
       <a href="/search">Search</a>
       <a href="/products">Products</a>
       <a href="/opportunities">Opportunities</a>
@@ -193,6 +195,55 @@ def source_catalog_payload(config: dict[str, Any], source_name: str = "") -> dic
             "schedule": str(cron.get("schedule") or ""),
             "token_free_default": token_free_default,
         },
+    }
+
+
+def adapter_health_snapshot(name: str, cfg: dict[str, Any], policy_status: str) -> dict[str, Any]:
+    if policy_status == "disabled":
+        return {
+            "ok": False,
+            "label": "disabled",
+            "message": "Health checks are skipped while this adapter is disabled.",
+        }
+    try:
+        ok, message = build_adapter(name, cfg).healthcheck()
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "ok": False,
+            "label": "fail",
+            "message": str(exc),
+        }
+    return {
+        "ok": ok,
+        "label": "ok" if ok else "fail",
+        "message": message,
+    }
+
+
+def source_status_overview(config: dict[str, Any]) -> dict[str, Any]:
+    payload = source_catalog_payload(config)
+    raw_sources = source_configs(config)
+    counts = {
+        "enabled": 0,
+        "dry-run-only": 0,
+        "needs-review": 0,
+        "disabled": 0,
+        "healthy": 0,
+        "failing": 0,
+    }
+    sources: list[dict[str, Any]] = []
+    for item in payload["sources"]:
+        health = adapter_health_snapshot(item["key"], raw_sources.get(item["key"], {}), str(item["policy_status"]))
+        counts[str(item["policy_status"])] = counts.get(str(item["policy_status"]), 0) + 1
+        if health["label"] == "ok":
+            counts["healthy"] += 1
+        elif health["label"] == "fail":
+            counts["failing"] += 1
+        sources.append({**item, "health": health})
+    return {
+        **payload,
+        "sources": sources,
+        "counts": counts,
     }
 
 
@@ -415,6 +466,18 @@ def source_status_tag(status: str) -> str:
     return f'<span class="tag">{esc(status or "unknown")}</span>'
 
 
+def policy_status_badge(status: str) -> str:
+    normalized = status.strip().lower()
+    tone = {
+        "enabled": "good",
+        "dry-run-only": "warn",
+        "needs-review": "warn",
+        "disabled": "bad",
+    }.get(normalized, "")
+    class_name = f"tag {tone}".strip()
+    return f'<span class="{class_name}">{esc(status or "unknown")}</span>'
+
+
 def health_status_badge(status: str) -> str:
     normalized = status.strip().lower()
     tone = {
@@ -432,6 +495,50 @@ def health_status_badge(status: str) -> str:
     return f'<span class="{class_name}">{esc(status or "unknown")}</span>'
 
 
+def source_safety_panel(payload: dict[str, Any]) -> str:
+    cron = payload["cron"]
+    counts = payload["counts"]
+    cron_state = "disabled by default" if not cron["enabled"] else "enabled"
+    approved = counts.get("enabled", 0)
+    review_pending = counts.get("dry-run-only", 0) + counts.get("needs-review", 0)
+    return f"""<section class="panel">
+  <section class="toolbar">
+    <div>
+      <p class="list-head">Source safety and cron status</p>
+      <h2>Cron is {esc(cron_state)}</h2>
+      <p class="subtle">This page is read-only. It does not start scheduling, enable adapters, or change unattended collection state.</p>
+    </div>
+    <div class="toolbar-links">
+      {health_status_badge('ok' if not cron['enabled'] else 'warning')}
+      {source_status_tag('token-free default' if cron['token_free_default'] else 'token-required')}
+    </div>
+  </section>
+  <section class="grid">
+    <div class="metric"><strong>{esc(approved)}</strong><span>Approved for unattended collection</span></div>
+    <div class="metric"><strong>{esc(review_pending)}</strong><span>Still blocked on review or manual-only use</span></div>
+    <div class="metric"><strong>{esc(counts.get('healthy', 0))}</strong><span>Adapters passing live health checks</span></div>
+    <div class="metric"><strong>{esc(counts.get('disabled', 0))}</strong><span>Disabled adapters</span></div>
+  </section>
+  <div class="detail-grid">
+    <div>
+      <p class="list-head">Cron guardrails</p>
+      <div class="mini-list">
+        <div class="mini-item"><strong>Global cron switch</strong><div class="subtle">{esc(cron_state)}</div></div>
+        <div class="mini-item"><strong>Configured schedule</strong><div class="subtle">{esc(cron['schedule'] or 'not set')}</div></div>
+        <div class="mini-item"><strong>Token-free ingest default</strong><div class="subtle">{esc('enabled' if cron['token_free_default'] else 'disabled')}</div></div>
+      </div>
+    </div>
+    <div>
+      <p class="list-head">Operator notes</p>
+      <div class="mini-list">
+        <div class="mini-item"><strong>Approved sources only</strong><div class="subtle">Only sources with policy status <code>enabled</code> are eligible for unattended collection once the global cron switch is explicitly turned on later.</div></div>
+        <div class="mini-item"><strong>Manual and review states stay manual</strong><div class="subtle"><code>dry-run-only</code>, <code>needs-review</code>, and <code>disabled</code> sources remain excluded from unattended scheduling.</div></div>
+      </div>
+    </div>
+  </div>
+</section>"""
+
+
 def source_list_page(
     payload: dict[str, Any],
     activity_by_source: dict[str, dict[str, Any]],
@@ -447,12 +554,14 @@ def source_list_page(
     <div>
       <p class="list-head">Source</p>
       <h2><a href="{esc(source_path(item['key']))}">{esc(item['key'])}</a></h2>
-      <p class="meta">{source_status_tag(str(item['policy_status']))}<span class="tag">{esc(item['kind'])}</span></p>
+      <p class="meta">{policy_status_badge(str(item['policy_status']))}{health_status_badge(str(item['health']['label']))}<span class="tag">{esc(item['kind'])}</span></p>
     </div>
-    <div class="subtle">Signals {esc(activity.get('signal_count', 0))} · opportunities {esc(activity.get('opportunity_count', 0))} · health {esc(activity.get('health_status') or 'unknown')}</div>
+    <div class="subtle">Signals {esc(activity.get('signal_count', 0))} · opportunities {esc(activity.get('opportunity_count', 0))} · dashboard health {esc(activity.get('health_status') or 'unknown')}</div>
   </div>
   <p>{esc(item['notes'] or 'No operator notes recorded.')}</p>
+  <p class="subtle">Adapter health: {esc(item['health']['message'])}</p>
   <p class="subtle">Risk: credentials={esc(item['risk']['credentials'])}, terms={esc(item['risk']['terms'])}, rate_limits={esc(item['risk']['rate_limits'])}</p>
+  <p class="subtle">Cron readiness: {esc('eligible once cron is explicitly enabled' if item['unattended_cron']['eligible'] else 'blocked pending review or disabled state')} · global cron {esc('enabled' if item['unattended_cron']['global_cron_enabled'] else 'disabled')}</p>
 </article>"""
         )
     selected_html = ""
@@ -466,7 +575,8 @@ def source_list_page(
             )
     return (
         '<div class="stack">'
-        '<section class="toolbar"><p class="subtle">Configured sources with current policy and activity summaries.</p></section>'
+        f'{source_safety_panel(payload)}'
+        '<section class="toolbar"><p class="subtle">Configured sources with current policy, live adapter health, and activity summaries.</p></section>'
         f"{selected_html}"
         f'<section class="card-grid">{"".join(cards) if cards else "<p>No configured sources found.</p>"}</section>'
         '</div>'
@@ -517,7 +627,7 @@ def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> 
       <div>
         <p class="list-head">Policy status</p>
         <h2>{esc(source_entry['key'])}</h2>
-        <p class="meta">{source_status_tag(str(source_entry['policy_status']))}<span class="tag">{esc(source_entry['kind'])}</span></p>
+        <p class="meta">{policy_status_badge(str(source_entry['policy_status']))}<span class="tag">{esc(source_entry['kind'])}</span></p>
         <p>{esc(source_entry['notes'] or 'No operator notes recorded.')}</p>
         <p class="subtle">Signals {esc(detail['signal_count'])} · opportunities {esc(detail['opportunity_count'])} · avg score {esc(detail['avg_score'])}</p>
         <p class="subtle">Latest signal captured: {esc(detail['latest_signal_at'] or 'none yet')}</p>
@@ -883,7 +993,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 self.send_json(payload)
                 return
             if parsed.path == "/sources":
-                payload = source_catalog_payload(self.config)
+                payload = source_status_overview(self.config)
                 query = params.get("q", [""])[0]
                 source = params.get("source", [""])[0]
                 category = params.get("market", params.get("category", [""]))[0]
