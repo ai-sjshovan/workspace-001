@@ -625,6 +625,11 @@ def source_safety_panel(payload: dict[str, Any]) -> str:
     cron_state = "disabled by default" if not cron["enabled"] else "enabled"
     approved = counts.get("enabled", 0)
     review_pending = counts.get("dry-run-only", 0) + counts.get("needs-review", 0)
+    approved_note = (
+        "Only sources with policy status <code>enabled</code> are eligible for unattended collection in the current daily schedule."
+        if cron["enabled"]
+        else "Only sources with policy status <code>enabled</code> are eligible for unattended collection once the global cron switch is explicitly turned on."
+    )
     return f"""<section class="panel">
   <section class="toolbar">
     <div>
@@ -655,7 +660,7 @@ def source_safety_panel(payload: dict[str, Any]) -> str:
     <div>
       <p class="list-head">Operator notes</p>
       <div class="mini-list">
-        <div class="mini-item"><strong>Approved sources only</strong><div class="subtle">Only sources with policy status <code>enabled</code> are eligible for unattended collection once the global cron switch is explicitly turned on later.</div></div>
+        <div class="mini-item"><strong>Approved sources only</strong><div class="subtle">{approved_note}</div></div>
         <div class="mini-item"><strong>Manual and review states stay manual</strong><div class="subtle"><code>dry-run-only</code>, <code>needs-review</code>, and <code>disabled</code> sources remain excluded from unattended scheduling.</div></div>
       </div>
     </div>
@@ -667,7 +672,13 @@ def source_safety_status_board(payload: dict[str, Any]) -> str:
     cards: list[str] = []
     for item in payload["sources"]:
         tone = safety_tone(str(item["policy_status"]))
-        review_summary = "Safe for unattended ingest once cron is explicitly enabled." if item["unattended_cron"]["eligible"] else "Manual-only pending review or disabled."
+        review_summary = (
+            "Safe for unattended ingest in the current daily run."
+            if item["unattended_cron"]["eligible"] and item["unattended_cron"]["global_cron_enabled"]
+            else "Safe for unattended ingest once cron is explicitly enabled."
+            if item["unattended_cron"]["eligible"]
+            else "Manual-only pending review or disabled."
+        )
         cards.append(
             f"""<article class="row status-card {esc(tone)}">
   <div class="source-title">
@@ -684,10 +695,15 @@ def source_safety_status_board(payload: dict[str, Any]) -> str:
   <p class="subtle">Health: {esc(item['health']['message'])}</p>
 </article>"""
         )
+    eligibility_summary = (
+        "Green cards are eligible for unattended ingest in the current daily schedule. Yellow and red cards remain manual-only."
+        if payload["cron"]["enabled"]
+        else "Green cards are eligible for unattended ingest only after the global cron switch is explicitly enabled. Yellow and red cards remain manual-only."
+    )
     return (
         '<section class="panel"><section class="toolbar"><div><p class="list-head">Source safety status</p>'
         '<h2>Safe, blocked, and review-required adapters</h2>'
-        '<p class="subtle">Green cards are eligible for unattended ingest only after the global cron switch is explicitly enabled. Yellow and red cards remain manual-only.</p>'
+        f'<p class="subtle">{eligibility_summary}</p>'
         '</div><div class="toolbar-links"><a href="/sources">Browse sources</a></div></section>'
         f'<section class="card-grid">{"".join(cards) if cards else "<p>No configured sources found.</p>"}</section></section>'
     )
@@ -718,7 +734,7 @@ def source_review_checklist_panel(payload: dict[str, Any]) -> str:
         <div class="mini-item"><strong>1. Confirm policy status</strong><div class="subtle">Only <code>enabled</code> sources are eligible. <code>dry-run-only</code>, <code>needs-review</code>, and <code>disabled</code> remain blocked.</div></div>
         <div class="mini-item"><strong>2. Clear risk flags</strong><div class="subtle">Resolve any risk fields still marked <code>unknown</code> or <code>review-required</code>, especially terms, rate limits, and credentials handling.</div></div>
         <div class="mini-item"><strong>3. Verify adapter health</strong><div class="subtle">The adapter health check should pass before any unattended run is considered.</div></div>
-        <div class="mini-item"><strong>4. Re-check cron guardrails</strong><div class="subtle">This page does not enable cron. Global scheduling must stay an explicit later operator choice.</div></div>
+        <div class="mini-item"><strong>4. Re-check cron guardrails</strong><div class="subtle">This page does not change cron. Global scheduling stays an explicit config choice.</div></div>
       </div>
     </div>
     <div>
@@ -785,7 +801,7 @@ def source_list_page(
   <p>{esc(item['notes'] or 'No operator notes recorded.')}</p>
   <p class="subtle">Adapter health: {esc(item['health']['message'])}</p>
   <p class="subtle">Risk: credentials={esc(item['risk']['credentials'])}, terms={esc(item['risk']['terms'])}, rate_limits={esc(item['risk']['rate_limits'])}</p>
-  <p class="subtle">Cron readiness: {esc('eligible once cron is explicitly enabled' if item['unattended_cron']['eligible'] else 'blocked pending review or disabled state')} · global cron {esc('enabled' if item['unattended_cron']['global_cron_enabled'] else 'disabled')}</p>
+  <p class="subtle">Cron readiness: {esc('eligible in the current daily schedule' if item['unattended_cron']['eligible'] and item['unattended_cron']['global_cron_enabled'] else 'eligible once cron is explicitly enabled' if item['unattended_cron']['eligible'] else 'blocked pending review or disabled state')} · global cron {esc('enabled' if item['unattended_cron']['global_cron_enabled'] else 'disabled')}</p>
 </article>"""
         )
     selected_html = ""
