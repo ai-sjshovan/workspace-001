@@ -88,9 +88,21 @@ Example cron entry:
 17 4 * * * cd /path/to/workspace-001 && /usr/bin/python3 -m wayfinder --no-color scheduled-ingest >> logs/wayfinder-cron.log 2>&1
 ```
 
+Print the exact scheduler-ready command for the current config and interpreter:
+
+```bash
+python3 -m wayfinder --no-color schedule-command
+```
+
 ## Daily Operator Runbook
 
 Use these commands from the repository root when checking or running the daily ingest.
+
+Print the exact recurrence command for this checkout:
+
+```bash
+python3 -m wayfinder --no-color schedule-command
+```
 
 Run or confirm the scheduled path:
 
