@@ -766,6 +766,14 @@ def source_detail(
         "opportunities": [dict(row) for row in opportunities],
         "health_status": str(latest_run["status"]) if latest_run else "unknown",
         "last_ingest_at": str(latest_run["finished_at"]) if latest_run else "",
+        "last_run_status": str(latest_run["status"]) if latest_run else "",
+        "last_run_collected": int(latest_run["collected"]) if latest_run else 0,
+        "last_run_inserted_searchable_rows": int(latest_run["inserted_searchable_rows"]) if latest_run else 0,
+        "last_run_inserted_signals": int(latest_run["inserted_signals"]) if latest_run else 0,
+        "last_run_inserted_products": int(latest_run["inserted_products"]) if latest_run else 0,
+        "last_run_inserted_opportunities": int(latest_run["inserted_opportunities"]) if latest_run else 0,
+        "last_run_dry_run": bool(latest_run["dry_run"]) if latest_run else False,
+        "last_run_message": str(latest_run["message"]) if latest_run and latest_run["message"] else "",
         "recent_runs": [dict(row) for row in recent_runs],
     }
 
@@ -850,6 +858,14 @@ def source_activity(
         "opportunities": [dict(row) for row in opportunities],
         "health_status": str(latest_run["status"]) if latest_run else "unknown",
         "last_ingest_at": str(latest_run["finished_at"]) if latest_run else "",
+        "last_run_status": str(latest_run["status"]) if latest_run else "",
+        "last_run_collected": int(latest_run["collected"]) if latest_run else 0,
+        "last_run_inserted_searchable_rows": int(latest_run["inserted_searchable_rows"]) if latest_run else 0,
+        "last_run_inserted_signals": int(latest_run["inserted_signals"]) if latest_run else 0,
+        "last_run_inserted_products": int(latest_run["inserted_products"]) if latest_run else 0,
+        "last_run_inserted_opportunities": int(latest_run["inserted_opportunities"]) if latest_run else 0,
+        "last_run_dry_run": bool(latest_run["dry_run"]) if latest_run else False,
+        "last_run_message": str(latest_run["message"]) if latest_run and latest_run["message"] else "",
         "recent_runs": [dict(row) for row in recent_runs],
     }
 
