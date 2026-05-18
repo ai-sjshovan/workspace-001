@@ -72,9 +72,9 @@ The GitHub adapter stays anonymous by default, even if `GITHUB_TOKEN` is present
 
 ## Scheduled Ingest
 
-The daily runner is `python3 -m wayfinder scheduled-ingest`. It is intentionally guarded by `cron.enabled: false` in `wayfinder.yaml`, so unattended ingest stays off until someone explicitly approves it.
+The daily runner is `python3 -m wayfinder scheduled-ingest`. In the checked-in production config, `cron.enabled: true` and approved live sources run without `--allow-disabled`.
 
-Manual validation while the guard is off:
+If another environment temporarily turns the guard off, manual validation still works with:
 
 ```bash
 python3 -m wayfinder scheduled-ingest --allow-disabled
@@ -87,11 +87,10 @@ Behavior:
 - writes source-level counts, duration, and error details to `logs/wayfinder-audit.log`
 - records `token_free=true` and `llm_tokens=0` for the scheduled run path
 
-Example cron entry, left disabled by default:
+Example cron entry:
 
 ```cron
-# Daily Wayfinder ingest; remove the leading # only after cron.enabled is set to true
-# 17 4 * * * cd /path/to/workspace-001 && /usr/bin/python3 -m wayfinder scheduled-ingest >> logs/wayfinder-cron.log 2>&1
+17 4 * * * cd /path/to/workspace-001 && /usr/bin/python3 -m wayfinder scheduled-ingest >> logs/wayfinder-cron.log 2>&1
 ```
 
 ## Source Safety
@@ -144,9 +143,9 @@ The export is intentionally read-only: it prints editable Markdown, does not aut
 
 | Source | Adapter status | Recurring cron stance | Notes |
 | --- | --- | --- | --- |
-| `oss-ledger` | Healthy | Safe for recurring cron after separate approval of `cron.enabled` | Curated open-source source/tool ledger with offline local ingest. |
+| `oss-ledger` | Healthy | Safe for recurring cron | Curated open-source source/tool ledger with offline local ingest. |
 | `hackernews` | `dry-run-only` | Not safe for recurring cron yet | Public HN Algolia search with user-generated content and external rate-limit review still required. |
-| `github` | `dry-run-only` | Not safe for recurring cron yet | Anonymous public GitHub repository search; hosted dependency and API-rate review still required before unattended ingest. |
+| `github` | `enabled` | Approved for recurring cron | Anonymous public GitHub repository search with reviewed rate-limit posture and token-free unattended collection. |
 | Reddit / app-store reviews / Product Hunt / broader crawl/search sources | Deferred | Do not schedule | Out of the current Wayfinder scope until safety and terms review are complete. |
 
 The source review checklist in `docs/source-review-checklist.md` is the canonical promotion guide for moving a source from manual testing into unattended cron eligibility.

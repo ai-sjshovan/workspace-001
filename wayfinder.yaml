@@ -43,28 +43,27 @@ sources:
         hits_per_page: 10
     hits_per_query: 10
   github:
-    status: dry-run-only
+    status: enabled
     kind: github
-    notes: Manual dry runs against anonymous public repository search are acceptable, but unattended GitHub API use still needs rate-limit and dependency review.
+    notes: Anonymous public repository search is approved for unattended daily ingest with token-free collection and reviewed hosted dependency/rate-limit posture.
     risk:
       credentials: none
-      terms: review-required
-      rate_limits: api-rate-review
+      terms: reviewed-public-api
+      rate_limits: reviewed-anonymous-search-limits
       scraping: official-api
       pii_user_generated_content: low-public-repo-metadata
-      hosted_dependencies: github-api
-    fixture_path: research/github-sample.json
+      hosted_dependencies: reviewed-github-api
     queries:
-      - "startup ideas pain points"
+      - "startup ideas saas pain points"
       - "market research SaaS ideas"
-      - "competitor analysis startup validation"
+      - "competitor analysis saas validation"
     per_page: 10
 
 cron:
-  enabled: false
+  enabled: true
   schedule: daily
   token_free: true
-  # Leave OS cron disabled until the command below is explicitly approved.
+  # Operator-run daily command:
   # python3 -m wayfinder scheduled-ingest
 
 scoring:
