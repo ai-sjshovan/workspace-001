@@ -525,7 +525,7 @@ def source_detail_panel(detail: dict[str, Any] | None) -> str:
     run_items = "".join(
         f"""<div class="mini-item">
   <strong>{esc(item['status'])}</strong>
-  <div class="subtle">finished {esc(item['finished_at'] or 'unknown')} · collected {esc(item['collected'])} · signals +{esc(item['inserted_signals'])} · opportunities +{esc(item['inserted_opportunities'])}</div>
+  <div class="subtle">finished {esc(item['finished_at'] or 'unknown')} · collected {esc(item['collected'])} · searchable +{esc(item['inserted_searchable_rows'])} · signals +{esc(item['inserted_signals'])} · opportunities +{esc(item['inserted_opportunities'])}</div>
   <div class="subtle">{esc(item['message'] or ('dry run' if item['dry_run'] else 'no run notes'))}</div>
 </div>"""
         for item in recent_runs

@@ -199,7 +199,7 @@ def ingest_source(
     args: argparse.Namespace,
     config: dict[str, Any],
     audit_action: str | None = None,
-) -> tuple[int, str]:
+) -> tuple[dict[str, int], str]:
     started = utc_now()
     started_monotonic = time.perf_counter()
     adapter = build_adapter(name, runtime_source_config(cfg, dry_run=bool(args.dry_run)))
@@ -224,7 +224,14 @@ def ingest_source(
             token_free=True,
             llm_tokens=0,
         )
-        return 0, (
+        return {
+            "raw_records": len(raw),
+            "normalized": collected,
+            "inserted_searchable_rows": 0,
+            "inserted_signals": 0,
+            "inserted_products": 0,
+            "inserted_opportunities": 0,
+        }, (
             f"{name}: dry-run queries={query_count} collected={len(raw)} normalized={collected} "
             f"signals={normalized_signals} products={normalized_products} "
             f"opportunities={normalized_opportunities}"
@@ -233,20 +240,22 @@ def ingest_source(
     conn = connect(storage_path(config))
     try:
         inserted_signals = insert_signals(conn, batch.signals)
+        inserted_searchable_rows = inserted_signals
         inserted_products = insert_products(conn, batch.products)
         inserted_opportunities = insert_opportunities(conn, batch.opportunities, scoring_weights(config))
         conn.execute(
             """
             INSERT INTO ingest_runs (
-              source, started_at, finished_at, collected, inserted_signals,
+              source, started_at, finished_at, collected, inserted_searchable_rows, inserted_signals,
               inserted_products, inserted_opportunities, dry_run, status, message
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 name,
                 started,
                 utc_now(),
                 collected,
+                inserted_searchable_rows,
                 inserted_signals,
                 inserted_products,
                 inserted_opportunities,
@@ -264,6 +273,7 @@ def ingest_source(
         source=name,
         raw_records=len(raw),
         normalized=collected,
+        inserted_searchable_rows=inserted_searchable_rows,
         inserted_signals=inserted_signals,
         inserted_products=inserted_products,
         inserted_opportunities=inserted_opportunities,
@@ -271,8 +281,15 @@ def ingest_source(
         token_free=True,
         llm_tokens=0,
     )
-    return inserted_signals + inserted_products + inserted_opportunities, (
-        f"{name}: raw={len(raw)} inserted signals={inserted_signals} "
+    return {
+        "raw_records": len(raw),
+        "normalized": collected,
+        "inserted_searchable_rows": inserted_searchable_rows,
+        "inserted_signals": inserted_signals,
+        "inserted_products": inserted_products,
+        "inserted_opportunities": inserted_opportunities,
+    }, (
+        f"{name}: raw={len(raw)} searchable_rows={inserted_searchable_rows} inserted signals={inserted_signals} "
         f"products={inserted_products} opportunities={inserted_opportunities}"
     )
 
@@ -337,6 +354,10 @@ def cmd_scheduled_ingest(args: argparse.Namespace) -> int:
     skipped = 0
     succeeded = 0
     failed = 0
+    inserted_searchable_rows = 0
+    inserted_signals = 0
+    inserted_products = 0
+    inserted_opportunities = 0
 
     write_event(
         audit_log_path(config),
@@ -347,6 +368,14 @@ def cmd_scheduled_ingest(args: argparse.Namespace) -> int:
         approved_source_count=len(approved),
         token_free=True,
         llm_tokens=0,
+    )
+    print(
+        color(
+            "scheduled-ingest: "
+            f"sources={len(all_sources)} approved={len(approved)} token_free=true llm_tokens=0",
+            CYAN,
+            not args.no_color,
+        )
     )
 
     for name, cfg in all_sources.items():
@@ -365,8 +394,25 @@ def cmd_scheduled_ingest(args: argparse.Namespace) -> int:
             skipped += 1
             continue
         try:
-            _, message = ingest_source(name, cfg, args, config, audit_action="wayfinder_scheduled_ingest_source")
+            source_counts, message = ingest_source(name, cfg, args, config, audit_action="wayfinder_scheduled_ingest_source")
             print(color(message, GREEN, not args.no_color))
+            inserted_searchable_rows += source_counts["inserted_searchable_rows"]
+            inserted_signals += source_counts["inserted_signals"]
+            inserted_products += source_counts["inserted_products"]
+            inserted_opportunities += source_counts["inserted_opportunities"]
+            conn = connect(storage_path(config))
+            try:
+                activity = source_activity(conn, name)
+            finally:
+                conn.close()
+            print(
+                color(
+                    f"{name}: searchable_rows_total={int(activity['signal_count'])} "
+                    f"last_ingest_at={activity['last_ingest_at'] or 'unknown'}",
+                    DIM,
+                    not args.no_color,
+                )
+            )
             succeeded += 1
         except HackerNewsCollectError as exc:
             write_event(
@@ -405,17 +451,37 @@ def cmd_scheduled_ingest(args: argparse.Namespace) -> int:
             print(color(f"{name}: failed: {exc}", RED, not args.no_color), file=sys.stderr)
             failed += 1
 
+    duration_ms = round((time.perf_counter() - started_monotonic) * 1000, 3)
     write_event(
         audit_log_path(config),
         "wayfinder_scheduled_ingest_finished",
         enabled=bool(cron_cfg.get("enabled", False)),
         schedule=str(cron_cfg.get("schedule") or "daily"),
+        source_count=len(all_sources),
+        approved_source_count=len(approved),
         approved_sources=succeeded,
         skipped_sources=skipped,
         failed_sources=failed,
-        duration_ms=round((time.perf_counter() - started_monotonic) * 1000, 3),
+        inserted_searchable_rows=inserted_searchable_rows,
+        inserted_signals=inserted_signals,
+        inserted_products=inserted_products,
+        inserted_opportunities=inserted_opportunities,
+        duration_ms=duration_ms,
         token_free=True,
         llm_tokens=0,
+    )
+    print(
+        color(
+            "scheduled-ingest: "
+            f"succeeded={succeeded} skipped={skipped} failed={failed} "
+            f"inserted_searchable_rows={inserted_searchable_rows} "
+            f"inserted_signals={inserted_signals} inserted_products={inserted_products} "
+            f"inserted_opportunities={inserted_opportunities} "
+            f"duration_ms={duration_ms} "
+            f"token_free=true llm_tokens=0",
+            CYAN if not failed else YELLOW,
+            not args.no_color,
+        )
     )
     return 1 if failed else 0
 

@@ -158,15 +158,16 @@ class SourceStatusCliTests(unittest.TestCase):
                 conn.execute(
                     """
                     INSERT INTO ingest_runs (
-                      source, started_at, finished_at, collected, inserted_signals,
+                      source, started_at, finished_at, collected, inserted_searchable_rows, inserted_signals,
                       inserted_products, inserted_opportunities, dry_run, status, message
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         "approved-source",
                         "2026-05-18T00:00:00Z",
                         "2026-05-18T00:01:00Z",
                         2,
+                        1,
                         1,
                         0,
                         1,
