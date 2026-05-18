@@ -155,41 +155,69 @@ def cmd_sources(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps(sources, indent=2, sort_keys=True))
         return 0
-    for name, cfg in sources.items():
-        policy = source_policy(cfg)
-        status_color = {
-            "enabled": GREEN,
-            "dry-run-only": YELLOW,
-            "needs-review": YELLOW,
-            "disabled": RED,
-        }.get(policy.status, YELLOW)
-        status = color(policy.status, status_color, not args.no_color)
-        kind = str(cfg.get("kind") or name)
-        risk = policy.risk
-        print(
-            f"{color(name, BOLD, not args.no_color)} status={status} kind={kind} "
-            f"credentials={risk.credentials} terms={risk.terms} rate_limits={risk.rate_limits} "
-            f"scraping={risk.scraping} pii_ugc={risk.pii_user_generated_content} "
-            f"hosted_dependencies={risk.hosted_dependencies}"
-        )
-        review_state, unattended_state, review_reason = source_review_summary(policy)
-        print(f"  review={review_state} unattended={unattended_state} why={review_reason}")
-        if policy.notes:
-            print(f"  notes={policy.notes}")
-        if args.health:
-            if policy.status == "disabled":
-                print(
-                    "  health="
-                    f"{color('disabled', RED, not args.no_color)} "
-                    "Health checks are skipped while this adapter is disabled."
-                )
-                continue
-            try:
-                ok, message = build_adapter(name, cfg).healthcheck()
-                state = color("ok", GREEN, not args.no_color) if ok else color("fail", RED, not args.no_color)
-                print(f"  health={state} {message}")
-            except Exception as exc:  # noqa: BLE001
-                print(f"  health={color('fail', RED, not args.no_color)} {exc}")
+    conn = connect(storage_path(config)) if args.health else None
+    try:
+        for name, cfg in sources.items():
+            policy = source_policy(cfg)
+            status_color = {
+                "enabled": GREEN,
+                "dry-run-only": YELLOW,
+                "needs-review": YELLOW,
+                "disabled": RED,
+            }.get(policy.status, YELLOW)
+            status = color(policy.status, status_color, not args.no_color)
+            kind = str(cfg.get("kind") or name)
+            risk = policy.risk
+            print(
+                f"{color(name, BOLD, not args.no_color)} status={status} kind={kind} "
+                f"credentials={risk.credentials} terms={risk.terms} rate_limits={risk.rate_limits} "
+                f"scraping={risk.scraping} pii_ugc={risk.pii_user_generated_content} "
+                f"hosted_dependencies={risk.hosted_dependencies}"
+            )
+            review_state, unattended_state, review_reason = source_review_summary(policy)
+            print(f"  review={review_state} unattended={unattended_state} why={review_reason}")
+            if policy.notes:
+                print(f"  notes={policy.notes}")
+            if args.health:
+                if policy.status == "disabled":
+                    print(
+                        "  health="
+                        f"{color('disabled', RED, not args.no_color)} "
+                        "Health checks are skipped while this adapter is disabled."
+                    )
+                else:
+                    try:
+                        ok, message = build_adapter(name, cfg).healthcheck()
+                        state = color("ok", GREEN, not args.no_color) if ok else color("fail", RED, not args.no_color)
+                        print(f"  health={state} {message}")
+                    except Exception as exc:  # noqa: BLE001
+                        print(f"  health={color('fail', RED, not args.no_color)} {exc}")
+                activity = source_activity(conn, name) if conn is not None else {}
+                if activity:
+                    last_ingest_at = str(activity.get("last_ingest_at") or "never")
+                    last_status = str(activity.get("last_run_status") or "unknown")
+                    if activity.get("last_ingest_at"):
+                        run_label = "dry-run" if activity.get("last_run_dry_run") else "live"
+                    else:
+                        run_label = "none"
+                    print(
+                        "  latest_run="
+                        f"{run_label} status={last_status} last_ingest_at={last_ingest_at} "
+                        f"collected={int(activity.get('last_run_collected') or 0)} "
+                        f"searchable_rows={int(activity.get('last_run_inserted_searchable_rows') or 0)} "
+                        f"signals={int(activity.get('last_run_inserted_signals') or 0)} "
+                        f"products={int(activity.get('last_run_inserted_products') or 0)} "
+                        f"opportunities={int(activity.get('last_run_inserted_opportunities') or 0)}"
+                    )
+                    print(
+                        "  totals="
+                        f"signals={int(activity.get('signal_count') or 0)} "
+                        f"opportunities={int(activity.get('opportunity_count') or 0)} "
+                        f"latest_signal_at={activity.get('latest_signal_at') or 'never'}"
+                    )
+    finally:
+        if conn is not None:
+            conn.close()
     return 0
 
 

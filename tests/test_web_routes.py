@@ -132,6 +132,27 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
                 ],
                 scoring_weights(cls.config),
             )
+            conn.execute(
+                """
+                INSERT INTO ingest_runs (
+                  source, started_at, finished_at, collected, inserted_searchable_rows, inserted_signals,
+                  inserted_products, inserted_opportunities, dry_run, status, message
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    cls.source_name,
+                    "2026-05-18T00:00:00Z",
+                    "2026-05-18T00:01:00Z",
+                    2,
+                    2,
+                    2,
+                    2,
+                    1,
+                    0,
+                    "ok",
+                    "route smoke",
+                ),
+            )
             conn.commit()
         finally:
             conn.close()
@@ -202,11 +223,15 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         payload = json.loads(body)
         self.assertGreater(payload["count"], 0)
         self.assertIn(self.source_name, [item["key"] for item in payload["sources"]])
+        selected_source = next(item for item in payload["sources"] if item["key"] == self.source_name)
+        self.assertEqual(selected_source["activity"]["last_ingest_at"], "2026-05-18T00:01:00Z")
+        self.assertEqual(selected_source["activity"]["last_run_inserted_searchable_rows"], 2)
 
         status, body = self.fetch(f"/api/sources?source={quote(self.source_name)}")
         self.assertEqual(status, 200)
         payload = json.loads(body)
         self.assertEqual(payload["source"]["key"], self.source_name)
+        self.assertEqual(payload["source"]["activity"]["last_ingest_at"], "2026-05-18T00:01:00Z")
 
         status, body = self.fetch(
             f"/api/opportunities?source={quote(self.source_name)}&category=market-research&min_score=1&limit=1"
@@ -310,6 +335,7 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertIn(self.source_name, body)
         self.assertIn("Recent source records", body)
         self.assertIn("Wayfinder dashboard smoke signal", body)
+        self.assertIn("latest run 2026-05-18T00:01:00Z", body)
 
         status, body = self.fetch(f"/sources/{quote(self.source_name)}?signal=dashboard-smoke")
         self.assertEqual(status, 200)
@@ -340,14 +366,15 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertIn("Select a source to inspect its linked signals and opportunities.", body)
         self.assertIn(self.source_name, body)
         self.assertIn(f'/sources/{quote(self.source_name)}', body)
+        self.assertIn("Latest ingest evidence: live run ok at 2026-05-18T00:01:00Z", body)
 
         status, body = self.fetch("/source-safety")
         self.assertEqual(status, 200)
         self.assertIn("Source safety status", body)
         self.assertIn("Safe, blocked, and review-required adapters", body)
         self.assertIn("Safe for unattended ingest in the current daily run.", body)
-        self.assertIn("Manual-only pending review or disabled.", body)
         self.assertIn(f'/sources/{quote(self.source_name)}', body)
+        self.assertIn("Latest ingest evidence: live run ok at 2026-05-18T00:01:00Z", body)
 
         status, body = self.fetch("/products")
         self.assertEqual(status, 200)

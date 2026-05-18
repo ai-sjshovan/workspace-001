@@ -258,7 +258,7 @@ def adapter_health_snapshot(name: str, cfg: dict[str, Any], policy_status: str) 
     }
 
 
-def source_status_overview(config: dict[str, Any]) -> dict[str, Any]:
+def source_status_overview(config: dict[str, Any], conn: Any | None = None) -> dict[str, Any]:
     payload = source_catalog_payload(config)
     raw_sources = source_configs(config)
     counts = {
@@ -272,12 +272,13 @@ def source_status_overview(config: dict[str, Any]) -> dict[str, Any]:
     sources: list[dict[str, Any]] = []
     for item in payload["sources"]:
         health = adapter_health_snapshot(item["key"], raw_sources.get(item["key"], {}), str(item["policy_status"]))
+        activity = source_activity(conn, item["key"]) if conn is not None else {}
         counts[str(item["policy_status"])] = counts.get(str(item["policy_status"]), 0) + 1
         if health["label"] == "ok":
             counts["healthy"] += 1
         elif health["label"] == "fail":
             counts["failing"] += 1
-        sources.append({**item, "health": health})
+        sources.append({**item, "health": health, "activity": activity})
     return {
         **payload,
         "sources": sources,
@@ -672,12 +673,21 @@ def source_safety_status_board(payload: dict[str, Any]) -> str:
     cards: list[str] = []
     for item in payload["sources"]:
         tone = safety_tone(str(item["policy_status"]))
+        activity = item.get("activity") if isinstance(item.get("activity"), dict) else {}
         review_summary = (
             "Safe for unattended ingest in the current daily run."
             if item["unattended_cron"]["eligible"] and item["unattended_cron"]["global_cron_enabled"]
             else "Safe for unattended ingest once cron is explicitly enabled."
             if item["unattended_cron"]["eligible"]
             else "Manual-only pending review or disabled."
+        )
+        latest_run_summary = (
+            f"Latest ingest evidence: {'dry run' if activity.get('last_run_dry_run') else 'live run'} "
+            f"{activity.get('last_run_status') or 'unknown'} at {activity.get('last_ingest_at') or 'never'} "
+            f"with searchable +{int(activity.get('last_run_inserted_searchable_rows') or 0)} "
+            f"and opportunities +{int(activity.get('last_run_inserted_opportunities') or 0)}."
+            if activity.get("last_ingest_at")
+            else "Latest ingest evidence: no runs recorded yet."
         )
         cards.append(
             f"""<article class="row status-card {esc(tone)}">
@@ -691,6 +701,7 @@ def source_safety_status_board(payload: dict[str, Any]) -> str:
   </div>
   <p>{esc(review_summary)}</p>
   <p class="subtle">Why: {esc(item['why'])}</p>
+  <p class="subtle">{esc(latest_run_summary)}</p>
   <p class="subtle">Outstanding risk flags: {esc(', '.join(item['risk_summary']['unresolved']) if item['risk_summary']['unresolved'] else 'none')}</p>
   <p class="subtle">Health: {esc(item['health']['message'])}</p>
 </article>"""
@@ -752,9 +763,17 @@ def source_review_checklist_panel(payload: dict[str, Any]) -> str:
 def adapter_status_panel(payload: dict[str, Any]) -> str:
     items = []
     for item in payload["sources"]:
+        activity = item.get("activity") if isinstance(item.get("activity"), dict) else {}
         unresolved = item["risk_summary"]["unresolved"]
         unresolved_text = ", ".join(str(flag) for flag in unresolved) if unresolved else "none"
         unattended = "eligible" if item["unattended_cron"]["eligible"] else "blocked"
+        latest_run_summary = (
+            f"Latest ingest evidence: {activity.get('last_run_status') or 'unknown'} at {activity.get('last_ingest_at') or 'never'} "
+            f"· searchable +{activity.get('last_run_inserted_searchable_rows') or 0} "
+            f"· opportunities +{activity.get('last_run_inserted_opportunities') or 0}"
+            if activity.get("last_ingest_at")
+            else "Latest ingest evidence: no runs recorded yet."
+        )
         items.append(
             f"""<article class="row">
   <div class="source-title">
@@ -768,6 +787,7 @@ def adapter_status_panel(payload: dict[str, Any]) -> str:
   <p class="subtle">Risk flags: {esc(unresolved_text)}</p>
   <p class="subtle">Review state: {esc(item['review'])} · {esc(item['why'])}</p>
   <p class="subtle">Adapter health: {esc(item['health']['message'])}</p>
+  <p class="subtle">{esc(latest_run_summary)}</p>
 </article>"""
         )
     return (
@@ -788,6 +808,14 @@ def source_list_page(
     cards = []
     for item in payload["sources"]:
         activity = activity_by_source.get(item["key"], {})
+        latest_run_summary = (
+            f"Latest ingest evidence: {'dry run' if activity.get('last_run_dry_run') else 'live run'} "
+            f"{activity.get('last_run_status') or 'unknown'} at {activity.get('last_ingest_at') or 'never'} "
+            f"· searchable +{int(activity.get('last_run_inserted_searchable_rows') or 0)} "
+            f"· opportunities +{int(activity.get('last_run_inserted_opportunities') or 0)}"
+            if activity.get("last_ingest_at")
+            else "Latest ingest evidence: no runs recorded yet."
+        )
         cards.append(
             f"""<article class="row">
   <div class="source-title">
@@ -800,6 +828,7 @@ def source_list_page(
   </div>
   <p>{esc(item['notes'] or 'No operator notes recorded.')}</p>
   <p class="subtle">Adapter health: {esc(item['health']['message'])}</p>
+  <p class="subtle">{esc(latest_run_summary)}</p>
   <p class="subtle">Risk: credentials={esc(item['risk']['credentials'])}, terms={esc(item['risk']['terms'])}, rate_limits={esc(item['risk']['rate_limits'])}</p>
   <p class="subtle">Cron readiness: {esc('eligible in the current daily schedule' if item['unattended_cron']['eligible'] and item['unattended_cron']['global_cron_enabled'] else 'eligible once cron is explicitly enabled' if item['unattended_cron']['eligible'] else 'blocked pending review or disabled state')} · global cron {esc('enabled' if item['unattended_cron']['global_cron_enabled'] else 'disabled')}</p>
 </article>"""
@@ -1533,6 +1562,11 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                         HTTPStatus.NOT_FOUND,
                     )
                     return
+                status_payload = source_status_overview(self.config, conn)
+                status_by_key = {item["key"]: item for item in status_payload["sources"]}
+                if payload["source"] is not None:
+                    payload["source"] = {**payload["source"], **status_by_key.get(source_name.strip(), {})}
+                payload["sources"] = [status_by_key.get(item["key"], item) for item in payload["sources"]]
                 self.send_json(payload)
                 return
             if parsed.path == "/api/products":
@@ -1599,7 +1633,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 self.send_json(payload)
                 return
             if parsed.path == "/sources":
-                payload = source_status_overview(self.config)
+                payload = source_status_overview(self.config, conn)
                 query = params.get("q", [""])[0]
                 source = params.get("source", [""])[0]
                 category = params.get("market", params.get("category", [""]))[0]
@@ -1622,7 +1656,10 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     if source.strip()
                     else []
                 )
-                activity_by_source = {item["key"]: source_activity(conn, item["key"]) for item in payload["sources"]}
+                activity_by_source = {
+                    item["key"]: item["activity"] if isinstance(item.get("activity"), dict) else source_activity(conn, item["key"])
+                    for item in payload["sources"]
+                }
                 body = (
                     f'<div class="stack">{source_list_page(payload, activity_by_source, source, detail)}'
                     f'{filter_form("/sources", query=query, source=source, category=category, product=product, pain_type=pain_type, feature_request=feature_request, values=values, include_category=False, include_product=True, include_market=True, include_pain_type=True, include_feature_request=True, submit_label="Inspect")}'
@@ -1633,7 +1670,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 self.send_html("Sources", body)
                 return
             if parsed.path == "/source-safety":
-                payload = source_status_overview(self.config)
+                payload = source_status_overview(self.config, conn)
                 self.send_html("Source Safety", source_safety_page(payload))
                 return
             if parsed.path.startswith("/sources/"):

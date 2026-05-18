@@ -102,6 +102,50 @@ class SourceStatusCliTests(unittest.TestCase):
         self.assertIn("disabled-source status=disabled", output)
         self.assertIn("review=blocked unattended=blocked", output)
         self.assertIn("health=disabled Health checks are skipped while this adapter is disabled.", output)
+        self.assertIn("latest_run=none status=unknown last_ingest_at=never", output)
+
+    def test_sources_list_health_shows_last_ingest_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            config_path = self.write_config(root)
+            conn = connect(root / ".ai-state" / "wayfinder" / "test.db")
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO ingest_runs (
+                      source, started_at, finished_at, collected, inserted_searchable_rows, inserted_signals,
+                      inserted_products, inserted_opportunities, dry_run, status, message
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        "approved-source",
+                        "2026-05-18T00:00:00Z",
+                        "2026-05-18T00:01:00Z",
+                        4,
+                        2,
+                        2,
+                        1,
+                        1,
+                        0,
+                        "ok",
+                        "fixture",
+                    ),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+            args = argparse.Namespace(config=str(config_path), json=False, health=True, no_color=True)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                rc = cmd_sources(args)
+
+        self.assertEqual(rc, 0)
+        output = stdout.getvalue()
+        self.assertIn("approved-source status=enabled", output)
+        self.assertIn("health=fail", output)
+        self.assertIn("latest_run=live status=ok last_ingest_at=2026-05-18T00:01:00Z", output)
+        self.assertIn("collected=4 searchable_rows=2 signals=2 products=1 opportunities=1", output)
 
     def test_module_entrypoint_runs_help_from_repo_root(self) -> None:
         completed = subprocess.run(

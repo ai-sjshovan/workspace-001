@@ -133,6 +133,8 @@ Verify source health before or after the run:
 python3 -m wayfinder --no-color sources list --health
 ```
 
+The health output includes the latest persisted ingest evidence for each source, including `last_ingest_at` and the most recent inserted counts.
+
 Check the latest aggregate database counts and per-source last-ingest timestamps:
 
 ```bash
