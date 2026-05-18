@@ -41,10 +41,10 @@ The first user is the Codex Foundry operator. Later users may be builders who wa
 
 ## Source Safety
 
-- `oss-ledger`, Hacker News, and GitHub public search are acceptable early sources.
+- `oss-ledger`, Hacker News, and GitHub public search are approved early sources in the active project config.
 - Reddit, app-store reviews, Product Hunt, crawlers, and scraping adapters require explicit source/terms review before recurring cron.
 - Credentials must be optional and documented.
-- Cron should default to disabled until source safety and rate limits are reviewed.
+- The active Wayfinder config has `cron.enabled: true`; unattended ingest is still limited to reviewed `status: enabled` sources only.
 
 ## Validation Strategy
 

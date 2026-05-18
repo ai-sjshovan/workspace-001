@@ -16,7 +16,7 @@
 
 - Keep the existing `/` and `/health` smoke checks intact.
 - Keep the current deterministic, token-free ingest model intact.
-- Keep the current source-safety boundaries intact, including optional credentials, dry-run-first behavior, and cron remaining safety-gated by review status plus `cron.enabled: false` by default.
+- Keep the current source-safety boundaries intact, including optional credentials, dry-run-first behavior for diagnostics, and cron remaining safety-gated by review status with `cron.enabled: true` in the active project config.
 - Preserve the existing V1 smoke path:
   - `python3 -m wayfinder sources list --health`
   - `python3 -m wayfinder ingest --source oss-ledger`
@@ -25,7 +25,7 @@
   - `python3 -m wayfinder opportunities --limit 20`
   - `python3 -m wayfinder score --limit 10`
   - `python3 -m wayfinder export --min-score 40 --source oss-ledger`
-  - `python3 -m wayfinder scheduled-ingest --allow-disabled`
+  - `python3 -m wayfinder scheduled-ingest`
   - `/`
   - `/health`
 

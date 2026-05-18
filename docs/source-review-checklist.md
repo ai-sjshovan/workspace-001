@@ -18,7 +18,7 @@ Use this summary when deciding whether a source is safe for recurring cron today
 | Source | Current status | Recurring cron stance | Why |
 | --- | --- | --- | --- |
 | `oss-ledger` | Healthy | Included in the configured daily run | Curated local ledger, no credentials, no hosted dependency, and risk fields are already reviewed. |
-| `hackernews` | `dry-run-only` | Not safe for recurring cron yet | Manual dry runs are acceptable, but unattended live Algolia use still needs terms, rate-limit, and user-generated-content review. |
+| `hackernews` | Healthy | Included in the configured daily run | Public HN Algolia story search is approved at the configured low query volume with reviewed story-metadata handling and no credential requirement. |
 | `github` | Healthy | Included in the configured daily run | Anonymous public repository search is approved at the configured low daily volume, with no credentials required and fixture-backed dry runs preserved for diagnostics. |
 | Reddit / app-store reviews / Product Hunt / broader crawl-search sources | Deferred | Do not add to recurring cron | These sources remain outside the current Wayfinder scope until source safety and terms review are completed. |
 

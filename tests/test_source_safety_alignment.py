@@ -16,12 +16,12 @@ class SourceSafetyAlignmentTests(unittest.TestCase):
         sources = source_configs(config)
 
         self.assertEqual(source_policy(sources["oss-ledger"]).status, "enabled")
-        self.assertEqual(source_policy(sources["hackernews"]).status, "dry-run-only")
+        self.assertEqual(source_policy(sources["hackernews"]).status, "enabled")
         self.assertEqual(source_policy(sources["github"]).status, "enabled")
         self.assertEqual(source_policy(sources["oss-ledger"]).risk.credentials, "none")
         self.assertEqual(source_policy(sources["hackernews"]).risk.credentials, "none")
         self.assertEqual(source_policy(sources["github"]).risk.credentials, "none")
-        self.assertEqual(sorted(approved_scheduled_sources(config)), ["github", "oss-ledger"])
+        self.assertEqual(sorted(approved_scheduled_sources(config)), ["github", "hackernews", "oss-ledger"])
 
     def test_sources_list_health_surfaces_review_and_risk_metadata(self) -> None:
         args = argparse.Namespace(config=str(DEFAULT_CONFIG), json=False, health=True, no_color=True)
@@ -34,9 +34,9 @@ class SourceSafetyAlignmentTests(unittest.TestCase):
         output = stdout.getvalue()
         self.assertIn("oss-ledger status=enabled", output)
         self.assertIn("review=approved unattended=eligible", output)
-        self.assertIn("hackernews status=dry-run-only", output)
+        self.assertIn("hackernews status=enabled", output)
         self.assertIn("github status=enabled", output)
-        self.assertIn("review=pending unattended=blocked", output)
+        self.assertIn("review=approved unattended=eligible", output)
         self.assertIn("credentials=none", output)
         self.assertIn("hosted_dependencies=algolia-hn-api", output)
         self.assertIn("hosted_dependencies=github-public-api", output)
@@ -67,7 +67,7 @@ class SourceSafetyAlignmentTests(unittest.TestCase):
             self.assertEqual(item["risk"]["hosted_dependencies"], policy.risk.hosted_dependencies)
 
         self.assertTrue(catalog["oss-ledger"]["unattended_cron"]["eligible"])
-        self.assertFalse(catalog["hackernews"]["unattended_cron"]["eligible"])
+        self.assertTrue(catalog["hackernews"]["unattended_cron"]["eligible"])
         self.assertTrue(catalog["github"]["unattended_cron"]["eligible"])
 
     def test_readme_matches_configured_safety_posture(self) -> None:
@@ -76,7 +76,7 @@ class SourceSafetyAlignmentTests(unittest.TestCase):
         self.assertIn("cron.enabled: true", readme)
         self.assertIn("skips `dry-run-only`, `needs-review`, and `disabled` sources", readme)
         self.assertIn("| `oss-ledger` | Healthy | Included in the configured daily run |", readme)
-        self.assertIn("| `hackernews` | `dry-run-only` | Not safe for recurring cron yet |", readme)
+        self.assertIn("| `hackernews` | Healthy | Included in the configured daily run |", readme)
         self.assertIn("| `github` | Healthy | Included in the configured daily run |", readme)
 
 

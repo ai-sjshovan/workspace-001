@@ -28,7 +28,7 @@ class ScheduledIngestTests(unittest.TestCase):
                     "    kind: static_ledger",
                     "    path: research/open-source-intel-ledger.yaml",
                     "  hackernews:",
-                    "    status: dry-run-only",
+                    "    status: enabled",
                     "    kind: hackernews",
                     "    fixture_path: research/hackernews-sample.json",
                     "    queries:",
@@ -127,16 +127,14 @@ class ScheduledIngestTests(unittest.TestCase):
             events = self.read_audit_events(root)
 
             self.assertEqual(rc, 0)
-            self.assertEqual(ingest_mock.call_count, 1)
-            self.assertEqual(ingest_mock.call_args.args[0], "oss-ledger")
-            self.assertIn("hackernews: skipped status=dry-run-only", stdout.getvalue())
+            self.assertEqual(ingest_mock.call_count, 2)
+            self.assertEqual([call.args[0] for call in ingest_mock.call_args_list], ["oss-ledger", "hackernews"])
             self.assertIn("review-source: skipped status=needs-review", stdout.getvalue())
             self.assertIn("blocked-source: skipped status=disabled", stdout.getvalue())
             self.assertEqual(
                 [event["action"] for event in events],
                 [
                     "wayfinder_scheduled_ingest_started",
-                    "wayfinder_scheduled_ingest_skipped",
                     "wayfinder_scheduled_ingest_skipped",
                     "wayfinder_scheduled_ingest_skipped",
                     "wayfinder_scheduled_ingest_finished",
@@ -153,7 +151,6 @@ class ScheduledIngestTests(unittest.TestCase):
             self.assertEqual(
                 skipped_statuses,
                 {
-                    "hackernews": "dry-run-only",
                     "review-source": "needs-review",
                     "blocked-source": "disabled",
                 },
@@ -176,38 +173,50 @@ class ScheduledIngestTests(unittest.TestCase):
             finished_event = next(event for event in events if event["action"] == "wayfinder_scheduled_ingest_finished")
 
             self.assertEqual(rc, 0)
-            self.assertIn("scheduled-ingest: sources=4 approved=1 token_free=true llm_tokens=0", stdout.getvalue())
+            self.assertIn("scheduled-ingest: sources=4 approved=2 token_free=true llm_tokens=0", stdout.getvalue())
             self.assertIn(
                 "oss-ledger: raw=1 searchable_rows=1 inserted signals=1 products=1 opportunities=1",
                 stdout.getvalue(),
             )
             self.assertIn("oss-ledger: searchable_rows_total=1", stdout.getvalue())
+            self.assertIn("hackernews: raw=10 searchable_rows=10 inserted signals=10 products=0 opportunities=0", stdout.getvalue())
+            self.assertIn("hackernews: searchable_rows_total=10", stdout.getvalue())
             self.assertIn(
-                "scheduled-ingest: succeeded=1 skipped=3 failed=0 inserted_searchable_rows=1 "
-                "inserted_signals=1 inserted_products=1 inserted_opportunities=1 ",
+                "scheduled-ingest: succeeded=2 skipped=2 failed=0 inserted_searchable_rows=11 "
+                "inserted_signals=11 inserted_products=1 inserted_opportunities=1 ",
                 stdout.getvalue(),
             )
             self.assertIn("duration_ms=", stdout.getvalue())
             self.assertIn("token_free=true llm_tokens=0", stdout.getvalue())
-            self.assertEqual(len(source_events), 1)
-            self.assertEqual(source_events[0]["source"], "oss-ledger")
+            self.assertEqual(len(source_events), 2)
+            self.assertEqual([event["source"] for event in source_events], ["oss-ledger", "hackernews"])
             self.assertEqual(source_events[0]["raw_records"], 1)
             self.assertEqual(source_events[0]["normalized"], 3)
             self.assertEqual(source_events[0]["inserted_searchable_rows"], 1)
             self.assertEqual(source_events[0]["inserted_signals"], 1)
             self.assertEqual(source_events[0]["inserted_products"], 1)
             self.assertEqual(source_events[0]["inserted_opportunities"], 1)
+            self.assertEqual(source_events[1]["raw_records"], 10)
+            self.assertEqual(source_events[1]["normalized"], 10)
+            self.assertEqual(source_events[1]["inserted_searchable_rows"], 10)
+            self.assertEqual(source_events[1]["inserted_signals"], 10)
+            self.assertEqual(source_events[1]["inserted_products"], 0)
+            self.assertEqual(source_events[1]["inserted_opportunities"], 0)
             self.assertIn("duration_ms", source_events[0])
             self.assertGreaterEqual(float(source_events[0]["duration_ms"]), 0.0)
             self.assertIs(source_events[0]["token_free"], True)
             self.assertEqual(source_events[0]["llm_tokens"], 0)
+            self.assertIn("duration_ms", source_events[1])
+            self.assertGreaterEqual(float(source_events[1]["duration_ms"]), 0.0)
+            self.assertIs(source_events[1]["token_free"], True)
+            self.assertEqual(source_events[1]["llm_tokens"], 0)
             self.assertEqual(finished_event["source_count"], 4)
-            self.assertEqual(finished_event["approved_source_count"], 1)
-            self.assertEqual(finished_event["approved_sources"], 1)
-            self.assertEqual(finished_event["skipped_sources"], 3)
+            self.assertEqual(finished_event["approved_source_count"], 2)
+            self.assertEqual(finished_event["approved_sources"], 2)
+            self.assertEqual(finished_event["skipped_sources"], 2)
             self.assertEqual(finished_event["failed_sources"], 0)
-            self.assertEqual(finished_event["inserted_searchable_rows"], 1)
-            self.assertEqual(finished_event["inserted_signals"], 1)
+            self.assertEqual(finished_event["inserted_searchable_rows"], 11)
+            self.assertEqual(finished_event["inserted_signals"], 11)
             self.assertEqual(finished_event["inserted_products"], 1)
             self.assertEqual(finished_event["inserted_opportunities"], 1)
             self.assertIn("duration_ms", finished_event)
