@@ -53,8 +53,8 @@ Verified in `workspace-001` on the configured `project/wayfinder` branch.
 - Entrypoints: repo-local CLI via `python3 -m wayfinder` and the read-only dashboard via `python3 -m wayfinder serve --port 8766`
 - Confirmed routes: `/` renders the dashboard and `/health` returns a readiness payload with `ok`, `service`, `config`, `database`, and `storage_path`
 - Confirmed CLI smoke path from the repo root: `python3 -m wayfinder sources list --health`, `python3 -m wayfinder scheduled-ingest`, `python3 -m wayfinder search saas`, `python3 -m wayfinder products --limit 20`, `python3 -m wayfinder opportunities --limit 20`, and `python3 -m wayfinder stats`
-- Current approved ingest baseline: `oss-ledger` and `github` are enabled; `hackernews` remains `dry-run-only`
-- Daily ingest now includes a real anonymous GitHub public-search source while preserving fixture-backed dry runs for diagnostics
+- Current approved ingest baseline: `oss-ledger`, `hackernews`, and `github` are enabled for unattended ingest
+- Daily ingest now includes real anonymous GitHub public-search and Hacker News Algolia sources while preserving fixture-backed dry runs for diagnostics
 - Setup drift to note: `.codex-foundry/REPO_PROFILE.md` can lag `HEAD`; treat it as a map and verify exact files before follow-on implementation
 
 The sample `search "reddit pain"` command remains useful for ad hoc exploration, but the supported repo-root smoke example is `python3 -m wayfinder search saas`. After a successful scheduled ingest, it should return stored rows from the approved live GitHub source.
@@ -68,6 +68,21 @@ Each adapter implements three methods:
 - `normalize()` converts raw records into `Signal`, `ProductIntel`, and `Opportunity` records.
 
 New sources should start as `dry-run-only` adapters before being enabled in recurring cron. Sources that require credentials, scrape pages, or collect user-generated content need an explicit safety review before unattended collection.
+
+The approved unattended Hacker News configuration in `wayfinder.yaml` is:
+
+- `status: enabled`
+- `kind: hackernews`
+- `queries`: `SaaS pain points`, `startup idea validation`, and `competitor analysis tool`, all constrained to `tags: story` with `hits_per_page: 10`
+- `hits_per_query: 10`
+- `risk.credentials: none`
+- `risk.terms: public-api-allowed`
+- `risk.rate_limits: low-volume-search`
+- `risk.scraping: api-search`
+- `risk.pii_user_generated_content: reviewed-story-metadata`
+- `risk.hosted_dependencies: algolia-hn-api`
+
+Normal and scheduled ingest drop `fixture_path` for the live run path, while manual diagnostics can still use the fixture-backed `--dry-run` mode.
 
 The GitHub adapter stays anonymous by default, even if `GITHUB_TOKEN` is present in the environment. To intentionally enable documented credentials for manual testing, set `allow_credentials: true` on the `github` source and then provide either `token:` or `token_env:`. If GitHub returns a rate-limit response, Wayfinder surfaces the HTTP status plus the reset time when GitHub provides it so the adapter can fail clearly without guessing.
 
@@ -217,7 +232,7 @@ The export is intentionally read-only: it prints editable Markdown, does not aut
 | Source | Adapter status | Recurring cron stance | Notes |
 | --- | --- | --- | --- |
 | `oss-ledger` | Healthy | Included in the configured daily run | Curated open-source source/tool ledger with offline local ingest. |
-| `hackernews` | `dry-run-only` | Not safe for recurring cron yet | Public HN Algolia search with user-generated content and external rate-limit review still required. |
+| `hackernews` | Healthy | Included in the configured daily run | Public HN Algolia story search is approved at the configured low volume with token-free live ingest and fixture-backed dry runs preserved for diagnostics. |
 | `github` | Healthy | Included in the configured daily run | Anonymous public GitHub repository search at low daily volume, with fixture-backed dry runs preserved for diagnostics and the live official API used for normal ingest. |
 | Reddit / app-store reviews / Product Hunt / broader crawl/search sources | Deferred | Do not schedule | Out of the current Wayfinder scope until safety and terms review are complete. |
 

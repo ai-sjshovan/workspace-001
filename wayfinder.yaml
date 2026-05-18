@@ -17,15 +17,15 @@ sources:
       pii_user_generated_content: low-curated-public-metadata
       hosted_dependencies: none
   hackernews:
-    status: dry-run-only
+    status: enabled
     kind: hackernews
-    notes: Deterministic fixture-backed dry runs are allowed; unattended live Algolia ingest still needs review for UGC handling and query-rate expectations.
+    notes: Approved for unattended low-volume Algolia search using the configured story-only queries; normal and scheduled ingest use the live official endpoint while fixture-backed dry runs remain available for diagnostics.
     risk:
       credentials: none
-      terms: review-required
-      rate_limits: review-required
+      terms: public-api-allowed
+      rate_limits: low-volume-search
       scraping: api-search
-      pii_user_generated_content: medium-user-generated-content
+      pii_user_generated_content: reviewed-story-metadata
       hosted_dependencies: algolia-hn-api
     fixture_path: research/hackernews-sample.json
     queries:
