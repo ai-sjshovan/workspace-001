@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import sqlite3
 import sys
 import time
+from pathlib import Path
 from typing import Any
 
 from . import __version__
@@ -418,6 +420,29 @@ def cmd_scheduled_ingest(args: argparse.Namespace) -> int:
     return 1 if failed else 0
 
 
+def cmd_schedule_command(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    config_path = Path(args.config).resolve() if args.config else Path.cwd() / "wayfinder.yaml"
+    config_path = config_path.resolve()
+    repo_root = config_path.parent
+    audit_path = audit_log_path(config)
+    cron_log_path = audit_path.parent / "wayfinder-cron.log"
+    schedule = str((config.get("cron") or {}).get("schedule") or "daily").strip() or "daily"
+    schedule_prefix = {
+        "hourly": "@hourly",
+        "daily": "@daily",
+        "weekly": "@weekly",
+        "monthly": "@monthly",
+    }.get(schedule.lower(), schedule)
+    runner = (
+        f"cd {shlex.quote(str(repo_root))} && "
+        f"{shlex.quote(sys.executable)} -m wayfinder --config {shlex.quote(str(config_path))} "
+        "--no-color scheduled-ingest"
+    )
+    print(f"{schedule_prefix} {runner} >> {shlex.quote(str(cron_log_path))} 2>&1")
+    return 0
+
+
 def cmd_search(args: argparse.Namespace) -> int:
     config = load_config(args.config)
     conn = connect(storage_path(config))
@@ -587,6 +612,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run manually even when cron.enabled is false in config",
     )
     scheduled.set_defaults(func=cmd_scheduled_ingest, dry_run=False)
+
+    schedule_command = subparsers.add_parser(
+        "schedule-command",
+        help="Print the scheduler command for the approved daily ingest path",
+    )
+    leaf_options(schedule_command)
+    schedule_command.set_defaults(func=cmd_schedule_command)
 
     search = subparsers.add_parser("search", help="Search stored signals")
     leaf_options(search)
