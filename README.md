@@ -73,7 +73,7 @@ The GitHub adapter stays anonymous by default, even if `GITHUB_TOKEN` is present
 
 ## Scheduled Ingest
 
-The daily runner is `python3 -m wayfinder scheduled-ingest`. In the current repo config, `cron.enabled: true` and `cron.schedule: daily` keep the operator-runnable daily path active for approved sources only.
+The exact daily production ingest command is `python3 -m wayfinder --no-color scheduled-ingest`. In the current repo config, `cron.enabled: true` and `cron.schedule: daily` keep that operator-runnable daily path active for approved sources only.
 
 Behavior:
 
@@ -85,8 +85,72 @@ Behavior:
 Example cron entry:
 
 ```cron
-17 4 * * * cd /path/to/workspace-001 && /usr/bin/python3 -m wayfinder scheduled-ingest >> logs/wayfinder-cron.log 2>&1
+17 4 * * * cd /path/to/workspace-001 && /usr/bin/python3 -m wayfinder --no-color scheduled-ingest >> logs/wayfinder-cron.log 2>&1
 ```
+
+## Daily Operator Runbook
+
+Use these commands from the repository root when checking or running the daily ingest.
+
+Run or confirm the scheduled path:
+
+```bash
+python3 -m wayfinder --no-color scheduled-ingest
+```
+
+Verify source health before or after the run:
+
+```bash
+python3 -m wayfinder --no-color sources list --health
+```
+
+Check the latest aggregate database counts and per-source last-ingest timestamps:
+
+```bash
+python3 -m wayfinder --no-color stats
+```
+
+Inspect the most recent scheduled-ingest audit events, including started, skipped, per-source, error, and finished records:
+
+```bash
+tail -n 20 logs/wayfinder-audit.log
+```
+
+Check the latest persisted ingest-run rows for exact inserted counts by source:
+
+```bash
+python3 - <<'PY'
+import sqlite3
+
+conn = sqlite3.connect(".ai-state/wayfinder/wayfinder.db")
+conn.row_factory = sqlite3.Row
+for row in conn.execute(
+    """
+    SELECT source, status, collected, inserted_signals, inserted_products,
+           inserted_opportunities, started_at, finished_at
+    FROM ingest_runs
+    ORDER BY id DESC
+    LIMIT 5
+    """
+):
+    print(dict(row))
+conn.close()
+PY
+```
+
+Filter the audit log down to failures only:
+
+```bash
+rg "wayfinder_scheduled_ingest_error|wayfinder_ingest_error" logs/wayfinder-audit.log || true
+```
+
+Confirm the unattended path stayed deterministic and spent no LLM tokens:
+
+```bash
+rg '"action": "wayfinder_scheduled_ingest_(started|source|skipped|finished|error)"|"token_free": true|"llm_tokens": 0' logs/wayfinder-audit.log
+```
+
+The unattended ingest boundary stays unchanged: the daily path is deterministic, records `token_free=true`, records `llm_tokens=0`, and does not spend LLM tokens.
 
 ## Source Safety
 
