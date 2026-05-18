@@ -78,6 +78,7 @@ class ScheduledIngestTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
+        (research / "github-sample.json").write_text('{"results":[]}', encoding="utf-8")
 
     def test_scheduled_ingest_is_blocked_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -106,7 +107,20 @@ class ScheduledIngestTests(unittest.TestCase):
             args = argparse.Namespace(config=str(config_path), no_color=True, allow_disabled=True, dry_run=False)
             stdout = io.StringIO()
 
-            with patch("wayfinder.cli.ingest_source", return_value=(3, "oss-ledger: ok")) as ingest_mock:
+            with patch(
+                "wayfinder.cli.ingest_source",
+                return_value=(
+                    {
+                        "raw_records": 1,
+                        "normalized": 3,
+                        "inserted_searchable_rows": 1,
+                        "inserted_signals": 1,
+                        "inserted_products": 1,
+                        "inserted_opportunities": 1,
+                    },
+                    "oss-ledger: ok",
+                ),
+            ) as ingest_mock:
                 with redirect_stdout(stdout):
                     rc = cmd_scheduled_ingest(args)
 
@@ -162,11 +176,24 @@ class ScheduledIngestTests(unittest.TestCase):
             finished_event = next(event for event in events if event["action"] == "wayfinder_scheduled_ingest_finished")
 
             self.assertEqual(rc, 0)
-            self.assertIn("oss-ledger: raw=1 inserted signals=1 products=1 opportunities=1", stdout.getvalue())
+            self.assertIn("scheduled-ingest: sources=4 approved=1 token_free=true llm_tokens=0", stdout.getvalue())
+            self.assertIn(
+                "oss-ledger: raw=1 searchable_rows=1 inserted signals=1 products=1 opportunities=1",
+                stdout.getvalue(),
+            )
+            self.assertIn("oss-ledger: searchable_rows_total=1", stdout.getvalue())
+            self.assertIn(
+                "scheduled-ingest: succeeded=1 skipped=3 failed=0 inserted_searchable_rows=1 "
+                "inserted_signals=1 inserted_products=1 inserted_opportunities=1 ",
+                stdout.getvalue(),
+            )
+            self.assertIn("duration_ms=", stdout.getvalue())
+            self.assertIn("token_free=true llm_tokens=0", stdout.getvalue())
             self.assertEqual(len(source_events), 1)
             self.assertEqual(source_events[0]["source"], "oss-ledger")
             self.assertEqual(source_events[0]["raw_records"], 1)
             self.assertEqual(source_events[0]["normalized"], 3)
+            self.assertEqual(source_events[0]["inserted_searchable_rows"], 1)
             self.assertEqual(source_events[0]["inserted_signals"], 1)
             self.assertEqual(source_events[0]["inserted_products"], 1)
             self.assertEqual(source_events[0]["inserted_opportunities"], 1)
@@ -174,13 +201,85 @@ class ScheduledIngestTests(unittest.TestCase):
             self.assertGreaterEqual(float(source_events[0]["duration_ms"]), 0.0)
             self.assertIs(source_events[0]["token_free"], True)
             self.assertEqual(source_events[0]["llm_tokens"], 0)
+            self.assertEqual(finished_event["source_count"], 4)
+            self.assertEqual(finished_event["approved_source_count"], 1)
             self.assertEqual(finished_event["approved_sources"], 1)
             self.assertEqual(finished_event["skipped_sources"], 3)
             self.assertEqual(finished_event["failed_sources"], 0)
+            self.assertEqual(finished_event["inserted_searchable_rows"], 1)
+            self.assertEqual(finished_event["inserted_signals"], 1)
+            self.assertEqual(finished_event["inserted_products"], 1)
+            self.assertEqual(finished_event["inserted_opportunities"], 1)
             self.assertIn("duration_ms", finished_event)
             self.assertGreaterEqual(float(finished_event["duration_ms"]), 0.0)
             self.assertIs(finished_event["token_free"], True)
             self.assertEqual(finished_event["llm_tokens"], 0)
+
+    def test_scheduled_ingest_reports_live_github_searchable_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self.seed_research(root)
+            config_path = root / "wayfinder.yaml"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "wayfinder:",
+                        "  storage_path: .ai-state/wayfinder/test.db",
+                        "  audit_log: logs/test-audit.log",
+                        "sources:",
+                        "  github:",
+                        "    status: enabled",
+                        "    kind: github",
+                        "    fixture_path: research/github-sample.json",
+                        "    queries:",
+                        '      - "startup ideas pain points"',
+                        "cron:",
+                        "  enabled: true",
+                        "  schedule: daily",
+                        "  token_free: true",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(config=str(config_path), no_color=True, allow_disabled=False, dry_run=False)
+            stdout = io.StringIO()
+            raw_records = [
+                {
+                    "name": "pain-radar",
+                    "full_name": "acme/pain-radar",
+                    "html_url": "https://github.com/acme/pain-radar",
+                    "description": "Founder pain search workflow for live ingest evidence",
+                    "stargazers_count": 58,
+                    "_wayfinder_queries": ["startup ideas pain points"],
+                    "_wayfinder_categories": ["market-research"],
+                }
+            ]
+
+            with patch("wayfinder.adapters.github.GitHubAdapter.collect", return_value=raw_records):
+                with redirect_stdout(stdout):
+                    rc = cmd_scheduled_ingest(args)
+
+            events = self.read_audit_events(root)
+            source_event = next(event for event in events if event["action"] == "wayfinder_scheduled_ingest_source")
+            finished_event = next(event for event in events if event["action"] == "wayfinder_scheduled_ingest_finished")
+
+            self.assertEqual(rc, 0)
+            self.assertIn(
+                "github: raw=1 searchable_rows=1 inserted signals=1 products=1 opportunities=1",
+                stdout.getvalue(),
+            )
+            self.assertIn("github: searchable_rows_total=1", stdout.getvalue())
+            self.assertEqual(source_event["source"], "github")
+            self.assertEqual(source_event["inserted_searchable_rows"], 1)
+            self.assertEqual(source_event["inserted_signals"], 1)
+            self.assertEqual(source_event["inserted_products"], 1)
+            self.assertEqual(source_event["inserted_opportunities"], 1)
+            self.assertEqual(finished_event["source_count"], 1)
+            self.assertEqual(finished_event["approved_source_count"], 1)
+            self.assertEqual(finished_event["approved_sources"], 1)
+            self.assertEqual(finished_event["failed_sources"], 0)
+            self.assertEqual(finished_event["inserted_searchable_rows"], 1)
 
     def test_schedule_command_prints_cron_ready_operator_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

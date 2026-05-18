@@ -353,9 +353,9 @@ class GitHubAdapterTests(unittest.TestCase):
             cfg = source_configs(config)["github"]
             args = argparse.Namespace(dry_run=True, config=str(config_path), no_color=True)
 
-            rc, message = ingest_source("github", cfg, args, config)
+            result, message = ingest_source("github", cfg, args, config)
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(result["inserted_searchable_rows"], 0)
             self.assertIn("github: dry-run queries=1 collected=1 normalized=3 signals=1 products=1 opportunities=1", message)
             self.assertFalse(storage_path.exists())
 

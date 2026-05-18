@@ -401,9 +401,9 @@ class HackerNewsAdapterTests(unittest.TestCase):
             cfg = source_configs(config)["hackernews"]
             args = argparse.Namespace(dry_run=True, config=str(config_path), no_color=True)
 
-            rc, message = ingest_source("hackernews", cfg, args, config)
+            result, message = ingest_source("hackernews", cfg, args, config)
 
-            self.assertEqual(rc, 0)
+            self.assertEqual(result["inserted_searchable_rows"], 0)
             self.assertIn("hackernews: dry-run queries=1 collected=1 normalized=1 signals=1", message)
             self.assertFalse(storage_path.exists())
 

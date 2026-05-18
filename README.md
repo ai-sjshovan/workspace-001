@@ -126,7 +126,7 @@ conn = sqlite3.connect(".ai-state/wayfinder/wayfinder.db")
 conn.row_factory = sqlite3.Row
 for row in conn.execute(
     """
-    SELECT source, status, collected, inserted_signals, inserted_products,
+    SELECT source, status, collected, inserted_searchable_rows, inserted_signals, inserted_products,
            inserted_opportunities, started_at, finished_at
     FROM ingest_runs
     ORDER BY id DESC
