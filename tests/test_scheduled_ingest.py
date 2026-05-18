@@ -3,13 +3,14 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-from wayfinder.cli import cmd_scheduled_ingest
+from wayfinder.cli import cmd_schedule_command, cmd_scheduled_ingest
 
 
 class ScheduledIngestTests(unittest.TestCase):
@@ -180,6 +181,23 @@ class ScheduledIngestTests(unittest.TestCase):
             self.assertGreaterEqual(float(finished_event["duration_ms"]), 0.0)
             self.assertIs(finished_event["token_free"], True)
             self.assertEqual(finished_event["llm_tokens"], 0)
+
+    def test_schedule_command_prints_cron_ready_operator_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            config_path = self.write_config(root, cron_enabled=True)
+            args = argparse.Namespace(config=str(config_path), no_color=True)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                rc = cmd_schedule_command(args)
+
+        self.assertEqual(rc, 0)
+        expected = (
+            f"@daily cd {root} && {sys.executable} -m wayfinder --config {config_path} "
+            f"--no-color scheduled-ingest >> {root / 'logs' / 'wayfinder-cron.log'} 2>&1"
+        )
+        self.assertEqual(stdout.getvalue().strip(), expected)
 
 
 if __name__ == "__main__":
