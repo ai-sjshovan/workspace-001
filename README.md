@@ -94,6 +94,8 @@ Print the exact scheduler-ready command for the current config and interpreter:
 python3 -m wayfinder --no-color schedule-command
 ```
 
+Use that helper to derive the current checkout's recurrence line instead of copying an older artifact or hard-coded cron entry from a different workspace.
+
 ## Daily Operator Runbook
 
 Use these commands from the repository root when checking or running the daily ingest.

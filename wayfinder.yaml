@@ -64,8 +64,10 @@ cron:
   enabled: true
   schedule: daily
   token_free: true
-  # Operator-runnable daily ingest command:
-  # python3 -m wayfinder scheduled-ingest
+  # Operator-runnable daily ingest recurrence helper:
+  # python3 -m wayfinder --no-color schedule-command
+  # Scheduled run path emitted by that helper:
+  # python3 -m wayfinder --no-color scheduled-ingest
 
 scoring:
   evidence_count_weight: 0.35
