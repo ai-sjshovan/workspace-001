@@ -10,7 +10,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-from wayfinder.cli import cmd_schedule_command, cmd_scheduled_ingest
+from wayfinder.cli import cmd_opportunities, cmd_schedule_command, cmd_scheduled_ingest, cmd_search
 
 
 class ScheduledIngestTests(unittest.TestCase):
@@ -280,6 +280,68 @@ class ScheduledIngestTests(unittest.TestCase):
             self.assertEqual(finished_event["approved_sources"], 1)
             self.assertEqual(finished_event["failed_sources"], 0)
             self.assertEqual(finished_event["inserted_searchable_rows"], 1)
+
+    def test_scheduled_ingest_populates_search_and_opportunity_surfaces(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            config_path = root / "wayfinder.yaml"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "wayfinder:",
+                        "  storage_path: .ai-state/wayfinder/test.db",
+                        "  audit_log: logs/test-audit.log",
+                        "sources:",
+                        "  github:",
+                        "    status: enabled",
+                        "    kind: github",
+                        "    fixture_path: research/github-sample.json",
+                        "    queries:",
+                        '      - "startup ideas pain points"',
+                        "cron:",
+                        "  enabled: true",
+                        "  schedule: daily",
+                        "  token_free: true",
+                        "",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            research = root / "research"
+            research.mkdir(parents=True, exist_ok=True)
+            (research / "github-sample.json").write_text('{"results":[]}', encoding="utf-8")
+            raw_records = [
+                {
+                    "name": "pain-radar",
+                    "full_name": "acme/pain-radar",
+                    "html_url": "https://github.com/acme/pain-radar",
+                    "description": "Founder pain search workflow for live ingest evidence",
+                    "stargazers_count": 58,
+                    "_wayfinder_queries": ["startup ideas pain points"],
+                    "_wayfinder_categories": ["market-research"],
+                }
+            ]
+            ingest_args = argparse.Namespace(config=str(config_path), no_color=True, allow_disabled=False, dry_run=False)
+            search_args = argparse.Namespace(config=str(config_path), no_color=True, query="pain", limit=5, json=False)
+            opportunities_args = argparse.Namespace(config=str(config_path), no_color=True, limit=5, json=False, rescore=False)
+            search_stdout = io.StringIO()
+            opportunities_stdout = io.StringIO()
+
+            with patch("wayfinder.adapters.github.GitHubAdapter.collect", return_value=raw_records):
+                rc = cmd_scheduled_ingest(ingest_args)
+
+            self.assertEqual(rc, 0)
+
+            with redirect_stdout(search_stdout):
+                self.assertEqual(cmd_search(search_args), 0)
+            self.assertIn("acme/pain-radar | github | market-research", search_stdout.getvalue())
+            self.assertIn("Founder pain search workflow for live ingest evidence", search_stdout.getvalue())
+            self.assertIn("startup ideas pain points", search_stdout.getvalue())
+
+            with redirect_stdout(opportunities_stdout):
+                self.assertEqual(cmd_opportunities(opportunities_args), 0)
+            self.assertIn("Inspect acme/pain-radar for leverage", opportunities_stdout.getvalue())
+            self.assertIn("Founder pain search workflow for live ingest evidence", opportunities_stdout.getvalue())
 
     def test_schedule_command_prints_cron_ready_operator_command(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
