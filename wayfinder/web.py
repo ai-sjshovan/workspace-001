@@ -396,12 +396,20 @@ def source_directory(source_names: list[str], active_source: str, activity_looku
         summary = (
             f"Signals {esc(activity.get('signal_count', 0))} · opportunities {esc(activity.get('opportunity_count', 0))}"
         )
+        latest_run_summary = (
+            f"Latest ingest evidence: {activity.get('last_run_status') or 'unknown'} at {activity.get('last_ingest_at') or 'never'} "
+            f"· searchable +{int(activity.get('last_run_inserted_searchable_rows') or 0)} "
+            f"· opportunities +{int(activity.get('last_run_inserted_opportunities') or 0)}"
+            if activity.get("last_ingest_at")
+            else "Latest ingest evidence: no runs recorded yet."
+        )
         cards.append(
             f"""<a class="row source-card{selected}" href="{esc(source_path(name))}">
   <p class="list-head">Source detail</p>
   <h2>{esc(name)}</h2>
   <p class="subtle">{summary}</p>
   <p class="subtle">Avg score {esc(activity.get('avg_score', 0))} · latest {esc(activity.get('latest_signal_at') or 'none yet')}</p>
+  <p class="subtle">{esc(latest_run_summary)}</p>
 </a>"""
         )
     return (

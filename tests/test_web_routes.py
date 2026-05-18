@@ -190,6 +190,9 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertIn('name="feature_gap"', body)
         self.assertIn("Top opportunities", body)
         self.assertIn("Open export", body)
+        self.assertIn("Latest ingest evidence: ok at 2026-05-18T00:01:00Z", body)
+        self.assertIn("searchable +2", body)
+        self.assertIn("opportunities +1", body)
 
         status, body = self.fetch(
             f"/?source={quote(self.source_name)}&product=Pain%20Radar&market=market-research&freshness=30&min_score=1&max_score=100&opportunity_sort=freshest&pain=reporting%20delays&feature_gap=deeper%20source%20drill-ins"
@@ -204,6 +207,11 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertIn('Apply opportunity filters', body)
         self.assertIn('href="/opportunities/1"', body)
         self.assertIn('href="/opportunities/1#task-draft-preview"', body)
+        self.assertIn(f"Source detail drill-in for {self.source_name}.", body)
+        self.assertIn(f"Latest signal captured: {self.recent_collected_at}", body)
+        self.assertIn("Ingest health:", body)
+        self.assertIn("finished 2026-05-18T00:01:00Z", body)
+        self.assertIn("searchable +2", body)
 
         status, body = self.fetch("/health")
         self.assertEqual(status, 200)
