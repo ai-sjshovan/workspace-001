@@ -345,7 +345,7 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("Source safety status", body)
         self.assertIn("Safe, blocked, and review-required adapters", body)
-        self.assertIn("Safe for unattended ingest once cron is explicitly enabled.", body)
+        self.assertIn("Safe for unattended ingest in the current daily run.", body)
         self.assertIn("Manual-only pending review or disabled.", body)
         self.assertIn(f'/sources/{quote(self.source_name)}', body)
 

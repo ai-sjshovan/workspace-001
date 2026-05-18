@@ -25,6 +25,7 @@ from .db import (
     ranked_opportunities,
     rescore_opportunities,
     search_signals,
+    source_activity,
 )
 from .models import scoring_weights, utc_now
 
@@ -68,6 +69,17 @@ def runnable_sources(config: dict[str, Any], dry_run: bool = False) -> dict[str,
 
 def approved_scheduled_sources(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return runnable_sources(config, dry_run=False)
+
+
+def runtime_source_config(cfg: dict[str, Any], *, dry_run: bool) -> dict[str, Any]:
+    if dry_run or "fixture_path" not in cfg:
+        return cfg
+    kind = str(cfg.get("kind") or "").strip().lower()
+    if kind not in {"github", "hackernews"}:
+        return cfg
+    live_cfg = dict(cfg)
+    live_cfg.pop("fixture_path", None)
+    return live_cfg
 
 
 def score_summary(row: sqlite3.Row) -> str:
@@ -188,7 +200,7 @@ def ingest_source(
 ) -> tuple[int, str]:
     started = utc_now()
     started_monotonic = time.perf_counter()
-    adapter = build_adapter(name, cfg)
+    adapter = build_adapter(name, runtime_source_config(cfg, dry_run=bool(args.dry_run)))
     raw = adapter.collect()
     batch = adapter.normalize(raw)
     query_count = len(cfg.get("queries", [])) if isinstance(cfg.get("queries"), list) else 0
@@ -490,11 +502,42 @@ def cmd_stats(args: argparse.Namespace) -> int:
     conn = connect(storage_path(config))
     try:
         data = counts(conn)
+        source_stats = {
+            name: source_activity(conn, name)
+            for name in sorted(source_configs(config))
+        }
         if args.json:
-            print(json.dumps(data, indent=2, sort_keys=True))
+            print(
+                json.dumps(
+                    {
+                        "counts": data,
+                        "sources": {
+                            name: {
+                                "signals": int(activity["signal_count"]),
+                                "opportunities": int(activity["opportunity_count"]),
+                                "last_ingest_at": str(activity["last_ingest_at"] or ""),
+                                "latest_signal_at": str(activity["latest_signal_at"] or ""),
+                                "health_status": str(activity["health_status"] or "unknown"),
+                            }
+                            for name, activity in source_stats.items()
+                        },
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
         else:
             for key, value in data.items():
                 print(f"{color(key + ':', BOLD, not args.no_color)} {value}")
+            print(color("source_activity:", BOLD, not args.no_color))
+            for name, activity in source_stats.items():
+                print(
+                    "  "
+                    f"{name}: signals={int(activity['signal_count'])} "
+                    f"opportunities={int(activity['opportunity_count'])} "
+                    f"last_ingest_at={activity['last_ingest_at'] or 'never'} "
+                    f"health={activity['health_status'] or 'unknown'}"
+                )
     finally:
         conn.close()
     return 0

@@ -2,14 +2,14 @@
 
 Use this checklist before changing any source from `dry-run-only` to `enabled` for unattended cron ingest.
 
-This guide is additive to the current source policies in `wayfinder.yaml`. It does not change the meaning of any policy field, and it does not override the default guardrail that keeps `cron.enabled: false` until unattended ingest is explicitly approved.
+This guide is additive to the current source policies in `wayfinder.yaml`. It does not change the meaning of any policy field, and it does not override the need for an explicit top-level cron decision in config.
 
 ## Review Surfaces
 
 - `wayfinder.yaml` is the source of truth for `status`, `notes`, and `risk.*` policy fields.
 - `python3 -m wayfinder sources list --health` is the operator review surface for the configured source policies, and it prints `review=...`, `unattended=...`, and `why=...` summaries for each adapter.
 - The source catalog in `wayfinder/web.py` exposes the same safety metadata under `policy_status`, `risk`, and `unattended_cron`.
-- `python3 -m wayfinder scheduled-ingest` is the unattended path and must stay blocked by `cron.enabled: false` until approval is complete.
+- `python3 -m wayfinder scheduled-ingest` is the unattended path and follows the current top-level `cron.enabled` setting.
 
 ## Current Adapter Status
 
@@ -17,9 +17,9 @@ Use this summary when deciding whether a source is safe for recurring cron today
 
 | Source | Current status | Recurring cron stance | Why |
 | --- | --- | --- | --- |
-| `oss-ledger` | Healthy | Safe for recurring cron after the separate `cron.enabled` switch is explicitly approved | Curated local ledger, no credentials, no hosted dependency, and risk fields are already reviewed. |
+| `oss-ledger` | Healthy | Included in the configured daily run | Curated local ledger, no credentials, no hosted dependency, and risk fields are already reviewed. |
 | `hackernews` | `dry-run-only` | Not safe for recurring cron yet | Manual dry runs are acceptable, but unattended live Algolia use still needs terms, rate-limit, and user-generated-content review. |
-| `github` | `dry-run-only` | Not safe for recurring cron yet | Anonymous public search is acceptable for manual dry runs, but unattended API use still needs hosted-dependency and rate-limit review. |
+| `github` | Healthy | Included in the configured daily run | Anonymous public repository search is approved at the configured low daily volume, with no credentials required and fixture-backed dry runs preserved for diagnostics. |
 | Reddit / app-store reviews / Product Hunt / broader crawl-search sources | Deferred | Do not add to recurring cron | These sources remain outside the current Wayfinder scope until source safety and terms review are completed. |
 
 ## Checklist
@@ -59,7 +59,7 @@ The CLI source review summary should be interpreted as:
 - `review=approved`: the adapter is reviewed for unattended use.
 - `review=pending`: the adapter is still limited to manual or review-only usage.
 - `review=blocked`: the adapter is intentionally disabled in config.
-- `unattended=eligible`: the adapter may participate in unattended ingest once the separate global cron switch is enabled.
+- `unattended=eligible`: the adapter may participate in unattended ingest whenever the top-level cron switch is enabled.
 - `unattended=blocked`: the adapter must stay out of unattended ingest because it is pending review or disabled.
 
 ## Promotion Rules
@@ -70,9 +70,9 @@ A source can move from `dry-run-only` to `enabled` only when all of the followin
 - `risk.terms`, `risk.rate_limits`, `risk.scraping`, `risk.credentials`, `risk.pii_user_generated_content`, and `risk.hosted_dependencies` all reflect an acceptable unattended posture rather than unresolved review work.
 - Manual dry runs are already acceptable for the source and there is no remaining note that limits it to review-only or ad hoc use.
 - The source is safe to include in `approved_scheduled_sources()`, which means it is acceptable for normal ingest without `--dry-run`.
-- The default-disabled cron stance is still preserved until an operator separately enables `cron.enabled: true`.
+- The top-level `cron.enabled` choice in `wayfinder.yaml` matches the intended operator posture for the environment where the review is being applied.
 
-Promotion to `enabled` does not by itself turn cron on. The unattended path remains blocked until the separate top-level cron switch is explicitly approved.
+Promotion to `enabled` does not by itself change the top-level cron switch. The source gate and the global scheduler gate stay separate.
 
 ## Approval Or Rejection Decision
 
@@ -88,7 +88,7 @@ Until a source reaches the approved path above, it must stay out of unattended i
 
 The current unattended guardrails must remain unchanged:
 
-- `cron.enabled: false` blocks `python3 -m wayfinder scheduled-ingest` unless an operator uses `--allow-disabled` for manual validation.
+- `cron.enabled` controls whether `python3 -m wayfinder scheduled-ingest` runs directly or requires `--allow-disabled` for manual validation.
 - Scheduled ingest only runs `status: enabled` sources through `approved_scheduled_sources()`.
 - `dry-run-only`, `needs-review`, and `disabled` sources are skipped with audit log entries.
 - Scheduled ingest records `token_free=true` and `llm_tokens=0` audit metadata for the unattended path.
