@@ -55,6 +55,29 @@ class ScheduledIngestTests(unittest.TestCase):
         audit_path = root / "logs" / "test-audit.log"
         return [json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines()]
 
+    def seed_research(self, root: Path) -> None:
+        research = root / "research"
+        research.mkdir(parents=True, exist_ok=True)
+        (research / "open-source-intel-ledger.yaml").write_text(
+            "\n".join(
+                [
+                    "repos:",
+                    "  - name: sample-ledger-entry",
+                    "    url: https://example.com/sample-ledger-entry",
+                    "    category: sample-category",
+                    "    useful_outputs:",
+                    "      - one useful output",
+                    "    safety_risks:",
+                    "      - low risk",
+                    "    api_keys_required: none",
+                    "    install_complexity: low",
+                    "    verdict: safe sample verdict",
+                    "",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
     def test_scheduled_ingest_is_blocked_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -121,6 +144,42 @@ class ScheduledIngestTests(unittest.TestCase):
                 },
             )
             self.assertFalse(events[0]["enabled"])
+
+    def test_scheduled_ingest_records_real_source_outcomes_in_audit_trail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            self.seed_research(root)
+            config_path = self.write_config(root, cron_enabled=True)
+            args = argparse.Namespace(config=str(config_path), no_color=True, allow_disabled=False, dry_run=False)
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                rc = cmd_scheduled_ingest(args)
+
+            events = self.read_audit_events(root)
+            source_events = [event for event in events if event["action"] == "wayfinder_scheduled_ingest_source"]
+            finished_event = next(event for event in events if event["action"] == "wayfinder_scheduled_ingest_finished")
+
+            self.assertEqual(rc, 0)
+            self.assertIn("oss-ledger: raw=1 inserted signals=1 products=1 opportunities=1", stdout.getvalue())
+            self.assertEqual(len(source_events), 1)
+            self.assertEqual(source_events[0]["source"], "oss-ledger")
+            self.assertEqual(source_events[0]["raw_records"], 1)
+            self.assertEqual(source_events[0]["normalized"], 3)
+            self.assertEqual(source_events[0]["inserted_signals"], 1)
+            self.assertEqual(source_events[0]["inserted_products"], 1)
+            self.assertEqual(source_events[0]["inserted_opportunities"], 1)
+            self.assertIn("duration_ms", source_events[0])
+            self.assertGreaterEqual(float(source_events[0]["duration_ms"]), 0.0)
+            self.assertIs(source_events[0]["token_free"], True)
+            self.assertEqual(source_events[0]["llm_tokens"], 0)
+            self.assertEqual(finished_event["approved_sources"], 1)
+            self.assertEqual(finished_event["skipped_sources"], 3)
+            self.assertEqual(finished_event["failed_sources"], 0)
+            self.assertIn("duration_ms", finished_event)
+            self.assertGreaterEqual(float(finished_event["duration_ms"]), 0.0)
+            self.assertIs(finished_event["token_free"], True)
+            self.assertEqual(finished_event["llm_tokens"], 0)
 
 
 if __name__ == "__main__":
