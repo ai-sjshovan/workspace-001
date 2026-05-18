@@ -183,6 +183,23 @@ rg '"action": "wayfinder_scheduled_ingest_(started|source|skipped|finished|error
 
 The unattended ingest boundary stays unchanged: the daily path is deterministic, records `token_free=true`, records `llm_tokens=0`, and does not spend LLM tokens.
 
+## Daily Ingest Acceptance Evidence
+
+Use this checklist when QA needs to verify the live daily-ingest gate without redoing the separate dashboard freshness work.
+
+- `python3 -m wayfinder --no-color schedule-command` prints the scheduler-ready `@daily ... scheduled-ingest >> .../logs/wayfinder-cron.log 2>&1` line for the current checkout.
+- `python3 -m wayfinder --no-color scheduled-ingest` runs directly, without `--dry-run` and without `--allow-disabled`, and prints the top-line source counts plus final `inserted_searchable_rows`, `inserted_signals`, `inserted_products`, `inserted_opportunities`, `duration_ms`, `token_free=true`, and `llm_tokens=0`.
+- `python3 -m wayfinder --no-color sources list --health` shows the current source posture and latest per-source persisted run evidence, including `review=approved`, `unattended=eligible`, `latest_run=live`, `last_ingest_at`, and inserted totals.
+- `python3 -m wayfinder --no-color stats` confirms the aggregate stored counts plus `source_activity` timestamps after the same run.
+- `tail -n 20 logs/wayfinder-audit.log` shows the matching `wayfinder_scheduled_ingest_started`, `wayfinder_scheduled_ingest_source`, and `wayfinder_scheduled_ingest_finished` events for that run.
+
+Pass criteria for the current live-source posture:
+
+- `wayfinder.yaml` keeps `cron.enabled: true` and `cron.schedule: daily`.
+- Approved sources remain `oss-ledger`, `hackernews`, and `github`; the daily path does not widen scope beyond those reviewed sources.
+- The scheduled run preserves source safety and determinism: it stays token-free, records `llm_tokens=0`, and emits per-source counts and total duration in the audit trail.
+- QA does not need to re-prove dashboard cards or page freshness here; the acceptance gate is the operator schedule command plus CLI and audit evidence above.
+
 ## Source Safety
 
 Promotion and review steps for unattended ingest live in `docs/source-review-checklist.md`.
