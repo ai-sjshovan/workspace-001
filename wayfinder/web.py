@@ -1012,6 +1012,20 @@ def source_opportunity_rows(rows: list[dict[str, Any]]) -> str:
 
 def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> str:
     risk = source_entry["risk"]
+    unresolved = source_entry["risk_summary"]["unresolved"]
+    unattended_summary = (
+        "Eligible for unattended ingest in the current daily schedule."
+        if source_entry["unattended_cron"]["eligible"] and source_entry["unattended_cron"]["global_cron_enabled"]
+        else "Eligible for unattended ingest once the global cron switch is explicitly enabled."
+        if source_entry["unattended_cron"]["eligible"]
+        else "Manual-only until review is completed or the adapter is re-enabled."
+    )
+    selected_record = detail.get("selected_signal") if isinstance(detail.get("selected_signal"), dict) else None
+    sample_state = (
+        f"Focused record selected: {selected_record.get('title') or 'untitled'}."
+        if selected_record
+        else "Showing the latest source-linked sample rows captured in local storage."
+    )
     config_items = "".join(
         f'<div class="mini-item"><strong>{esc(key)}</strong><div class="subtle">{esc(value)}</div></div>'
         for key, value in sorted(source_entry["config"].items())
@@ -1037,12 +1051,48 @@ def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> 
       <div>
         <p class="list-head">Safety metadata</p>
         <div class="mini-list">
+          <div class="mini-item"><strong>Review state</strong><div class="subtle">{esc(source_entry['review'])} · {esc(source_entry['why'])}</div></div>
+          <div class="mini-item"><strong>Unattended status</strong><div class="subtle">{esc(unattended_summary)}</div></div>
           <div class="mini-item"><strong>Credentials</strong><div class="subtle">{esc(risk['credentials'])}</div></div>
           <div class="mini-item"><strong>Terms</strong><div class="subtle">{esc(risk['terms'])}</div></div>
           <div class="mini-item"><strong>Rate limits</strong><div class="subtle">{esc(risk['rate_limits'])}</div></div>
           <div class="mini-item"><strong>Scraping</strong><div class="subtle">{esc(risk['scraping'])}</div></div>
           <div class="mini-item"><strong>PII / UGC</strong><div class="subtle">{esc(risk['pii_user_generated_content'])}</div></div>
           <div class="mini-item"><strong>Hosted dependencies</strong><div class="subtle">{esc(risk['hosted_dependencies'])}</div></div>
+          <div class="mini-item"><strong>Outstanding review flags</strong><div class="subtle">{esc(', '.join(unresolved) if unresolved else 'none')}</div></div>
+          <div class="mini-item"><strong>Adapter health note</strong><div class="subtle">{esc(source_entry['health']['message'])}</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="panel">
+    <section class="toolbar">
+      <div>
+        <p class="list-head">Adapter review summary</p>
+        <h2>Read-only adapter posture for {esc(source_entry['key'])}</h2>
+        <p class="subtle">This page does not run ingest, mutate source policy, or change adapter config. It only surfaces stored evidence and sanitized config for operator review.</p>
+      </div>
+      <div class="toolbar-links">
+        {health_status_badge(str(source_entry['health']['label']))}
+        {policy_status_badge(str(source_entry['policy_status']))}
+        <span class="tag">{esc(source_entry['review'])}</span>
+      </div>
+    </section>
+    <div class="detail-grid">
+      <div>
+        <p class="list-head">Adapter state</p>
+        <div class="mini-list">
+          <div class="mini-item"><strong>Health status</strong><div class="subtle">{esc(source_entry['health']['label'])} · {esc(source_entry['health']['message'])}</div></div>
+          <div class="mini-item"><strong>Review notes</strong><div class="subtle">{esc(source_entry['notes'] or 'No operator notes recorded.')}</div></div>
+          <div class="mini-item"><strong>Sample records</strong><div class="subtle">{esc(sample_state)}</div></div>
+        </div>
+      </div>
+      <div>
+        <p class="list-head">Latest run evidence</p>
+        <div class="mini-list">
+          <div class="mini-item"><strong>Latest run</strong><div class="subtle">{esc(detail.get('last_run_status') or 'unknown')} at {esc(detail.get('last_ingest_at') or 'never')}</div></div>
+          <div class="mini-item"><strong>Searchable rows</strong><div class="subtle">{esc(detail.get('last_run_inserted_searchable_rows') or 0)} searchable rows from the latest ingest run.</div></div>
+          <div class="mini-item"><strong>Opportunities added</strong><div class="subtle">{esc(detail.get('last_run_inserted_opportunities') or 0)} source-linked opportunities from the latest ingest run.</div></div>
         </div>
       </div>
     </div>
@@ -1053,7 +1103,7 @@ def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> 
     <section class="toolbar">
       <div>
         <p class="list-head">Recent source records</p>
-        <p class="subtle">Review the latest source-linked signals and opportunity records without leaving the dashboard.</p>
+        <p class="subtle">Review the latest source-linked signals and opportunity records without leaving the dashboard. Sample rows stay read-only and reflect stored local evidence only.</p>
       </div>
       <div class="toolbar-links">
         <a href="/search?source={quote_plus(source_entry['key'])}">Open search results</a>
@@ -1072,7 +1122,7 @@ def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> 
     </div>
   </section>
   <section class="row">
-    <p class="list-head">Config snapshot</p>
+    <p class="list-head">Sanitized config snapshot</p>
     <div class="mini-list">{config_items}</div>
   </section>
 </div>"""
