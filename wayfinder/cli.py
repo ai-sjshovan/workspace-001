@@ -29,6 +29,7 @@ from .db import (
     search_signals,
     source_activity,
 )
+from .engine_registry import registry_snapshot
 from .models import scoring_weights, utc_now
 
 
@@ -233,6 +234,29 @@ def cmd_sources(args: argparse.Namespace) -> int:
     finally:
         if conn is not None:
             conn.close()
+    return 0
+
+
+def cmd_engines(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    engines = registry_snapshot(config)
+    if args.json:
+        print(json.dumps(engines, indent=2, sort_keys=True))
+        return 0
+    if not engines:
+        print(color("No engines configured.", DIM, not args.no_color))
+        return 0
+    for engine in engines:
+        importable = color("yes", GREEN, not args.no_color) if engine["importable"] else color("no", YELLOW, not args.no_color)
+        object_name = engine["object"] or "-"
+        print(
+            f"{color(engine['name'], BOLD, not args.no_color)} module={engine['module'] or '-'} "
+            f"object={object_name} importable={importable} sensors_only={str(engine['sensors_only']).lower()}"
+        )
+        if engine["notes"]:
+            print(f"  notes={engine['notes']}")
+        if engine["error"]:
+            print(f"  error={engine['error']}")
     return 0
 
 
@@ -698,12 +722,13 @@ def cmd_stats(args: argparse.Namespace) -> int:
                         f"products+{item['inserted_products']} opportunities+{item['inserted_opportunities']}"
                     )
             print(f"{color('real_source_signal_count:', BOLD, not args.no_color)} {real_source_signal_count}")
+            print(f"{color('source_activity:', BOLD, not args.no_color)}")
             for item in source_rows:
                 print(
                     "  "
-                    f"{item['source']} mode={item['evidence_mode']} signals={item['signal_count']} "
-                    f"opportunities={item['opportunity_count']} last_signal={item['last_signal_at'] or 'none'} "
-                    f"last_ingest={item['last_ingest_at'] or 'none'}"
+                    f"{item['source']}: signals={item['signal_count']} opportunities={item['opportunity_count']} "
+                    f"mode={item['evidence_mode']} last_signal={item['last_signal_at'] or 'none'} "
+                    f"last_ingest_at={item['last_ingest_at'] or 'none'}"
                 )
     finally:
         conn.close()
@@ -735,6 +760,13 @@ def build_parser() -> argparse.ArgumentParser:
     sources_list.add_argument("--health", action="store_true", help="Run adapter health checks")
     sources_list.add_argument("--json", action="store_true")
     sources_list.set_defaults(func=cmd_sources)
+
+    engines = subparsers.add_parser("engines", help="Inspect configured external engines")
+    engines_sub = engines.add_subparsers(dest="engines_command", required=True)
+    engines_list = engines_sub.add_parser("list", help="List configured external engines")
+    leaf_options(engines_list)
+    engines_list.add_argument("--json", action="store_true")
+    engines_list.set_defaults(func=cmd_engines)
 
     ingest = subparsers.add_parser("ingest", help="Collect and normalize source data")
     leaf_options(ingest)

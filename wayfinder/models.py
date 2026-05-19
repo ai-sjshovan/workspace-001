@@ -30,6 +30,15 @@ class SourceReviewPolicy:
 
 
 @dataclass(slots=True)
+class EngineDefinition:
+    name: str
+    module: str = ""
+    object_name: str = ""
+    notes: str = ""
+    sensors_only: bool = True
+
+
+@dataclass(slots=True)
 class Signal:
     source: str
     source_id: str

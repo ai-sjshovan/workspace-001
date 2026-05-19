@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wayfinder"
+version = "0.1.0"
+description = "Local-first SaaS and product research pipeline for Codex Foundry"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "PyYAML>=6,<7",
+]
+
+[project.scripts]
+wayfinder = "wayfinder.cli:main"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["wayfinder*"]

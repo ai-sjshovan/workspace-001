@@ -9,19 +9,23 @@ The first version is intentionally simple:
 - SQLite FTS powers local search before we add embeddings or a vector database
 - a small read-only dashboard makes the database browsable
 - external sources are explicit in `wayfinder.yaml`
+- external engines are registered separately from sources
 
 ## Current Acceptance Target
 
 Wayfinder is currently operating against the V1 acceptance target already present on `project/wayfinder`: deterministic, token-free ingest; explicit source-safety controls; read-only browse/detail/export surfaces; and the existing CLI and web smoke checks.
 
-V2 implementation work is not authorized by default. Unless an operator explicitly reopens the project for V2, the current branch should only preserve and clarify the V1 baseline rather than start a new feature slice.
+This slice adds V2 foundation only where it supports the existing internal API/CLI tool shape: standard pip packaging plus a separate external-engine registry surface. It does not add tmux workflow, dashboard polish, paid services, or required LLM execution.
 
 ## Commands
 
 From the repository root:
 
 ```bash
+python3 -m pip install --user --break-system-packages -e .
+wayfinder --help
 python3 -m wayfinder sources list --health
+python3 -m wayfinder engines list --no-color
 python3 -m wayfinder ingest --source oss-ledger
 python3 -m wayfinder scheduled-ingest
 python3 -m wayfinder ingest --source github
@@ -39,10 +43,12 @@ python3 -m wayfinder serve --port 8766
 
 - Config: `wayfinder.yaml`
 - Architecture: `docs/architecture.md`
+- Engineering practices: `docs/engineering-practices.md`
 - Source review checklist: `docs/source-review-checklist.md`
 - OSS source ledger: `research/open-source-intel-ledger.yaml`
 - SQLite database: `.ai-state/wayfinder/wayfinder.db`
 - Audit log: `logs/wayfinder-audit.log`
+- Installed CLI: `wayfinder`
 - Repo-local CLI: `python3 -m wayfinder`
 - Foundry target mapping: `.codex-foundry/TARGET_REPO` -> `workspace-001` on `project/wayfinder`
 
@@ -51,6 +57,7 @@ python3 -m wayfinder serve --port 8766
 Verified in `workspace-001` on the configured `project/wayfinder` branch.
 
 - Entrypoints: repo-local CLI via `python3 -m wayfinder` and the read-only dashboard via `python3 -m wayfinder serve --port 8766`
+- Packaging: editable installs expose the same CLI as `wayfinder ...` through `pyproject.toml`
 - Confirmed routes: `/` renders the dashboard and `/health` returns a readiness payload with `ok`, `service`, `config`, `database`, and `storage_path`
 - Confirmed CLI smoke path from the repo root: `python3 -m wayfinder sources list --health`, `python3 -m wayfinder scheduled-ingest`, `python3 -m wayfinder search saas`, `python3 -m wayfinder products --limit 20`, `python3 -m wayfinder opportunities --limit 20`, and `python3 -m wayfinder stats`
 - Current approved ingest baseline: `oss-ledger`, `hackernews`, and `github` are enabled for unattended ingest
@@ -68,6 +75,21 @@ Each adapter implements three methods:
 - `normalize()` converts raw records into `Signal`, `ProductIntel`, and `Opportunity` records.
 
 New sources should start as `dry-run-only` adapters before being enabled in recurring cron. Sources that require credentials, scrape pages, or collect user-generated content need an explicit safety review before unattended collection.
+
+## Engine Registry
+
+Wayfinder now keeps external engines in a separate `engines:` section in `wayfinder.yaml`.
+
+- Engines are sensors, not copied core logic.
+- Engines are inspected independently from approved ingest sources.
+- The current foundation only lists configured engines and reports importability.
+- Registry checks stay deterministic and local-only.
+
+Use:
+
+```bash
+python3 -m wayfinder engines list --no-color
+```
 
 The approved unattended Hacker News configuration in `wayfinder.yaml` is:
 

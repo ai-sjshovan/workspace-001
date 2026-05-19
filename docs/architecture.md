@@ -5,11 +5,13 @@ Wayfinder is a local-first product intelligence pipeline for Codex Foundry. Its 
 ## Principles
 
 - Daily ingestion does not call LLMs.
-- Every source is an adapter with the same contract.
+- Sources and engines are separate surfaces.
 - Evidence is stored before interpretation.
 - SQLite FTS is the first search layer; vector search is optional later.
 - Paid or fragile sources are disabled until reviewed.
 - Sources move through explicit safety states before unattended cron use.
+- API-first, CLI-second, UI-last.
+- External engines act as sensors; Wayfinder does not copy their core logic into the local scoring path.
 
 ## Flow
 
@@ -29,6 +31,15 @@ Each adapter exposes:
 - `fingerprint(record)` to produce a stable dedupe key.
 
 Adapters may read API keys from environment variables, but v1 sources should work without secrets.
+
+## Engine Registry
+
+`engines:` is separate from `sources:` in `wayfinder.yaml`.
+
+- Engines are importable external sensor definitions, not ingest adapters.
+- The registry only proves configuration and importability in this slice.
+- `python3 -m wayfinder engines list --no-color` is the operator-facing inspection command.
+- Engine registration must stay deterministic and local-output friendly.
 
 ## Source Safety
 
@@ -81,4 +92,4 @@ The v1 web UI is intentionally small:
 - products page
 - opportunities page
 
-The CLI remains the primary automation surface.
+The API and SQLite model remain the primary product surface. The CLI is the operator automation layer over that model, and the web UI stays intentionally small and read-only.
