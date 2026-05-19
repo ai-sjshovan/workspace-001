@@ -97,19 +97,19 @@ Behavior:
 - writes source-level counts, duration, and error details to `logs/wayfinder-audit.log`
 - records `token_free=true` and `llm_tokens=0` for the scheduled run path
 
-Example cron entry:
-
-```cron
-17 4 * * * cd /path/to/workspace-001 && /usr/bin/python3 -m wayfinder --no-color scheduled-ingest >> logs/wayfinder-cron.log 2>&1
-```
-
-Print the exact scheduler-ready command for the current config and interpreter:
+The scheduler wiring should come from the live helper output, not a copied historical cron line:
 
 ```bash
 python3 -m wayfinder --no-color schedule-command
 ```
 
-Use that helper to derive the current checkout's recurrence line instead of copying an older artifact or hard-coded cron entry from a different workspace.
+Current output shape:
+
+```cron
+@daily cd /path/to/workspace-001 && /usr/bin/python3 -m wayfinder --config /path/to/workspace-001/wayfinder.yaml --no-color scheduled-ingest >> /path/to/workspace-001/logs/wayfinder-cron.log 2>&1
+```
+
+Use that helper to derive the exact recurrence line for the current checkout, interpreter, config path, and log path instead of copying an older artifact from a different workspace. Recurrence is triggered when cron or another scheduler runs the emitted line, which `cd`s into the repo and invokes the approved non-dry-run `scheduled-ingest` path.
 
 ## Daily Operator Runbook
 
@@ -146,6 +146,13 @@ Inspect the most recent scheduled-ingest audit events, including started, skippe
 ```bash
 tail -n 20 logs/wayfinder-audit.log
 ```
+
+If the daily recurrence fails, check these first:
+
+- rerun `python3 -m wayfinder --no-color schedule-command` and confirm the installed scheduler still matches the emitted line
+- run `python3 -m wayfinder --no-color scheduled-ingest` from the repo root to confirm the production path still starts cleanly
+- inspect `tail -n 20 logs/wayfinder-audit.log` for `wayfinder_scheduled_ingest_error`, skipped-source reasons, or a missing `wayfinder_scheduled_ingest_finished`
+- verify `python3 -m wayfinder --no-color sources list --health` still shows the intended sources as approved for unattended runs
 
 Check the latest persisted ingest-run rows for exact inserted counts by source:
 
