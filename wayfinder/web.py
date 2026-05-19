@@ -8,7 +8,8 @@ from typing import Any
 from urllib.parse import parse_qs, quote, quote_plus, unquote, urlparse
 
 from .adapters import build_adapter
-from .config import source_configs, source_policy, source_review_summary, storage_path
+from .audit import latest_scheduled_ingest_summary
+from .config import audit_log_path, source_configs, source_policy, source_review_summary, storage_path
 from .db import (
     browse_signals,
     connect,
@@ -258,7 +259,7 @@ def adapter_health_snapshot(name: str, cfg: dict[str, Any], policy_status: str) 
     }
 
 
-def source_status_overview(config: dict[str, Any]) -> dict[str, Any]:
+def source_status_overview(config: dict[str, Any], conn: Any | None = None) -> dict[str, Any]:
     payload = source_catalog_payload(config)
     raw_sources = source_configs(config)
     counts = {
@@ -272,17 +273,120 @@ def source_status_overview(config: dict[str, Any]) -> dict[str, Any]:
     sources: list[dict[str, Any]] = []
     for item in payload["sources"]:
         health = adapter_health_snapshot(item["key"], raw_sources.get(item["key"], {}), str(item["policy_status"]))
+        activity = source_activity(conn, item["key"]) if conn is not None else {}
         counts[str(item["policy_status"])] = counts.get(str(item["policy_status"]), 0) + 1
         if health["label"] == "ok":
             counts["healthy"] += 1
         elif health["label"] == "fail":
             counts["failing"] += 1
-        sources.append({**item, "health": health})
+        sources.append({**item, "health": health, "activity": activity})
     return {
         **payload,
         "sources": sources,
         "counts": counts,
     }
+
+
+def source_entry_map(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {str(item["key"]): item for item in payload.get("sources", [])}
+
+
+def source_evidence_mode(entry: dict[str, Any] | None) -> tuple[str, str, str]:
+    if not entry:
+        return "unknown", "", "Source evidence mode is unknown."
+    kind = str(entry.get("kind") or "").strip().lower()
+    policy_status = str(entry.get("policy_status") or entry.get("status") or "").strip().lower()
+    config = entry.get("config") if isinstance(entry.get("config"), dict) else {}
+    activity = entry.get("activity") if isinstance(entry.get("activity"), dict) else {}
+    if kind == "static_ledger":
+        return "static-ledger", "warn", "Curated static-ledger evidence, not a live daily source."
+    if activity.get("last_ingest_at") and not activity.get("last_run_dry_run"):
+        return "real-source", "good", "Live source records came from the most recent scheduled or manual ingest run."
+    if policy_status == "enabled":
+        return "real-source", "good", "This source is configured for live ingest; fixture inputs are kept only for dry-run diagnostics."
+    if config.get("fixture_path"):
+        return "fixture-backed", "warn", "Fixture-backed adapter evidence for manual validation, not live daily records yet."
+    return "real-source", "good", "Live source records are eligible to reflect daily external ingest activity."
+
+
+def source_evidence_badge(entry: dict[str, Any] | None) -> str:
+    label, tone, _ = source_evidence_mode(entry)
+    class_name = f"tag {tone}".strip()
+    return f'<span class="{class_name}">{esc(label)}</span>'
+
+
+def scheduled_ingest_panel(
+    payload: dict[str, Any],
+    activity_by_source: dict[str, dict[str, Any]],
+    scheduled: dict[str, Any] | None,
+) -> str:
+    source_map = source_entry_map(payload)
+    searchable_updated_at = max((str(item.get("latest_signal_at") or "") for item in activity_by_source.values()), default="")
+    real_source_rows = 0
+    fixture_or_static_rows = 0
+    for name, activity in activity_by_source.items():
+        entry = source_map.get(name)
+        label, _, _ = source_evidence_mode(entry)
+        count = int(activity.get("signal_count", 0))
+        if label == "real-source":
+            real_source_rows += count
+        else:
+            fixture_or_static_rows += count
+    if scheduled is None:
+        headline = "No scheduled-ingest audit history recorded yet."
+        run_items = '<p class="subtle">No scheduled source outcomes recorded yet.</p>'
+        status_label = "warning"
+    elif scheduled["status"] == "blocked":
+        headline = f"Last scheduled-ingest attempt was blocked at {esc(scheduled.get('finished_at') or scheduled.get('started_at') or 'unknown')}."
+        run_items = f'<div class="mini-item"><strong>blocked</strong><div class="subtle">reason {esc(scheduled.get("reason") or "unknown")}</div></div>'
+        status_label = "warning"
+    else:
+        headline = (
+            f"Last scheduled-ingest attempt finished at {esc(scheduled.get('finished_at') or scheduled.get('started_at') or 'unknown')} "
+            f"with status {esc(scheduled.get('status') or 'unknown')}."
+        )
+        run_items = "".join(
+            f"""<div class="mini-item">
+  <strong>{esc(item['source'])}</strong>
+  <div class="subtle">status {esc(item['status'])} · signals +{esc(item['inserted_signals'])} · products +{esc(item['inserted_products'])} · opportunities +{esc(item['inserted_opportunities'])}</div>
+</div>"""
+            for item in scheduled.get("source_outcomes", [])
+        ) or '<p class="subtle">No scheduled source outcomes recorded yet.</p>'
+        status_label = str(scheduled.get("status") or "warning")
+    if real_source_rows == 0:
+        evidence_state = "No real-source searchable records have been indexed yet. Search is still backed by static-ledger or fixture-backed evidence."
+    else:
+        evidence_state = f"Real-source searchable records indexed: {real_source_rows}. Fixture/static evidence rows: {fixture_or_static_rows}."
+    return f"""<section class="panel">
+  <section class="toolbar">
+    <div>
+      <p class="list-head">Daily ingest evidence</p>
+      <h2>{headline}</h2>
+      <p class="subtle">Read-only ingest evidence from the audit log and local database. No web controls write data or trigger ingest.</p>
+    </div>
+    <div class="toolbar-links">
+      {health_status_badge(status_label)}
+      {source_status_tag(f"searchable updated {searchable_updated_at or 'none'}")}
+    </div>
+  </section>
+  <section class="grid">
+    <div class="metric"><strong>{esc(searchable_updated_at or 'none')}</strong><span>Searchable data last updated</span></div>
+    <div class="metric"><strong>{esc(real_source_rows)}</strong><span>Real-source signal rows indexed</span></div>
+    <div class="metric"><strong>{esc(scheduled.get('approved_sources', 0) if scheduled else 0)}</strong><span>Sources that ran in the last scheduled attempt</span></div>
+    <div class="metric"><strong>{esc(scheduled.get('failed_sources', 0) if scheduled else 0)}</strong><span>Sources that failed in the last scheduled attempt</span></div>
+  </section>
+  <div class="detail-grid">
+    <div>
+      <p class="list-head">Search evidence state</p>
+      <p class="subtle">{esc(evidence_state)}</p>
+      <p class="subtle">Static-ledger rows are curated repo-backed references. Fixture-backed rows come from manual validation inputs. Real-source rows come from live adapters without fixture-only fallback.</p>
+    </div>
+    <div>
+      <p class="list-head">Last scheduled source outcomes</p>
+      <div class="run-list">{run_items}</div>
+    </div>
+  </div>
+</section>"""
 
 
 def source_drill_in(source: str, label: str | None = None) -> str:
@@ -395,12 +499,20 @@ def source_directory(source_names: list[str], active_source: str, activity_looku
         summary = (
             f"Signals {esc(activity.get('signal_count', 0))} · opportunities {esc(activity.get('opportunity_count', 0))}"
         )
+        latest_run_summary = (
+            f"Latest ingest evidence: {activity.get('last_run_status') or 'unknown'} at {activity.get('last_ingest_at') or 'never'} "
+            f"· searchable +{int(activity.get('last_run_inserted_searchable_rows') or 0)} "
+            f"· opportunities +{int(activity.get('last_run_inserted_opportunities') or 0)}"
+            if activity.get("last_ingest_at")
+            else "Latest ingest evidence: no runs recorded yet."
+        )
         cards.append(
             f"""<a class="row source-card{selected}" href="{esc(source_path(name))}">
   <p class="list-head">Source detail</p>
   <h2>{esc(name)}</h2>
   <p class="subtle">{summary}</p>
   <p class="subtle">Avg score {esc(activity.get('avg_score', 0))} · latest {esc(activity.get('latest_signal_at') or 'none yet')}</p>
+  <p class="subtle">{esc(latest_run_summary)}</p>
 </a>"""
         )
     return (
@@ -470,9 +582,9 @@ def filter_form(
 </section>"""
 
 
-def signal_rows(rows: list[Any]) -> str:
+def signal_rows(rows: list[Any], sources: dict[str, dict[str, Any]] | None = None) -> str:
     if not rows:
-        return "<p>No signals found yet. Run <code>wayfinder ingest --source oss-ledger</code>.</p>"
+        return "<p>No signals found yet. Daily ingest has not produced searchable records in this database yet.</p>"
     chunks = []
     for row in rows:
         body = esc(row["body"])
@@ -480,16 +592,18 @@ def signal_rows(rows: list[Any]) -> str:
             body = body[:317] + "..."
         source_url = row["source_url"] or ""
         source_context = source_context_path(str(row["source"]), str(row["source_id"] or ""), source_url)
+        source_entry = sources.get(str(row["source"])) if sources else None
         chunks.append(
             f"""<article class="row">
   <div class="signal-head">
     <div>
       <h2><a href="{esc(source_url)}">{esc(row['title'])}</a></h2>
-      <div class="meta">{source_drill_in(str(row['source']))}<span class="tag">{esc(row['category'])}</span></div>
+      <div class="meta">{source_drill_in(str(row['source']))}{source_evidence_badge(source_entry)}<span class="tag">{esc(row['category'])}</span></div>
     </div>
     <div class="score">score {esc(row['score'])}</div>
   </div>
   <p class="source-link"><a href="{esc(source_url)}">{esc(source_url)}</a></p>
+  <p class="subtle">{esc(source_evidence_mode(source_entry)[2])}</p>
   <p class="subtle"><a href="{esc(source_context)}">View source context</a></p>
   <p class="excerpt">{body}</p>
 </article>"""
@@ -518,14 +632,14 @@ def selected_source_record_panel(detail: dict[str, Any] | None) -> str:
 </section>"""
 
 
-def source_detail_panel(detail: dict[str, Any] | None) -> str:
+def source_detail_panel(detail: dict[str, Any] | None, source_entry: dict[str, Any] | None = None) -> str:
     if not detail:
         return ""
     recent_runs = detail.get("recent_runs", [])
     run_items = "".join(
         f"""<div class="mini-item">
   <strong>{esc(item['status'])}</strong>
-  <div class="subtle">finished {esc(item['finished_at'] or 'unknown')} · collected {esc(item['collected'])} · signals +{esc(item['inserted_signals'])} · opportunities +{esc(item['inserted_opportunities'])}</div>
+  <div class="subtle">finished {esc(item['finished_at'] or 'unknown')} · collected {esc(item['collected'])} · searchable +{esc(item['inserted_searchable_rows'])} · signals +{esc(item['inserted_signals'])} · opportunities +{esc(item['inserted_opportunities'])}</div>
   <div class="subtle">{esc(item['message'] or ('dry run' if item['dry_run'] else 'no run notes'))}</div>
 </div>"""
         for item in recent_runs
@@ -556,9 +670,11 @@ def source_detail_panel(detail: dict[str, Any] | None) -> str:
     <div>
       <p class="list-head">Selected source</p>
       <h2>{esc(detail['source'])}</h2>
+      <p class="meta">{source_evidence_badge(source_entry)}</p>
       <p class="subtle">Signals {esc(detail['signal_count'])} · opportunities {esc(detail['opportunity_count'])} · avg score {esc(detail['avg_score'])}</p>
       <p class="subtle">Latest signal captured: {esc(detail['latest_signal_at'] or 'unknown')}</p>
       <p class="subtle">Ingest health: {health_status_badge(str(detail.get('health_status') or 'unknown'))} latest run {esc(detail.get('last_ingest_at') or 'unknown')}</p>
+      <p class="subtle">{esc(source_evidence_mode(source_entry)[2])}</p>
       <p class="list-head">Top categories</p>
       <p>{category_chips}</p>
       <div class="mini-list">
@@ -625,6 +741,11 @@ def source_safety_panel(payload: dict[str, Any]) -> str:
     cron_state = "disabled by default" if not cron["enabled"] else "enabled"
     approved = counts.get("enabled", 0)
     review_pending = counts.get("dry-run-only", 0) + counts.get("needs-review", 0)
+    approved_note = (
+        "Only sources with policy status <code>enabled</code> are eligible for unattended collection in the current daily schedule."
+        if cron["enabled"]
+        else "Only sources with policy status <code>enabled</code> are eligible for unattended collection once the global cron switch is explicitly turned on."
+    )
     return f"""<section class="panel">
   <section class="toolbar">
     <div>
@@ -655,7 +776,7 @@ def source_safety_panel(payload: dict[str, Any]) -> str:
     <div>
       <p class="list-head">Operator notes</p>
       <div class="mini-list">
-        <div class="mini-item"><strong>Approved sources only</strong><div class="subtle">Only sources with policy status <code>enabled</code> are eligible for unattended collection once the global cron switch is explicitly turned on later.</div></div>
+        <div class="mini-item"><strong>Approved sources only</strong><div class="subtle">{approved_note}</div></div>
         <div class="mini-item"><strong>Manual and review states stay manual</strong><div class="subtle"><code>dry-run-only</code>, <code>needs-review</code>, and <code>disabled</code> sources remain excluded from unattended scheduling.</div></div>
       </div>
     </div>
@@ -667,7 +788,22 @@ def source_safety_status_board(payload: dict[str, Any]) -> str:
     cards: list[str] = []
     for item in payload["sources"]:
         tone = safety_tone(str(item["policy_status"]))
-        review_summary = "Safe for unattended ingest once cron is explicitly enabled." if item["unattended_cron"]["eligible"] else "Manual-only pending review or disabled."
+        activity = item.get("activity") if isinstance(item.get("activity"), dict) else {}
+        review_summary = (
+            "Safe for unattended ingest in the current daily run."
+            if item["unattended_cron"]["eligible"] and item["unattended_cron"]["global_cron_enabled"]
+            else "Safe for unattended ingest once cron is explicitly enabled."
+            if item["unattended_cron"]["eligible"]
+            else "Manual-only pending review or disabled."
+        )
+        latest_run_summary = (
+            f"Latest ingest evidence: {'dry run' if activity.get('last_run_dry_run') else 'live run'} "
+            f"{activity.get('last_run_status') or 'unknown'} at {activity.get('last_ingest_at') or 'never'} "
+            f"with searchable +{int(activity.get('last_run_inserted_searchable_rows') or 0)} "
+            f"and opportunities +{int(activity.get('last_run_inserted_opportunities') or 0)}."
+            if activity.get("last_ingest_at")
+            else "Latest ingest evidence: no runs recorded yet."
+        )
         cards.append(
             f"""<article class="row status-card {esc(tone)}">
   <div class="source-title">
@@ -680,14 +816,20 @@ def source_safety_status_board(payload: dict[str, Any]) -> str:
   </div>
   <p>{esc(review_summary)}</p>
   <p class="subtle">Why: {esc(item['why'])}</p>
+  <p class="subtle">{esc(latest_run_summary)}</p>
   <p class="subtle">Outstanding risk flags: {esc(', '.join(item['risk_summary']['unresolved']) if item['risk_summary']['unresolved'] else 'none')}</p>
   <p class="subtle">Health: {esc(item['health']['message'])}</p>
 </article>"""
         )
+    eligibility_summary = (
+        "Green cards are eligible for unattended ingest in the current daily schedule. Yellow and red cards remain manual-only."
+        if payload["cron"]["enabled"]
+        else "Green cards are eligible for unattended ingest only after the global cron switch is explicitly enabled. Yellow and red cards remain manual-only."
+    )
     return (
         '<section class="panel"><section class="toolbar"><div><p class="list-head">Source safety status</p>'
         '<h2>Safe, blocked, and review-required adapters</h2>'
-        '<p class="subtle">Green cards are eligible for unattended ingest only after the global cron switch is explicitly enabled. Yellow and red cards remain manual-only.</p>'
+        f'<p class="subtle">{eligibility_summary}</p>'
         '</div><div class="toolbar-links"><a href="/sources">Browse sources</a></div></section>'
         f'<section class="card-grid">{"".join(cards) if cards else "<p>No configured sources found.</p>"}</section></section>'
     )
@@ -718,7 +860,7 @@ def source_review_checklist_panel(payload: dict[str, Any]) -> str:
         <div class="mini-item"><strong>1. Confirm policy status</strong><div class="subtle">Only <code>enabled</code> sources are eligible. <code>dry-run-only</code>, <code>needs-review</code>, and <code>disabled</code> remain blocked.</div></div>
         <div class="mini-item"><strong>2. Clear risk flags</strong><div class="subtle">Resolve any risk fields still marked <code>unknown</code> or <code>review-required</code>, especially terms, rate limits, and credentials handling.</div></div>
         <div class="mini-item"><strong>3. Verify adapter health</strong><div class="subtle">The adapter health check should pass before any unattended run is considered.</div></div>
-        <div class="mini-item"><strong>4. Re-check cron guardrails</strong><div class="subtle">This page does not enable cron. Global scheduling must stay an explicit later operator choice.</div></div>
+        <div class="mini-item"><strong>4. Re-check cron guardrails</strong><div class="subtle">This page does not change cron. Global scheduling stays an explicit config choice.</div></div>
       </div>
     </div>
     <div>
@@ -736,9 +878,17 @@ def source_review_checklist_panel(payload: dict[str, Any]) -> str:
 def adapter_status_panel(payload: dict[str, Any]) -> str:
     items = []
     for item in payload["sources"]:
+        activity = item.get("activity") if isinstance(item.get("activity"), dict) else {}
         unresolved = item["risk_summary"]["unresolved"]
         unresolved_text = ", ".join(str(flag) for flag in unresolved) if unresolved else "none"
         unattended = "eligible" if item["unattended_cron"]["eligible"] else "blocked"
+        latest_run_summary = (
+            f"Latest ingest evidence: {activity.get('last_run_status') or 'unknown'} at {activity.get('last_ingest_at') or 'never'} "
+            f"· searchable +{activity.get('last_run_inserted_searchable_rows') or 0} "
+            f"· opportunities +{activity.get('last_run_inserted_opportunities') or 0}"
+            if activity.get("last_ingest_at")
+            else "Latest ingest evidence: no runs recorded yet."
+        )
         items.append(
             f"""<article class="row">
   <div class="source-title">
@@ -752,6 +902,7 @@ def adapter_status_panel(payload: dict[str, Any]) -> str:
   <p class="subtle">Risk flags: {esc(unresolved_text)}</p>
   <p class="subtle">Review state: {esc(item['review'])} · {esc(item['why'])}</p>
   <p class="subtle">Adapter health: {esc(item['health']['message'])}</p>
+  <p class="subtle">{esc(latest_run_summary)}</p>
 </article>"""
         )
     return (
@@ -766,26 +917,36 @@ def adapter_status_panel(payload: dict[str, Any]) -> str:
 def source_list_page(
     payload: dict[str, Any],
     activity_by_source: dict[str, dict[str, Any]],
+    scheduled: dict[str, Any] | None,
     selected_source: str = "",
     selected_detail: dict[str, Any] | None = None,
 ) -> str:
     cards = []
     for item in payload["sources"]:
         activity = activity_by_source.get(item["key"], {})
+        latest_run_summary = (
+            f"Latest ingest evidence: {'dry run' if activity.get('last_run_dry_run') else 'live run'} "
+            f"{activity.get('last_run_status') or 'unknown'} at {activity.get('last_ingest_at') or 'never'} "
+            f"· searchable +{int(activity.get('last_run_inserted_searchable_rows') or 0)} "
+            f"· opportunities +{int(activity.get('last_run_inserted_opportunities') or 0)}"
+            if activity.get("last_ingest_at")
+            else "Latest ingest evidence: no runs recorded yet."
+        )
         cards.append(
             f"""<article class="row">
   <div class="source-title">
     <div>
       <p class="list-head">Source</p>
       <h2><a href="{esc(source_path(item['key']))}">{esc(item['key'])}</a></h2>
-      <p class="meta">{policy_status_badge(str(item['policy_status']))}{health_status_badge(str(item['health']['label']))}<span class="tag">{esc(item['kind'])}</span></p>
+      <p class="meta">{policy_status_badge(str(item['policy_status']))}{health_status_badge(str(item['health']['label']))}<span class="tag">{esc(item['kind'])}</span>{source_evidence_badge(item)}</p>
     </div>
     <div class="subtle">Signals {esc(activity.get('signal_count', 0))} · opportunities {esc(activity.get('opportunity_count', 0))} · dashboard health {esc(activity.get('health_status') or 'unknown')}</div>
   </div>
   <p>{esc(item['notes'] or 'No operator notes recorded.')}</p>
   <p class="subtle">Adapter health: {esc(item['health']['message'])}</p>
+  <p class="subtle">{esc(latest_run_summary)}</p>
   <p class="subtle">Risk: credentials={esc(item['risk']['credentials'])}, terms={esc(item['risk']['terms'])}, rate_limits={esc(item['risk']['rate_limits'])}</p>
-  <p class="subtle">Cron readiness: {esc('eligible once cron is explicitly enabled' if item['unattended_cron']['eligible'] else 'blocked pending review or disabled state')} · global cron {esc('enabled' if item['unattended_cron']['global_cron_enabled'] else 'disabled')}</p>
+  <p class="subtle">Cron readiness: {esc('eligible in the current daily schedule' if item['unattended_cron']['eligible'] and item['unattended_cron']['global_cron_enabled'] else 'eligible once cron is explicitly enabled' if item['unattended_cron']['eligible'] else 'blocked pending review or disabled state')} · global cron {esc('enabled' if item['unattended_cron']['global_cron_enabled'] else 'disabled')}</p>
 </article>"""
         )
     selected_html = ""
@@ -795,10 +956,11 @@ def source_list_page(
             selected_html = (
                 f'<section class="toolbar"><p class="subtle">Selected source preview for {esc(selected_source)}.</p>'
                 f'<a href="{esc(source_path(selected_source))}">Open dedicated detail page</a></section>'
-                f"{source_detail_panel(preview)}"
+                f"{source_detail_panel(preview, source_entry_map(payload).get(selected_source.strip()))}"
             )
     return (
         '<div class="stack">'
+        f'{scheduled_ingest_panel(payload, activity_by_source, scheduled)}'
         f'{source_safety_panel(payload)}'
         f'{source_review_checklist_panel(payload)}'
         f'{adapter_status_panel(payload)}'
@@ -822,7 +984,7 @@ def source_safety_page(payload: dict[str, Any]) -> str:
 
 def source_signal_rows(rows: list[dict[str, Any]]) -> str:
     if not rows:
-        return "<p>No source-linked signals recorded yet.</p>"
+        return "<p>No source-linked signals recorded yet. Daily ingest has not produced searchable rows for this source.</p>"
     chunks = []
     for item in rows:
         chunks.append(
@@ -865,10 +1027,12 @@ def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> 
         <p class="list-head">Policy status</p>
         <h2>{esc(source_entry['key'])}</h2>
         <p class="meta">{policy_status_badge(str(source_entry['policy_status']))}<span class="tag">{esc(source_entry['kind'])}</span></p>
+        <p class="meta">{source_evidence_badge(source_entry)}</p>
         <p>{esc(source_entry['notes'] or 'No operator notes recorded.')}</p>
         <p class="subtle">Signals {esc(detail['signal_count'])} · opportunities {esc(detail['opportunity_count'])} · avg score {esc(detail['avg_score'])}</p>
         <p class="subtle">Latest signal captured: {esc(detail['latest_signal_at'] or 'none yet')}</p>
         <p class="subtle">Ingest health: {health_status_badge(str(detail.get('health_status') or 'unknown'))} latest run {esc(detail.get('last_ingest_at') or 'unknown')}</p>
+        <p class="subtle">{esc(source_evidence_mode(source_entry)[2])}</p>
       </div>
       <div>
         <p class="list-head">Safety metadata</p>
@@ -883,7 +1047,7 @@ def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> 
       </div>
     </div>
   </section>
-  {source_detail_panel(detail)}
+  {source_detail_panel(detail, source_entry)}
   {selected_source_record_panel(detail)}
   <section class="row">
     <section class="toolbar">
@@ -1312,9 +1476,14 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 )
                 values = signal_filter_values(conn)
                 opportunity_values = opportunity_filter_values(conn)
-                source_payload = source_catalog_payload(self.config)
+                source_payload = source_status_overview(self.config, conn)
+                source_lookup = source_entry_map(source_payload)
                 dashboard_sources = [item["key"] for item in source_payload["sources"]]
-                activity_by_source = {name: source_activity(conn, name) for name in dashboard_sources}
+                activity_by_source = {
+                    item["key"]: item["activity"] if isinstance(item.get("activity"), dict) else source_activity(conn, item["key"])
+                    for item in source_payload["sources"]
+                }
+                scheduled = latest_scheduled_ingest_summary(audit_log_path(self.config))
                 rows = browse_signals(
                     conn,
                     query=query,
@@ -1386,8 +1555,9 @@ class WayfinderHandler(BaseHTTPRequestHandler):
   </section>
   <section class="row-grid">{shortlist_rows(shortlist)}</section>
 </section>"""
+                    f'{scheduled_ingest_panel(source_payload, activity_by_source, scheduled)}'
                     f'{source_directory(dashboard_sources, source, activity_by_source)}'
-                    f'{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>'
+                    f'{source_detail_panel(detail, source_lookup.get(source.strip()))}{summary}<section class="row-grid">{signal_rows(rows, source_lookup)}</section></div>'
                 )
                 self.send_html("Dashboard", body)
                 return
@@ -1455,9 +1625,13 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                         ("feature gap", feature_request),
                     ]
                 )
-                source_payload = source_catalog_payload(self.config)
+                source_payload = source_status_overview(self.config, conn)
+                source_lookup = source_entry_map(source_payload)
                 search_sources = [item["key"] for item in source_payload["sources"]]
-                activity_by_source = {name: source_activity(conn, name) for name in search_sources}
+                activity_by_source = {
+                    item["key"]: item["activity"] if isinstance(item.get("activity"), dict) else source_activity(conn, item["key"])
+                    for item in source_payload["sources"]
+                }
                 summary = (
                     f'<section class="toolbar"><div><p class="subtle">Search returned {len(rows)} rows with URL-backed filters.</p>'
                     f'{active_filters}</div><div class="toolbar-links">'
@@ -1466,11 +1640,13 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 )
                 self.send_html(
                     "Search",
-                    f'<div class="stack">{form}{source_directory(search_sources, source, activity_by_source)}{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>',
+                    f'<div class="stack">{form}{source_directory(search_sources, source, activity_by_source)}{source_detail_panel(detail, source_lookup.get(source.strip()))}{summary}<section class="row-grid">{signal_rows(rows, source_lookup)}</section></div>',
                 )
                 return
             if parsed.path == "/api/search":
                 filters = api_search_filters(params)
+                source_payload = source_status_overview(self.config, conn)
+                source_lookup = source_entry_map(source_payload)
                 query = str(filters["query"])
                 if (
                     not query.strip()
@@ -1502,11 +1678,23 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                         limit=int(filters["limit"]),
                         offset=int(filters["offset"]),
                     )
-                self.send_json([dict(row) for row in rows])
+                payload = []
+                for row in rows:
+                    item = dict(row)
+                    source_entry = source_lookup.get(str(item.get("source") or ""))
+                    evidence_mode, _, evidence_summary = source_evidence_mode(source_entry)
+                    item["source_kind"] = str(source_entry.get("kind") or "") if source_entry else ""
+                    item["source_evidence_mode"] = evidence_mode
+                    item["source_evidence_summary"] = evidence_summary
+                    payload.append(item)
+                self.send_json(payload)
                 return
             if parsed.path == "/api/sources":
                 source_name = params.get("source", [""])[0]
-                payload = source_catalog_payload(self.config, source_name)
+                payload = source_status_overview(self.config)
+                payload["requested_source"] = source_name.strip() or None
+                payload["source"] = next((item for item in payload["sources"] if item["key"] == source_name.strip()), None) if source_name.strip() else None
+                payload["scheduled_ingest"] = latest_scheduled_ingest_summary(audit_log_path(self.config))
                 if source_name.strip() and payload["source"] is None:
                     self.send_json(
                         {
@@ -1517,6 +1705,11 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                         HTTPStatus.NOT_FOUND,
                     )
                     return
+                status_payload = source_status_overview(self.config, conn)
+                status_by_key = {item["key"]: item for item in status_payload["sources"]}
+                if payload["source"] is not None:
+                    payload["source"] = {**payload["source"], **status_by_key.get(source_name.strip(), {})}
+                payload["sources"] = [status_by_key.get(item["key"], item) for item in payload["sources"]]
                 self.send_json(payload)
                 return
             if parsed.path == "/api/products":
@@ -1583,7 +1776,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 self.send_json(payload)
                 return
             if parsed.path == "/sources":
-                payload = source_status_overview(self.config)
+                payload = source_status_overview(self.config, conn)
                 query = params.get("q", [""])[0]
                 source = params.get("source", [""])[0]
                 category = params.get("market", params.get("category", [""]))[0]
@@ -1602,28 +1795,32 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                         pain_type=pain_type,
                         feature_request=feature_request,
                         limit=30,
-                    )
+                )
                     if source.strip()
                     else []
                 )
-                activity_by_source = {item["key"]: source_activity(conn, item["key"]) for item in payload["sources"]}
+                activity_by_source = {
+                    item["key"]: item["activity"] if isinstance(item.get("activity"), dict) else source_activity(conn, item["key"])
+                    for item in payload["sources"]
+                }
+                scheduled = latest_scheduled_ingest_summary(audit_log_path(self.config))
                 body = (
-                    f'<div class="stack">{source_list_page(payload, activity_by_source, source, detail)}'
+                    f'<div class="stack">{source_list_page(payload, activity_by_source, scheduled, source, detail)}'
                     f'{filter_form("/sources", query=query, source=source, category=category, product=product, pain_type=pain_type, feature_request=feature_request, values=values, include_category=False, include_product=True, include_market=True, include_pain_type=True, include_feature_request=True, submit_label="Inspect")}'
-                    f'{source_detail_panel(detail)}'
+                    f'{source_detail_panel(detail, source_entry_map(payload).get(source.strip()))}'
                     f'<section class="toolbar"><p class="subtle">Showing {len(rows)} source-linked signal rows.</p><a href="/opportunities?source={quote_plus(source)}">Open source opportunities</a></section>'
-                    f'<section class="row-grid">{signal_rows(rows) if source.strip() else "<p>Select a source to inspect its linked signals and opportunities.</p>"}</section></div>'
+                    f'<section class="row-grid">{signal_rows(rows, source_entry_map(payload)) if source.strip() else "<p>Select a source to inspect its linked signals and opportunities.</p>"}</section></div>'
                 )
                 self.send_html("Sources", body)
                 return
             if parsed.path == "/source-safety":
-                payload = source_status_overview(self.config)
+                payload = source_status_overview(self.config, conn)
                 self.send_html("Source Safety", source_safety_page(payload))
                 return
             if parsed.path.startswith("/sources/"):
                 source_name = unquote(parsed.path.removeprefix("/sources/")).strip()
-                payload = source_catalog_payload(self.config, source_name)
-                source_entry = payload["source"]
+                payload = source_status_overview(self.config, conn)
+                source_entry = next((item for item in payload["sources"] if item["key"] == source_name), None)
                 if source_entry is None:
                     self.send_html(
                         "Source Not Found",

@@ -17,15 +17,15 @@ sources:
       pii_user_generated_content: low-curated-public-metadata
       hosted_dependencies: none
   hackernews:
-    status: dry-run-only
+    status: enabled
     kind: hackernews
-    notes: Deterministic fixture-backed dry runs are allowed; unattended live Algolia ingest still needs review for UGC handling and query-rate expectations.
+    notes: Approved for unattended low-volume Algolia search using the configured story-only queries; normal and scheduled ingest use the live official endpoint while fixture-backed dry runs remain available for diagnostics.
     risk:
       credentials: none
-      terms: review-required
-      rate_limits: review-required
+      terms: public-api-allowed
+      rate_limits: low-volume-search
       scraping: api-search
-      pii_user_generated_content: medium-user-generated-content
+      pii_user_generated_content: reviewed-story-metadata
       hosted_dependencies: algolia-hn-api
     fixture_path: research/hackernews-sample.json
     queries:
@@ -43,16 +43,16 @@ sources:
         hits_per_page: 10
     hits_per_query: 10
   github:
-    status: dry-run-only
+    status: enabled
     kind: github
-    notes: Manual dry runs against anonymous public repository search are acceptable, but unattended GitHub API use still needs rate-limit and dependency review.
+    notes: Approved for daily anonymous public repository search at the configured low query volume; dry runs stay fixture-backed for diagnostics while scheduled and normal ingest use the live official API.
     risk:
       credentials: none
-      terms: review-required
-      rate_limits: api-rate-review
+      terms: public-api-allowed
+      rate_limits: low-volume-public-search
       scraping: official-api
       pii_user_generated_content: low-public-repo-metadata
-      hosted_dependencies: github-api
+      hosted_dependencies: github-public-api
     fixture_path: research/github-sample.json
     queries:
       - "startup ideas pain points"
@@ -64,9 +64,10 @@ cron:
   enabled: true
   schedule: daily
   token_free: true
-  # Daily scheduling is approved only for sources with status: enabled.
-  # Keep manual-review sources out of the unattended path until promoted.
-  # python3 -m wayfinder scheduled-ingest
+  # Operator-runnable daily ingest recurrence helper:
+  # python3 -m wayfinder --no-color schedule-command
+  # Scheduled run path emitted by that helper:
+  # python3 -m wayfinder --no-color scheduled-ingest
 
 scoring:
   evidence_count_weight: 0.35

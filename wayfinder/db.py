@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS ingest_runs (
   started_at TEXT NOT NULL,
   finished_at TEXT NOT NULL,
   collected INTEGER NOT NULL DEFAULT 0,
+  inserted_searchable_rows INTEGER NOT NULL DEFAULT 0,
   inserted_signals INTEGER NOT NULL DEFAULT 0,
   inserted_products INTEGER NOT NULL DEFAULT 0,
   inserted_opportunities INTEGER NOT NULL DEFAULT 0,
@@ -99,7 +100,7 @@ def connect(path: pathlib.Path) -> sqlite3.Connection:
 
 
 def ensure_schema(conn: sqlite3.Connection) -> None:
-    columns = {row["name"] for row in conn.execute("PRAGMA table_info(opportunities)").fetchall()}
+    opportunity_columns = {row["name"] for row in conn.execute("PRAGMA table_info(opportunities)").fetchall()}
     for name, definition in (
         ("source", "TEXT NOT NULL DEFAULT ''"),
         ("category", "TEXT NOT NULL DEFAULT ''"),
@@ -107,8 +108,11 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
         ("score_components_json", "TEXT NOT NULL DEFAULT '{}'"),
         ("scored_at", "TEXT NOT NULL DEFAULT ''"),
     ):
-        if name not in columns:
+        if name not in opportunity_columns:
             conn.execute(f"ALTER TABLE opportunities ADD COLUMN {name} {definition}")
+    ingest_run_columns = {row["name"] for row in conn.execute("PRAGMA table_info(ingest_runs)").fetchall()}
+    if "inserted_searchable_rows" not in ingest_run_columns:
+        conn.execute("ALTER TABLE ingest_runs ADD COLUMN inserted_searchable_rows INTEGER NOT NULL DEFAULT 0")
     conn.commit()
 
 
@@ -739,7 +743,7 @@ def source_detail(
     ).fetchall()
     recent_runs = conn.execute(
         """
-        SELECT started_at, finished_at, status, collected, inserted_signals, inserted_products,
+        SELECT started_at, finished_at, status, collected, inserted_searchable_rows, inserted_signals, inserted_products,
                inserted_opportunities, dry_run, message
         FROM ingest_runs
         WHERE source = ?
@@ -762,6 +766,14 @@ def source_detail(
         "opportunities": [dict(row) for row in opportunities],
         "health_status": str(latest_run["status"]) if latest_run else "unknown",
         "last_ingest_at": str(latest_run["finished_at"]) if latest_run else "",
+        "last_run_status": str(latest_run["status"]) if latest_run else "",
+        "last_run_collected": int(latest_run["collected"]) if latest_run else 0,
+        "last_run_inserted_searchable_rows": int(latest_run["inserted_searchable_rows"]) if latest_run else 0,
+        "last_run_inserted_signals": int(latest_run["inserted_signals"]) if latest_run else 0,
+        "last_run_inserted_products": int(latest_run["inserted_products"]) if latest_run else 0,
+        "last_run_inserted_opportunities": int(latest_run["inserted_opportunities"]) if latest_run else 0,
+        "last_run_dry_run": bool(latest_run["dry_run"]) if latest_run else False,
+        "last_run_message": str(latest_run["message"]) if latest_run and latest_run["message"] else "",
         "recent_runs": [dict(row) for row in recent_runs],
     }
 
@@ -823,7 +835,7 @@ def source_activity(
     ).fetchall()
     recent_runs = conn.execute(
         """
-        SELECT started_at, finished_at, status, collected, inserted_signals, inserted_products,
+        SELECT started_at, finished_at, status, collected, inserted_searchable_rows, inserted_signals, inserted_products,
                inserted_opportunities, dry_run, message
         FROM ingest_runs
         WHERE source = ?
@@ -846,6 +858,14 @@ def source_activity(
         "opportunities": [dict(row) for row in opportunities],
         "health_status": str(latest_run["status"]) if latest_run else "unknown",
         "last_ingest_at": str(latest_run["finished_at"]) if latest_run else "",
+        "last_run_status": str(latest_run["status"]) if latest_run else "",
+        "last_run_collected": int(latest_run["collected"]) if latest_run else 0,
+        "last_run_inserted_searchable_rows": int(latest_run["inserted_searchable_rows"]) if latest_run else 0,
+        "last_run_inserted_signals": int(latest_run["inserted_signals"]) if latest_run else 0,
+        "last_run_inserted_products": int(latest_run["inserted_products"]) if latest_run else 0,
+        "last_run_inserted_opportunities": int(latest_run["inserted_opportunities"]) if latest_run else 0,
+        "last_run_dry_run": bool(latest_run["dry_run"]) if latest_run else False,
+        "last_run_message": str(latest_run["message"]) if latest_run and latest_run["message"] else "",
         "recent_runs": [dict(row) for row in recent_runs],
     }
 

@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import sqlite3
 import sys
 import time
+from pathlib import Path
 from typing import Any
 
 from . import __version__
 from .adapters import build_adapter
 from .adapters.github import GitHubCollectError
 from .adapters.hackernews import HackerNewsCollectError
-from .audit import write_event
+from .audit import latest_scheduled_ingest_summary, write_event
 from .config import audit_log_path, load_config, source_configs, source_policy, source_review_summary, storage_path
 from .drafts import format_task_draft
 from .db import (
@@ -25,6 +27,7 @@ from .db import (
     ranked_opportunities,
     rescore_opportunities,
     search_signals,
+    source_activity,
 )
 from .models import scoring_weights, utc_now
 
@@ -68,6 +71,32 @@ def runnable_sources(config: dict[str, Any], dry_run: bool = False) -> dict[str,
 
 def approved_scheduled_sources(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return runnable_sources(config, dry_run=False)
+
+
+def source_evidence_mode(cfg: dict[str, Any], activity: dict[str, Any] | None = None) -> str:
+    kind = str(cfg.get("kind") or "").strip().lower()
+    if kind == "static_ledger":
+        return "static-ledger"
+    run = activity or {}
+    if run.get("last_ingest_at") and not run.get("last_run_dry_run"):
+        return "real-source"
+    status = str(cfg.get("status") or "").strip().lower()
+    if status == "enabled":
+        return "real-source"
+    if cfg.get("fixture_path"):
+        return "fixture-backed"
+    return "real-source"
+
+
+def runtime_source_config(cfg: dict[str, Any], *, dry_run: bool) -> dict[str, Any]:
+    if dry_run or "fixture_path" not in cfg:
+        return cfg
+    kind = str(cfg.get("kind") or "").strip().lower()
+    if kind not in {"github", "hackernews"}:
+        return cfg
+    live_cfg = dict(cfg)
+    live_cfg.pop("fixture_path", None)
+    return live_cfg
 
 
 def score_summary(row: sqlite3.Row) -> str:
@@ -141,41 +170,69 @@ def cmd_sources(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps(sources, indent=2, sort_keys=True))
         return 0
-    for name, cfg in sources.items():
-        policy = source_policy(cfg)
-        status_color = {
-            "enabled": GREEN,
-            "dry-run-only": YELLOW,
-            "needs-review": YELLOW,
-            "disabled": RED,
-        }.get(policy.status, YELLOW)
-        status = color(policy.status, status_color, not args.no_color)
-        kind = str(cfg.get("kind") or name)
-        risk = policy.risk
-        print(
-            f"{color(name, BOLD, not args.no_color)} status={status} kind={kind} "
-            f"credentials={risk.credentials} terms={risk.terms} rate_limits={risk.rate_limits} "
-            f"scraping={risk.scraping} pii_ugc={risk.pii_user_generated_content} "
-            f"hosted_dependencies={risk.hosted_dependencies}"
-        )
-        review_state, unattended_state, review_reason = source_review_summary(policy)
-        print(f"  review={review_state} unattended={unattended_state} why={review_reason}")
-        if policy.notes:
-            print(f"  notes={policy.notes}")
-        if args.health:
-            if policy.status == "disabled":
-                print(
-                    "  health="
-                    f"{color('disabled', RED, not args.no_color)} "
-                    "Health checks are skipped while this adapter is disabled."
-                )
-                continue
-            try:
-                ok, message = build_adapter(name, cfg).healthcheck()
-                state = color("ok", GREEN, not args.no_color) if ok else color("fail", RED, not args.no_color)
-                print(f"  health={state} {message}")
-            except Exception as exc:  # noqa: BLE001
-                print(f"  health={color('fail', RED, not args.no_color)} {exc}")
+    conn = connect(storage_path(config)) if args.health else None
+    try:
+        for name, cfg in sources.items():
+            policy = source_policy(cfg)
+            status_color = {
+                "enabled": GREEN,
+                "dry-run-only": YELLOW,
+                "needs-review": YELLOW,
+                "disabled": RED,
+            }.get(policy.status, YELLOW)
+            status = color(policy.status, status_color, not args.no_color)
+            kind = str(cfg.get("kind") or name)
+            risk = policy.risk
+            print(
+                f"{color(name, BOLD, not args.no_color)} status={status} kind={kind} "
+                f"credentials={risk.credentials} terms={risk.terms} rate_limits={risk.rate_limits} "
+                f"scraping={risk.scraping} pii_ugc={risk.pii_user_generated_content} "
+                f"hosted_dependencies={risk.hosted_dependencies}"
+            )
+            review_state, unattended_state, review_reason = source_review_summary(policy)
+            print(f"  review={review_state} unattended={unattended_state} why={review_reason}")
+            if policy.notes:
+                print(f"  notes={policy.notes}")
+            if args.health:
+                if policy.status == "disabled":
+                    print(
+                        "  health="
+                        f"{color('disabled', RED, not args.no_color)} "
+                        "Health checks are skipped while this adapter is disabled."
+                    )
+                else:
+                    try:
+                        ok, message = build_adapter(name, cfg).healthcheck()
+                        state = color("ok", GREEN, not args.no_color) if ok else color("fail", RED, not args.no_color)
+                        print(f"  health={state} {message}")
+                    except Exception as exc:  # noqa: BLE001
+                        print(f"  health={color('fail', RED, not args.no_color)} {exc}")
+                activity = source_activity(conn, name) if conn is not None else {}
+                if activity:
+                    last_ingest_at = str(activity.get("last_ingest_at") or "never")
+                    last_status = str(activity.get("last_run_status") or "unknown")
+                    if activity.get("last_ingest_at"):
+                        run_label = "dry-run" if activity.get("last_run_dry_run") else "live"
+                    else:
+                        run_label = "none"
+                    print(
+                        "  latest_run="
+                        f"{run_label} status={last_status} last_ingest_at={last_ingest_at} "
+                        f"collected={int(activity.get('last_run_collected') or 0)} "
+                        f"searchable_rows={int(activity.get('last_run_inserted_searchable_rows') or 0)} "
+                        f"signals={int(activity.get('last_run_inserted_signals') or 0)} "
+                        f"products={int(activity.get('last_run_inserted_products') or 0)} "
+                        f"opportunities={int(activity.get('last_run_inserted_opportunities') or 0)}"
+                    )
+                    print(
+                        "  totals="
+                        f"signals={int(activity.get('signal_count') or 0)} "
+                        f"opportunities={int(activity.get('opportunity_count') or 0)} "
+                        f"latest_signal_at={activity.get('latest_signal_at') or 'never'}"
+                    )
+    finally:
+        if conn is not None:
+            conn.close()
     return 0
 
 
@@ -185,10 +242,10 @@ def ingest_source(
     args: argparse.Namespace,
     config: dict[str, Any],
     audit_action: str | None = None,
-) -> tuple[int, str]:
+) -> tuple[dict[str, int], str]:
     started = utc_now()
     started_monotonic = time.perf_counter()
-    adapter = build_adapter(name, cfg)
+    adapter = build_adapter(name, runtime_source_config(cfg, dry_run=bool(args.dry_run)))
     raw = adapter.collect()
     batch = adapter.normalize(raw)
     query_count = len(cfg.get("queries", [])) if isinstance(cfg.get("queries"), list) else 0
@@ -210,7 +267,14 @@ def ingest_source(
             token_free=True,
             llm_tokens=0,
         )
-        return 0, (
+        return {
+            "raw_records": len(raw),
+            "normalized": collected,
+            "inserted_searchable_rows": 0,
+            "inserted_signals": 0,
+            "inserted_products": 0,
+            "inserted_opportunities": 0,
+        }, (
             f"{name}: dry-run queries={query_count} collected={len(raw)} normalized={collected} "
             f"signals={normalized_signals} products={normalized_products} "
             f"opportunities={normalized_opportunities}"
@@ -219,20 +283,22 @@ def ingest_source(
     conn = connect(storage_path(config))
     try:
         inserted_signals = insert_signals(conn, batch.signals)
+        inserted_searchable_rows = inserted_signals
         inserted_products = insert_products(conn, batch.products)
         inserted_opportunities = insert_opportunities(conn, batch.opportunities, scoring_weights(config))
         conn.execute(
             """
             INSERT INTO ingest_runs (
-              source, started_at, finished_at, collected, inserted_signals,
+              source, started_at, finished_at, collected, inserted_searchable_rows, inserted_signals,
               inserted_products, inserted_opportunities, dry_run, status, message
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 name,
                 started,
                 utc_now(),
                 collected,
+                inserted_searchable_rows,
                 inserted_signals,
                 inserted_products,
                 inserted_opportunities,
@@ -250,6 +316,7 @@ def ingest_source(
         source=name,
         raw_records=len(raw),
         normalized=collected,
+        inserted_searchable_rows=inserted_searchable_rows,
         inserted_signals=inserted_signals,
         inserted_products=inserted_products,
         inserted_opportunities=inserted_opportunities,
@@ -257,8 +324,15 @@ def ingest_source(
         token_free=True,
         llm_tokens=0,
     )
-    return inserted_signals + inserted_products + inserted_opportunities, (
-        f"{name}: raw={len(raw)} inserted signals={inserted_signals} "
+    return {
+        "raw_records": len(raw),
+        "normalized": collected,
+        "inserted_searchable_rows": inserted_searchable_rows,
+        "inserted_signals": inserted_signals,
+        "inserted_products": inserted_products,
+        "inserted_opportunities": inserted_opportunities,
+    }, (
+        f"{name}: raw={len(raw)} searchable_rows={inserted_searchable_rows} inserted signals={inserted_signals} "
         f"products={inserted_products} opportunities={inserted_opportunities}"
     )
 
@@ -323,6 +397,10 @@ def cmd_scheduled_ingest(args: argparse.Namespace) -> int:
     skipped = 0
     succeeded = 0
     failed = 0
+    inserted_searchable_rows = 0
+    inserted_signals = 0
+    inserted_products = 0
+    inserted_opportunities = 0
 
     write_event(
         audit_log_path(config),
@@ -333,6 +411,14 @@ def cmd_scheduled_ingest(args: argparse.Namespace) -> int:
         approved_source_count=len(approved),
         token_free=True,
         llm_tokens=0,
+    )
+    print(
+        color(
+            "scheduled-ingest: "
+            f"sources={len(all_sources)} approved={len(approved)} token_free=true llm_tokens=0",
+            CYAN,
+            not args.no_color,
+        )
     )
 
     for name, cfg in all_sources.items():
@@ -351,8 +437,25 @@ def cmd_scheduled_ingest(args: argparse.Namespace) -> int:
             skipped += 1
             continue
         try:
-            _, message = ingest_source(name, cfg, args, config, audit_action="wayfinder_scheduled_ingest_source")
+            source_counts, message = ingest_source(name, cfg, args, config, audit_action="wayfinder_scheduled_ingest_source")
             print(color(message, GREEN, not args.no_color))
+            inserted_searchable_rows += source_counts["inserted_searchable_rows"]
+            inserted_signals += source_counts["inserted_signals"]
+            inserted_products += source_counts["inserted_products"]
+            inserted_opportunities += source_counts["inserted_opportunities"]
+            conn = connect(storage_path(config))
+            try:
+                activity = source_activity(conn, name)
+            finally:
+                conn.close()
+            print(
+                color(
+                    f"{name}: searchable_rows_total={int(activity['signal_count'])} "
+                    f"last_ingest_at={activity['last_ingest_at'] or 'unknown'}",
+                    DIM,
+                    not args.no_color,
+                )
+            )
             succeeded += 1
         except HackerNewsCollectError as exc:
             write_event(
@@ -391,19 +494,62 @@ def cmd_scheduled_ingest(args: argparse.Namespace) -> int:
             print(color(f"{name}: failed: {exc}", RED, not args.no_color), file=sys.stderr)
             failed += 1
 
+    duration_ms = round((time.perf_counter() - started_monotonic) * 1000, 3)
     write_event(
         audit_log_path(config),
         "wayfinder_scheduled_ingest_finished",
         enabled=bool(cron_cfg.get("enabled", False)),
         schedule=str(cron_cfg.get("schedule") or "daily"),
+        source_count=len(all_sources),
+        approved_source_count=len(approved),
         approved_sources=succeeded,
         skipped_sources=skipped,
         failed_sources=failed,
-        duration_ms=round((time.perf_counter() - started_monotonic) * 1000, 3),
+        inserted_searchable_rows=inserted_searchable_rows,
+        inserted_signals=inserted_signals,
+        inserted_products=inserted_products,
+        inserted_opportunities=inserted_opportunities,
+        duration_ms=duration_ms,
         token_free=True,
         llm_tokens=0,
     )
+    print(
+        color(
+            "scheduled-ingest: "
+            f"succeeded={succeeded} skipped={skipped} failed={failed} "
+            f"inserted_searchable_rows={inserted_searchable_rows} "
+            f"inserted_signals={inserted_signals} inserted_products={inserted_products} "
+            f"inserted_opportunities={inserted_opportunities} "
+            f"duration_ms={duration_ms} "
+            f"token_free=true llm_tokens=0",
+            CYAN if not failed else YELLOW,
+            not args.no_color,
+        )
+    )
     return 1 if failed else 0
+
+
+def cmd_schedule_command(args: argparse.Namespace) -> int:
+    config = load_config(args.config)
+    config_path = Path(args.config).resolve() if args.config else Path.cwd() / "wayfinder.yaml"
+    config_path = config_path.resolve()
+    repo_root = config_path.parent
+    audit_path = audit_log_path(config)
+    cron_log_path = audit_path.parent / "wayfinder-cron.log"
+    schedule = str((config.get("cron") or {}).get("schedule") or "daily").strip() or "daily"
+    schedule_prefix = {
+        "hourly": "@hourly",
+        "daily": "@daily",
+        "weekly": "@weekly",
+        "monthly": "@monthly",
+    }.get(schedule.lower(), schedule)
+    runner = (
+        f"cd {shlex.quote(str(repo_root))} && "
+        f"{shlex.quote(sys.executable)} -m wayfinder --config {shlex.quote(str(config_path))} "
+        "--no-color scheduled-ingest"
+    )
+    print(f"{schedule_prefix} {runner} >> {shlex.quote(str(cron_log_path))} 2>&1")
+    return 0
 
 
 def cmd_search(args: argparse.Namespace) -> int:
@@ -490,11 +636,75 @@ def cmd_stats(args: argparse.Namespace) -> int:
     conn = connect(storage_path(config))
     try:
         data = counts(conn)
+        sources = source_configs(config)
+        activity_by_source = {name: source_activity(conn, name) for name in sorted(sources)}
+        searchable_updated_at = max(
+            (str(activity.get("latest_signal_at") or "") for activity in activity_by_source.values()),
+            default="",
+        )
+        scheduled = latest_scheduled_ingest_summary(audit_log_path(config))
+        source_rows = []
+        real_source_signal_count = 0
+        for name, cfg in sorted(sources.items()):
+            kind = str(cfg.get("kind") or name)
+            activity = activity_by_source[name]
+            evidence_mode = source_evidence_mode(cfg, activity)
+            source_rows.append(
+                {
+                    "source": name,
+                    "kind": kind,
+                    "evidence_mode": evidence_mode,
+                    "signal_count": int(activity.get("signal_count", 0)),
+                    "opportunity_count": int(activity.get("opportunity_count", 0)),
+                    "last_signal_at": str(activity.get("latest_signal_at") or ""),
+                    "last_ingest_at": str(activity.get("last_ingest_at") or ""),
+                    "latest_ingest_status": str(activity.get("health_status") or "unknown"),
+                }
+            )
+            if evidence_mode == "real-source":
+                real_source_signal_count += int(activity.get("signal_count", 0))
         if args.json:
-            print(json.dumps(data, indent=2, sort_keys=True))
+            print(
+                json.dumps(
+                    {
+                        **data,
+                        "searchable_data_last_updated": searchable_updated_at,
+                        "real_source_signal_count": real_source_signal_count,
+                        "scheduled_ingest": scheduled,
+                        "sources": source_rows,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
         else:
             for key, value in data.items():
                 print(f"{color(key + ':', BOLD, not args.no_color)} {value}")
+            print(f"{color('searchable_data_last_updated:', BOLD, not args.no_color)} {searchable_updated_at or 'none'}")
+            if scheduled is None:
+                print(f"{color('scheduled_ingest:', BOLD, not args.no_color)} no audit history")
+            else:
+                finished_at = scheduled.get("finished_at") or scheduled.get("started_at") or "unknown"
+                print(
+                    f"{color('scheduled_ingest:', BOLD, not args.no_color)} "
+                    f"status={scheduled.get('status', 'unknown')} finished_at={finished_at} "
+                    f"approved={scheduled.get('approved_sources', 0)} skipped={scheduled.get('skipped_sources', 0)} "
+                    f"failed={scheduled.get('failed_sources', 0)}"
+                )
+                for item in scheduled.get("source_outcomes", []):
+                    print(
+                        "  "
+                        f"{item['source']}: status={item['status']} signals+{item['inserted_signals']} "
+                        f"products+{item['inserted_products']} opportunities+{item['inserted_opportunities']}"
+                    )
+            print(f"{color('real_source_signal_count:', BOLD, not args.no_color)} {real_source_signal_count}")
+            for item in source_rows:
+                print(
+                    "  "
+                    f"{item['source']} mode={item['evidence_mode']} signals={item['signal_count']} "
+                    f"opportunities={item['opportunity_count']} last_signal={item['last_signal_at'] or 'none'} "
+                    f"last_ingest={item['last_ingest_at'] or 'none'}"
+                )
     finally:
         conn.close()
     return 0
@@ -544,6 +754,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run manually even when cron.enabled is false in config",
     )
     scheduled.set_defaults(func=cmd_scheduled_ingest, dry_run=False)
+
+    schedule_command = subparsers.add_parser(
+        "schedule-command",
+        help="Print the scheduler command for the approved daily ingest path",
+    )
+    leaf_options(schedule_command)
+    schedule_command.set_defaults(func=cmd_schedule_command)
 
     search = subparsers.add_parser("search", help="Search stored signals")
     leaf_options(search)
