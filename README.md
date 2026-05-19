@@ -22,10 +22,8 @@ From the repository root:
 
 ```bash
 python3 -m wayfinder sources list --health
-python3 -m wayfinder ingest --source oss-ledger
-python3 -m wayfinder scheduled-ingest --allow-disabled
-python3 -m wayfinder ingest --source hackernews --dry-run
-python3 -m wayfinder search "reddit pain"
+python3 -m wayfinder scheduled-ingest
+python3 -m wayfinder search leverage --limit 5
 python3 -m wayfinder products --limit 20
 python3 -m wayfinder opportunities --limit 20
 python3 -m wayfinder score --limit 10
@@ -51,12 +49,12 @@ Verified in `workspace-001` on the configured `project/wayfinder` branch.
 
 - Entrypoints: repo-local CLI via `python3 -m wayfinder` and the read-only dashboard via `python3 -m wayfinder serve --port 8766`
 - Confirmed routes: `/` renders the dashboard and `/health` returns a readiness payload with `ok`, `service`, `config`, `database`, and `storage_path`
-- Confirmed CLI smoke path from the repo root: `python3 -m wayfinder sources list --health`, `python3 -m wayfinder ingest --source oss-ledger`, `python3 -m wayfinder search saas`, `python3 -m wayfinder products --limit 20`, `python3 -m wayfinder opportunities --limit 20`, and `python3 -m wayfinder stats`
+- Confirmed CLI smoke path from the repo root: `python3 -m wayfinder sources list --health`, `python3 -m wayfinder scheduled-ingest`, `python3 -m wayfinder search leverage --limit 5`, `python3 -m wayfinder products --limit 20`, `python3 -m wayfinder opportunities --limit 20`, and `python3 -m wayfinder stats`
 - Current approved ingest baseline: `oss-ledger` is enabled; `hackernews` is `dry-run-only`; `github` is `dry-run-only`
-- Follow-on adapter gap: only `oss-ledger` is approved for normal writes today, so Hacker News and GitHub adapter work still needs safety/rate-limit promotion before unattended ingest
+- Follow-on adapter gap: only `oss-ledger` is approved for unattended writes today, so Hacker News and GitHub still need safety/rate-limit promotion before they can join the daily run
 - Setup drift to note: `.codex-foundry/REPO_PROFILE.md` can lag `HEAD`; treat it as a map and verify exact files before follow-on implementation
 
-The sample `search "reddit pain"` command remains useful for ad hoc exploration, but the supported repo-root smoke example is `python3 -m wayfinder search saas`. It may still return `No rows found.` after `oss-ledger` ingest alone, which is expected and still confirms that the command path works.
+Use `python3 -m wayfinder search leverage --limit 5` or `python3 -m wayfinder search pain --limit 5` after a scheduled run when you want to confirm the default `oss-ledger` dataset is actually searchable.
 
 ## Adapter Contract
 
@@ -72,27 +70,68 @@ The GitHub adapter stays anonymous by default, even if `GITHUB_TOKEN` is present
 
 ## Scheduled Ingest
 
-The daily runner is `python3 -m wayfinder scheduled-ingest`. It is intentionally guarded by `cron.enabled: false` in `wayfinder.yaml`, so unattended ingest stays off until someone explicitly approves it.
+The production daily runner is `python3 -m wayfinder scheduled-ingest`. In the checked-in v1 config, this command is approved for unattended use because it only runs sources with `status: enabled`, and the default approved set is currently just `oss-ledger`.
 
-Manual validation while the guard is off:
+Daily operator workflow:
 
 ```bash
-python3 -m wayfinder scheduled-ingest --allow-disabled
+python3 -m wayfinder sources list --health --no-color
+python3 -m wayfinder scheduled-ingest --no-color
+python3 -m wayfinder stats --no-color
 ```
 
-Behavior:
+What the scheduled runner does:
 
 - runs approved sources only (`status: enabled`)
 - skips `dry-run-only`, `needs-review`, and `disabled` sources with audit log entries
 - writes source-level counts, duration, and error details to `logs/wayfinder-audit.log`
+- writes records into `.ai-state/wayfinder/wayfinder.db`
 - records `token_free=true` and `llm_tokens=0` for the scheduled run path
 
-Example cron entry, left disabled by default:
+How to verify the run was real and stored:
+
+- `python3 -m wayfinder stats --no-color` should show non-zero `signals`, `products`, `opportunities`, and `ingest_runs` after the daily run.
+- `python3 -m wayfinder search leverage --limit 5 --no-color` or `python3 -m wayfinder search pain --limit 5 --no-color` should return stored `oss-ledger` records rather than `No rows found.`.
+- `python3 -m wayfinder opportunities --limit 5 --no-color` should show scored rows sourced from `oss-ledger`.
+- `tail -n 20 logs/wayfinder-audit.log` should show the scheduled-ingest event history and any blocked/manual-only sources.
+
+The default approved run stays token-free and local-first. It does not enable paid sources, credential-required sources, or manual-review sources by default.
+
+Minimal cron example:
 
 ```cron
-# Daily Wayfinder ingest; remove the leading # only after cron.enabled is set to true
-# 17 4 * * * cd /path/to/workspace-001 && /usr/bin/python3 -m wayfinder scheduled-ingest >> logs/wayfinder-cron.log 2>&1
+17 4 * * * cd /path/to/workspace-001 && /usr/bin/python3 -m wayfinder scheduled-ingest --no-color >> logs/wayfinder-cron.log 2>&1
 ```
+
+Minimal systemd service/timer example:
+
+```ini
+# /etc/systemd/system/wayfinder-daily.service
+[Unit]
+Description=Wayfinder daily ingest
+
+[Service]
+Type=oneshot
+WorkingDirectory=/path/to/workspace-001
+ExecStart=/usr/bin/python3 -m wayfinder scheduled-ingest --no-color
+
+# /etc/systemd/system/wayfinder-daily.timer
+[Unit]
+Description=Run Wayfinder daily ingest
+
+[Timer]
+OnCalendar=*-*-* 04:17:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Foundry-compatible operator note:
+
+- Keep the schedule pointed at the repo root and use the repo-local CLI entrypoint `python3 -m wayfinder`.
+- If you need to pause daily ingest, set `cron.enabled: false` in `wayfinder.yaml` rather than editing source policy states.
+- If you need to review a candidate source manually, use `python3 -m wayfinder ingest --source <name> --dry-run`; that path is for source review and tests, not the production daily run.
 
 ## Source Safety
 
@@ -102,7 +141,7 @@ Promotion and review steps for unattended ingest live in `docs/source-review-che
 
 Each source carries a review status in `wayfinder.yaml`:
 
-- `enabled`: approved for unattended ingest and eligible for cron once the broader cron switch is enabled.
+- `enabled`: approved for unattended ingest and eligible for the production daily run.
 - `dry-run-only`: safe to test manually, but must not write unattended data without a follow-up review.
 - `needs-review`: visible in source health output but excluded from `ingest --all`.
 - `disabled`: intentionally off and excluded from `ingest --all`.
@@ -116,7 +155,7 @@ Each source should also document these risk fields before promotion to cron:
 - `pii_user_generated_content`
 - `hosted_dependencies`
 
-A source can move to `enabled` for cron only after its terms, rate limits, collection method, hosted dependencies, and user-data exposure are reviewed and the unattended behavior is considered acceptable.
+A source can move to `enabled` for daily scheduling only after its terms, rate limits, collection method, hosted dependencies, and user-data exposure are reviewed and the unattended behavior is considered acceptable.
 
 ## Opportunity Scoring
 
@@ -144,7 +183,7 @@ The export is intentionally read-only: it prints editable Markdown, does not aut
 
 | Source | Adapter status | Recurring cron stance | Notes |
 | --- | --- | --- | --- |
-| `oss-ledger` | Healthy | Safe for recurring cron after separate approval of `cron.enabled` | Curated open-source source/tool ledger with offline local ingest. |
+| `oss-ledger` | Healthy | Safe for recurring cron in the checked-in production config | Curated open-source source/tool ledger with offline local ingest. |
 | `hackernews` | `dry-run-only` | Not safe for recurring cron yet | Public HN Algolia search with user-generated content and external rate-limit review still required. |
 | `github` | `dry-run-only` | Not safe for recurring cron yet | Anonymous public GitHub repository search; hosted dependency and API-rate review still required before unattended ingest. |
 | Reddit / app-store reviews / Product Hunt / broader crawl/search sources | Deferred | Do not schedule | Out of the current Wayfinder scope until safety and terms review are complete. |

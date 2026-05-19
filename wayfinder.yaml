@@ -61,10 +61,11 @@ sources:
     per_page: 10
 
 cron:
-  enabled: false
+  enabled: true
   schedule: daily
   token_free: true
-  # Leave OS cron disabled until the command below is explicitly approved.
+  # Daily scheduling is approved only for sources with status: enabled.
+  # Keep manual-review sources out of the unattended path until promoted.
   # python3 -m wayfinder scheduled-ingest
 
 scoring:
