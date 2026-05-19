@@ -8,7 +8,8 @@ from typing import Any
 from urllib.parse import parse_qs, quote, quote_plus, unquote, urlparse
 
 from .adapters import build_adapter
-from .config import source_configs, source_policy, source_review_summary, storage_path
+from .audit import latest_scheduled_ingest_summary
+from .config import audit_log_path, source_configs, source_policy, source_review_summary, storage_path
 from .db import (
     browse_signals,
     connect,
@@ -286,6 +287,102 @@ def source_status_overview(config: dict[str, Any], conn: Any | None = None) -> d
     }
 
 
+def source_entry_map(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {str(item["key"]): item for item in payload.get("sources", [])}
+
+
+def source_evidence_mode(entry: dict[str, Any] | None) -> tuple[str, str, str]:
+    if not entry:
+        return "unknown", "", "Source evidence mode is unknown."
+    kind = str(entry.get("kind") or "")
+    config = entry.get("config") if isinstance(entry.get("config"), dict) else {}
+    if kind == "static_ledger":
+        return "static-ledger", "warn", "Curated static-ledger evidence, not a live daily source."
+    if config.get("fixture_path"):
+        return "fixture-backed", "warn", "Fixture-backed adapter evidence for manual validation, not live daily records yet."
+    return "real-source", "good", "Live source records are eligible to reflect daily external ingest activity."
+
+
+def source_evidence_badge(entry: dict[str, Any] | None) -> str:
+    label, tone, _ = source_evidence_mode(entry)
+    class_name = f"tag {tone}".strip()
+    return f'<span class="{class_name}">{esc(label)}</span>'
+
+
+def scheduled_ingest_panel(
+    payload: dict[str, Any],
+    activity_by_source: dict[str, dict[str, Any]],
+    scheduled: dict[str, Any] | None,
+) -> str:
+    source_map = source_entry_map(payload)
+    searchable_updated_at = max((str(item.get("latest_signal_at") or "") for item in activity_by_source.values()), default="")
+    real_source_rows = 0
+    fixture_or_static_rows = 0
+    for name, activity in activity_by_source.items():
+        entry = source_map.get(name)
+        label, _, _ = source_evidence_mode(entry)
+        count = int(activity.get("signal_count", 0))
+        if label == "real-source":
+            real_source_rows += count
+        else:
+            fixture_or_static_rows += count
+    if scheduled is None:
+        headline = "No scheduled-ingest audit history recorded yet."
+        run_items = '<p class="subtle">No scheduled source outcomes recorded yet.</p>'
+        status_label = "warning"
+    elif scheduled["status"] == "blocked":
+        headline = f"Last scheduled-ingest attempt was blocked at {esc(scheduled.get('finished_at') or scheduled.get('started_at') or 'unknown')}."
+        run_items = f'<div class="mini-item"><strong>blocked</strong><div class="subtle">reason {esc(scheduled.get("reason") or "unknown")}</div></div>'
+        status_label = "warning"
+    else:
+        headline = (
+            f"Last scheduled-ingest attempt finished at {esc(scheduled.get('finished_at') or scheduled.get('started_at') or 'unknown')} "
+            f"with status {esc(scheduled.get('status') or 'unknown')}."
+        )
+        run_items = "".join(
+            f"""<div class="mini-item">
+  <strong>{esc(item['source'])}</strong>
+  <div class="subtle">status {esc(item['status'])} · signals +{esc(item['inserted_signals'])} · products +{esc(item['inserted_products'])} · opportunities +{esc(item['inserted_opportunities'])}</div>
+</div>"""
+            for item in scheduled.get("source_outcomes", [])
+        ) or '<p class="subtle">No scheduled source outcomes recorded yet.</p>'
+        status_label = str(scheduled.get("status") or "warning")
+    if real_source_rows == 0:
+        evidence_state = "No real-source searchable records have been indexed yet. Search is still backed by static-ledger or fixture-backed evidence."
+    else:
+        evidence_state = f"Real-source searchable records indexed: {real_source_rows}. Fixture/static evidence rows: {fixture_or_static_rows}."
+    return f"""<section class="panel">
+  <section class="toolbar">
+    <div>
+      <p class="list-head">Daily ingest evidence</p>
+      <h2>{headline}</h2>
+      <p class="subtle">Read-only ingest evidence from the audit log and local database. No web controls write data or trigger ingest.</p>
+    </div>
+    <div class="toolbar-links">
+      {health_status_badge(status_label)}
+      {source_status_tag(f"searchable updated {searchable_updated_at or 'none'}")}
+    </div>
+  </section>
+  <section class="grid">
+    <div class="metric"><strong>{esc(searchable_updated_at or 'none')}</strong><span>Searchable data last updated</span></div>
+    <div class="metric"><strong>{esc(real_source_rows)}</strong><span>Real-source signal rows indexed</span></div>
+    <div class="metric"><strong>{esc(scheduled.get('approved_sources', 0) if scheduled else 0)}</strong><span>Sources that ran in the last scheduled attempt</span></div>
+    <div class="metric"><strong>{esc(scheduled.get('failed_sources', 0) if scheduled else 0)}</strong><span>Sources that failed in the last scheduled attempt</span></div>
+  </section>
+  <div class="detail-grid">
+    <div>
+      <p class="list-head">Search evidence state</p>
+      <p class="subtle">{esc(evidence_state)}</p>
+      <p class="subtle">Static-ledger rows are curated repo-backed references. Fixture-backed rows come from manual validation inputs. Real-source rows come from live adapters without fixture-only fallback.</p>
+    </div>
+    <div>
+      <p class="list-head">Last scheduled source outcomes</p>
+      <div class="run-list">{run_items}</div>
+    </div>
+  </div>
+</section>"""
+
+
 def source_drill_in(source: str, label: str | None = None) -> str:
     source_name = (source or "").strip()
     if not source_name:
@@ -479,9 +576,9 @@ def filter_form(
 </section>"""
 
 
-def signal_rows(rows: list[Any]) -> str:
+def signal_rows(rows: list[Any], sources: dict[str, dict[str, Any]] | None = None) -> str:
     if not rows:
-        return "<p>No signals found yet. Run <code>wayfinder ingest --source oss-ledger</code>.</p>"
+        return "<p>No signals found yet. Daily ingest has not produced searchable records in this database yet.</p>"
     chunks = []
     for row in rows:
         body = esc(row["body"])
@@ -489,16 +586,18 @@ def signal_rows(rows: list[Any]) -> str:
             body = body[:317] + "..."
         source_url = row["source_url"] or ""
         source_context = source_context_path(str(row["source"]), str(row["source_id"] or ""), source_url)
+        source_entry = sources.get(str(row["source"])) if sources else None
         chunks.append(
             f"""<article class="row">
   <div class="signal-head">
     <div>
       <h2><a href="{esc(source_url)}">{esc(row['title'])}</a></h2>
-      <div class="meta">{source_drill_in(str(row['source']))}<span class="tag">{esc(row['category'])}</span></div>
+      <div class="meta">{source_drill_in(str(row['source']))}{source_evidence_badge(source_entry)}<span class="tag">{esc(row['category'])}</span></div>
     </div>
     <div class="score">score {esc(row['score'])}</div>
   </div>
   <p class="source-link"><a href="{esc(source_url)}">{esc(source_url)}</a></p>
+  <p class="subtle">{esc(source_evidence_mode(source_entry)[2])}</p>
   <p class="subtle"><a href="{esc(source_context)}">View source context</a></p>
   <p class="excerpt">{body}</p>
 </article>"""
@@ -527,7 +626,7 @@ def selected_source_record_panel(detail: dict[str, Any] | None) -> str:
 </section>"""
 
 
-def source_detail_panel(detail: dict[str, Any] | None) -> str:
+def source_detail_panel(detail: dict[str, Any] | None, source_entry: dict[str, Any] | None = None) -> str:
     if not detail:
         return ""
     recent_runs = detail.get("recent_runs", [])
@@ -565,9 +664,11 @@ def source_detail_panel(detail: dict[str, Any] | None) -> str:
     <div>
       <p class="list-head">Selected source</p>
       <h2>{esc(detail['source'])}</h2>
+      <p class="meta">{source_evidence_badge(source_entry)}</p>
       <p class="subtle">Signals {esc(detail['signal_count'])} · opportunities {esc(detail['opportunity_count'])} · avg score {esc(detail['avg_score'])}</p>
       <p class="subtle">Latest signal captured: {esc(detail['latest_signal_at'] or 'unknown')}</p>
       <p class="subtle">Ingest health: {health_status_badge(str(detail.get('health_status') or 'unknown'))} latest run {esc(detail.get('last_ingest_at') or 'unknown')}</p>
+      <p class="subtle">{esc(source_evidence_mode(source_entry)[2])}</p>
       <p class="list-head">Top categories</p>
       <p>{category_chips}</p>
       <div class="mini-list">
@@ -810,6 +911,7 @@ def adapter_status_panel(payload: dict[str, Any]) -> str:
 def source_list_page(
     payload: dict[str, Any],
     activity_by_source: dict[str, dict[str, Any]],
+    scheduled: dict[str, Any] | None,
     selected_source: str = "",
     selected_detail: dict[str, Any] | None = None,
 ) -> str:
@@ -830,7 +932,7 @@ def source_list_page(
     <div>
       <p class="list-head">Source</p>
       <h2><a href="{esc(source_path(item['key']))}">{esc(item['key'])}</a></h2>
-      <p class="meta">{policy_status_badge(str(item['policy_status']))}{health_status_badge(str(item['health']['label']))}<span class="tag">{esc(item['kind'])}</span></p>
+      <p class="meta">{policy_status_badge(str(item['policy_status']))}{health_status_badge(str(item['health']['label']))}<span class="tag">{esc(item['kind'])}</span>{source_evidence_badge(item)}</p>
     </div>
     <div class="subtle">Signals {esc(activity.get('signal_count', 0))} · opportunities {esc(activity.get('opportunity_count', 0))} · dashboard health {esc(activity.get('health_status') or 'unknown')}</div>
   </div>
@@ -848,10 +950,11 @@ def source_list_page(
             selected_html = (
                 f'<section class="toolbar"><p class="subtle">Selected source preview for {esc(selected_source)}.</p>'
                 f'<a href="{esc(source_path(selected_source))}">Open dedicated detail page</a></section>'
-                f"{source_detail_panel(preview)}"
+                f"{source_detail_panel(preview, source_entry_map(payload).get(selected_source.strip()))}"
             )
     return (
         '<div class="stack">'
+        f'{scheduled_ingest_panel(payload, activity_by_source, scheduled)}'
         f'{source_safety_panel(payload)}'
         f'{source_review_checklist_panel(payload)}'
         f'{adapter_status_panel(payload)}'
@@ -875,7 +978,7 @@ def source_safety_page(payload: dict[str, Any]) -> str:
 
 def source_signal_rows(rows: list[dict[str, Any]]) -> str:
     if not rows:
-        return "<p>No source-linked signals recorded yet.</p>"
+        return "<p>No source-linked signals recorded yet. Daily ingest has not produced searchable rows for this source.</p>"
     chunks = []
     for item in rows:
         chunks.append(
@@ -918,10 +1021,12 @@ def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> 
         <p class="list-head">Policy status</p>
         <h2>{esc(source_entry['key'])}</h2>
         <p class="meta">{policy_status_badge(str(source_entry['policy_status']))}<span class="tag">{esc(source_entry['kind'])}</span></p>
+        <p class="meta">{source_evidence_badge(source_entry)}</p>
         <p>{esc(source_entry['notes'] or 'No operator notes recorded.')}</p>
         <p class="subtle">Signals {esc(detail['signal_count'])} · opportunities {esc(detail['opportunity_count'])} · avg score {esc(detail['avg_score'])}</p>
         <p class="subtle">Latest signal captured: {esc(detail['latest_signal_at'] or 'none yet')}</p>
         <p class="subtle">Ingest health: {health_status_badge(str(detail.get('health_status') or 'unknown'))} latest run {esc(detail.get('last_ingest_at') or 'unknown')}</p>
+        <p class="subtle">{esc(source_evidence_mode(source_entry)[2])}</p>
       </div>
       <div>
         <p class="list-head">Safety metadata</p>
@@ -936,7 +1041,7 @@ def source_detail_page(source_entry: dict[str, Any], detail: dict[str, Any]) -> 
       </div>
     </div>
   </section>
-  {source_detail_panel(detail)}
+  {source_detail_panel(detail, source_entry)}
   {selected_source_record_panel(detail)}
   <section class="row">
     <section class="toolbar">
@@ -1366,8 +1471,10 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 values = signal_filter_values(conn)
                 opportunity_values = opportunity_filter_values(conn)
                 source_payload = source_catalog_payload(self.config)
+                source_lookup = source_entry_map(source_payload)
                 dashboard_sources = [item["key"] for item in source_payload["sources"]]
                 activity_by_source = {name: source_activity(conn, name) for name in dashboard_sources}
+                scheduled = latest_scheduled_ingest_summary(audit_log_path(self.config))
                 rows = browse_signals(
                     conn,
                     query=query,
@@ -1439,8 +1546,9 @@ class WayfinderHandler(BaseHTTPRequestHandler):
   </section>
   <section class="row-grid">{shortlist_rows(shortlist)}</section>
 </section>"""
+                    f'{scheduled_ingest_panel(source_payload, activity_by_source, scheduled)}'
                     f'{source_directory(dashboard_sources, source, activity_by_source)}'
-                    f'{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>'
+                    f'{source_detail_panel(detail, source_lookup.get(source.strip()))}{summary}<section class="row-grid">{signal_rows(rows, source_lookup)}</section></div>'
                 )
                 self.send_html("Dashboard", body)
                 return
@@ -1509,6 +1617,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     ]
                 )
                 source_payload = source_catalog_payload(self.config)
+                source_lookup = source_entry_map(source_payload)
                 search_sources = [item["key"] for item in source_payload["sources"]]
                 activity_by_source = {name: source_activity(conn, name) for name in search_sources}
                 summary = (
@@ -1519,11 +1628,13 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 )
                 self.send_html(
                     "Search",
-                    f'<div class="stack">{form}{source_directory(search_sources, source, activity_by_source)}{source_detail_panel(detail)}{summary}<section class="row-grid">{signal_rows(rows)}</section></div>',
+                    f'<div class="stack">{form}{source_directory(search_sources, source, activity_by_source)}{source_detail_panel(detail, source_lookup.get(source.strip()))}{summary}<section class="row-grid">{signal_rows(rows, source_lookup)}</section></div>',
                 )
                 return
             if parsed.path == "/api/search":
                 filters = api_search_filters(params)
+                source_payload = source_catalog_payload(self.config)
+                source_lookup = source_entry_map(source_payload)
                 query = str(filters["query"])
                 if (
                     not query.strip()
@@ -1555,11 +1666,23 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                         limit=int(filters["limit"]),
                         offset=int(filters["offset"]),
                     )
-                self.send_json([dict(row) for row in rows])
+                payload = []
+                for row in rows:
+                    item = dict(row)
+                    source_entry = source_lookup.get(str(item.get("source") or ""))
+                    evidence_mode, _, evidence_summary = source_evidence_mode(source_entry)
+                    item["source_kind"] = str(source_entry.get("kind") or "") if source_entry else ""
+                    item["source_evidence_mode"] = evidence_mode
+                    item["source_evidence_summary"] = evidence_summary
+                    payload.append(item)
+                self.send_json(payload)
                 return
             if parsed.path == "/api/sources":
                 source_name = params.get("source", [""])[0]
-                payload = source_catalog_payload(self.config, source_name)
+                payload = source_status_overview(self.config)
+                payload["requested_source"] = source_name.strip() or None
+                payload["source"] = next((item for item in payload["sources"] if item["key"] == source_name.strip()), None) if source_name.strip() else None
+                payload["scheduled_ingest"] = latest_scheduled_ingest_summary(audit_log_path(self.config))
                 if source_name.strip() and payload["source"] is None:
                     self.send_json(
                         {
@@ -1660,7 +1783,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                         pain_type=pain_type,
                         feature_request=feature_request,
                         limit=30,
-                    )
+                )
                     if source.strip()
                     else []
                 )
@@ -1668,12 +1791,13 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                     item["key"]: item["activity"] if isinstance(item.get("activity"), dict) else source_activity(conn, item["key"])
                     for item in payload["sources"]
                 }
+                scheduled = latest_scheduled_ingest_summary(audit_log_path(self.config))
                 body = (
-                    f'<div class="stack">{source_list_page(payload, activity_by_source, source, detail)}'
+                    f'<div class="stack">{source_list_page(payload, activity_by_source, scheduled, source, detail)}'
                     f'{filter_form("/sources", query=query, source=source, category=category, product=product, pain_type=pain_type, feature_request=feature_request, values=values, include_category=False, include_product=True, include_market=True, include_pain_type=True, include_feature_request=True, submit_label="Inspect")}'
-                    f'{source_detail_panel(detail)}'
+                    f'{source_detail_panel(detail, source_entry_map(payload).get(source.strip()))}'
                     f'<section class="toolbar"><p class="subtle">Showing {len(rows)} source-linked signal rows.</p><a href="/opportunities?source={quote_plus(source)}">Open source opportunities</a></section>'
-                    f'<section class="row-grid">{signal_rows(rows) if source.strip() else "<p>Select a source to inspect its linked signals and opportunities.</p>"}</section></div>'
+                    f'<section class="row-grid">{signal_rows(rows, source_entry_map(payload)) if source.strip() else "<p>Select a source to inspect its linked signals and opportunities.</p>"}</section></div>'
                 )
                 self.send_html("Sources", body)
                 return

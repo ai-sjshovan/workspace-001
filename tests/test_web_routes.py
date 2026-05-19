@@ -11,6 +11,7 @@ from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import urlopen
 
+from wayfinder.audit import write_event
 from wayfinder.config import load_config, source_configs
 from wayfinder.db import connect, insert_opportunities, insert_products, insert_signals
 from wayfinder.models import Opportunity, ProductIntel, Signal, scoring_weights, utc_now
@@ -21,13 +22,15 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         base_config = load_config()
-        cls.source_name = sorted(source_configs(base_config))[0]
+        cls.source_name = "oss-ledger"
         cls.temp_dir = tempfile.TemporaryDirectory()
         cls.storage_path = Path(cls.temp_dir.name) / "wayfinder-test.db"
+        cls.audit_log = Path(cls.temp_dir.name) / "wayfinder-audit.log"
         cls.config = dict(base_config)
         cls.config["wayfinder"] = {
             **(base_config.get("wayfinder") if isinstance(base_config.get("wayfinder"), dict) else {}),
             "storage_path": str(cls.storage_path),
+            "audit_log": str(cls.audit_log),
         }
         cls.recent_collected_at = utc_now()
         cls.stale_collected_at = (
@@ -156,6 +159,10 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
             conn.commit()
         finally:
             conn.close()
+        write_event(cls.audit_log, "wayfinder_scheduled_ingest_started", enabled=False, schedule="daily", source_count=3, approved_source_count=1, token_free=True, llm_tokens=0)
+        write_event(cls.audit_log, "wayfinder_scheduled_ingest_source", source=cls.source_name, raw_records=2, normalized=4, inserted_signals=2, inserted_products=1, inserted_opportunities=1, token_free=True, llm_tokens=0)
+        write_event(cls.audit_log, "wayfinder_scheduled_ingest_skipped", source="github", status="dry-run-only", reason="source_not_approved_for_unattended_ingest", token_free=True, llm_tokens=0)
+        write_event(cls.audit_log, "wayfinder_scheduled_ingest_finished", enabled=False, schedule="daily", approved_sources=1, skipped_sources=1, failed_sources=0, token_free=True, llm_tokens=0)
         WayfinderHandler.config = cls.config
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), WayfinderHandler)
         cls.server_thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
@@ -193,6 +200,9 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertIn("Latest ingest evidence: ok at 2026-05-18T00:01:00Z", body)
         self.assertIn("searchable +2", body)
         self.assertIn("opportunities +1", body)
+        self.assertIn("Daily ingest evidence", body)
+        self.assertIn("Searchable data last updated", body)
+        self.assertIn("No real-source searchable records have been indexed yet.", body)
 
         status, body = self.fetch(
             f"/?source={quote(self.source_name)}&product=Pain%20Radar&market=market-research&freshness=30&min_score=1&max_score=100&opportunity_sort=freshest&pain=reporting%20delays&feature_gap=deeper%20source%20drill-ins"
@@ -201,6 +211,7 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertIn("Wayfinder dashboard smoke signal", body)
         self.assertIn("Open dedicated source view", body)
         self.assertIn("Source evidence drill-ins for research operators", body)
+        self.assertIn("static-ledger", body)
         self.assertIn("Showing 1 signal rows", body)
         self.assertEqual(body.count("View source context"), 1)
         self.assertEqual(body.count("#task-draft-preview"), 1)
@@ -234,6 +245,8 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         selected_source = next(item for item in payload["sources"] if item["key"] == self.source_name)
         self.assertEqual(selected_source["activity"]["last_ingest_at"], "2026-05-18T00:01:00Z")
         self.assertEqual(selected_source["activity"]["last_run_inserted_searchable_rows"], 2)
+        self.assertEqual(payload["scheduled_ingest"]["status"], "finished")
+        self.assertEqual(payload["scheduled_ingest"]["source_outcomes"][0]["source"], self.source_name)
 
         status, body = self.fetch(f"/api/sources?source={quote(self.source_name)}")
         self.assertEqual(status, 200)
@@ -267,6 +280,8 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertEqual(len(payload), 1)
         self.assertEqual(payload[0]["source_id"], "dashboard-smoke")
         self.assertEqual(payload[0]["product"], "Pain Radar")
+        self.assertEqual(payload[0]["source_evidence_mode"], "static-ledger")
+        self.assertIn("Curated static-ledger evidence", payload[0]["source_evidence_summary"])
 
         status, body = self.fetch("/api/search?limit=1&offset=1")
         self.assertEqual(status, 200)
@@ -344,6 +359,7 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertIn("Recent source records", body)
         self.assertIn("Wayfinder dashboard smoke signal", body)
         self.assertIn("latest run 2026-05-18T00:01:00Z", body)
+        self.assertIn("Curated static-ledger evidence", body)
 
         status, body = self.fetch(f"/sources/{quote(self.source_name)}?signal=dashboard-smoke")
         self.assertEqual(status, 200)

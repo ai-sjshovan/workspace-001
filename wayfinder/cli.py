@@ -13,7 +13,7 @@ from . import __version__
 from .adapters import build_adapter
 from .adapters.github import GitHubCollectError
 from .adapters.hackernews import HackerNewsCollectError
-from .audit import write_event
+from .audit import latest_scheduled_ingest_summary, write_event
 from .config import audit_log_path, load_config, source_configs, source_policy, source_review_summary, storage_path
 from .drafts import format_task_draft
 from .db import (
@@ -621,25 +621,47 @@ def cmd_stats(args: argparse.Namespace) -> int:
     conn = connect(storage_path(config))
     try:
         data = counts(conn)
-        source_stats = {
-            name: source_activity(conn, name)
-            for name in sorted(source_configs(config))
-        }
+        sources = source_configs(config)
+        activity_by_source = {name: source_activity(conn, name) for name in sorted(sources)}
+        searchable_updated_at = max(
+            (str(activity.get("latest_signal_at") or "") for activity in activity_by_source.values()),
+            default="",
+        )
+        scheduled = latest_scheduled_ingest_summary(audit_log_path(config))
+        source_rows = []
+        real_source_signal_count = 0
+        for name, cfg in sorted(sources.items()):
+            kind = str(cfg.get("kind") or name)
+            if kind == "static_ledger":
+                evidence_mode = "static-ledger"
+            elif cfg.get("fixture_path"):
+                evidence_mode = "fixture-backed"
+            else:
+                evidence_mode = "real-source"
+            activity = activity_by_source[name]
+            source_rows.append(
+                {
+                    "source": name,
+                    "kind": kind,
+                    "evidence_mode": evidence_mode,
+                    "signal_count": int(activity.get("signal_count", 0)),
+                    "opportunity_count": int(activity.get("opportunity_count", 0)),
+                    "last_signal_at": str(activity.get("latest_signal_at") or ""),
+                    "last_ingest_at": str(activity.get("last_ingest_at") or ""),
+                    "latest_ingest_status": str(activity.get("health_status") or "unknown"),
+                }
+            )
+            if evidence_mode == "real-source":
+                real_source_signal_count += int(activity.get("signal_count", 0))
         if args.json:
             print(
                 json.dumps(
                     {
-                        "counts": data,
-                        "sources": {
-                            name: {
-                                "signals": int(activity["signal_count"]),
-                                "opportunities": int(activity["opportunity_count"]),
-                                "last_ingest_at": str(activity["last_ingest_at"] or ""),
-                                "latest_signal_at": str(activity["latest_signal_at"] or ""),
-                                "health_status": str(activity["health_status"] or "unknown"),
-                            }
-                            for name, activity in source_stats.items()
-                        },
+                        **data,
+                        "searchable_data_last_updated": searchable_updated_at,
+                        "real_source_signal_count": real_source_signal_count,
+                        "scheduled_ingest": scheduled,
+                        "sources": source_rows,
                     },
                     indent=2,
                     sort_keys=True,
@@ -648,14 +670,30 @@ def cmd_stats(args: argparse.Namespace) -> int:
         else:
             for key, value in data.items():
                 print(f"{color(key + ':', BOLD, not args.no_color)} {value}")
-            print(color("source_activity:", BOLD, not args.no_color))
-            for name, activity in source_stats.items():
+            print(f"{color('searchable_data_last_updated:', BOLD, not args.no_color)} {searchable_updated_at or 'none'}")
+            if scheduled is None:
+                print(f"{color('scheduled_ingest:', BOLD, not args.no_color)} no audit history")
+            else:
+                finished_at = scheduled.get("finished_at") or scheduled.get("started_at") or "unknown"
+                print(
+                    f"{color('scheduled_ingest:', BOLD, not args.no_color)} "
+                    f"status={scheduled.get('status', 'unknown')} finished_at={finished_at} "
+                    f"approved={scheduled.get('approved_sources', 0)} skipped={scheduled.get('skipped_sources', 0)} "
+                    f"failed={scheduled.get('failed_sources', 0)}"
+                )
+                for item in scheduled.get("source_outcomes", []):
+                    print(
+                        "  "
+                        f"{item['source']}: status={item['status']} signals+{item['inserted_signals']} "
+                        f"products+{item['inserted_products']} opportunities+{item['inserted_opportunities']}"
+                    )
+            print(f"{color('real_source_signal_count:', BOLD, not args.no_color)} {real_source_signal_count}")
+            for item in source_rows:
                 print(
                     "  "
-                    f"{name}: signals={int(activity['signal_count'])} "
-                    f"opportunities={int(activity['opportunity_count'])} "
-                    f"last_ingest_at={activity['last_ingest_at'] or 'never'} "
-                    f"health={activity['health_status'] or 'unknown'}"
+                    f"{item['source']} mode={item['evidence_mode']} signals={item['signal_count']} "
+                    f"opportunities={item['opportunity_count']} last_signal={item['last_signal_at'] or 'none'} "
+                    f"last_ingest={item['last_ingest_at'] or 'none'}"
                 )
     finally:
         conn.close()
