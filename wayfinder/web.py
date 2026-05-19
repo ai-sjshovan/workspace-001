@@ -294,10 +294,16 @@ def source_entry_map(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def source_evidence_mode(entry: dict[str, Any] | None) -> tuple[str, str, str]:
     if not entry:
         return "unknown", "", "Source evidence mode is unknown."
-    kind = str(entry.get("kind") or "")
+    kind = str(entry.get("kind") or "").strip().lower()
+    policy_status = str(entry.get("policy_status") or entry.get("status") or "").strip().lower()
     config = entry.get("config") if isinstance(entry.get("config"), dict) else {}
+    activity = entry.get("activity") if isinstance(entry.get("activity"), dict) else {}
     if kind == "static_ledger":
         return "static-ledger", "warn", "Curated static-ledger evidence, not a live daily source."
+    if activity.get("last_ingest_at") and not activity.get("last_run_dry_run"):
+        return "real-source", "good", "Live source records came from the most recent scheduled or manual ingest run."
+    if policy_status == "enabled":
+        return "real-source", "good", "This source is configured for live ingest; fixture inputs are kept only for dry-run diagnostics."
     if config.get("fixture_path"):
         return "fixture-backed", "warn", "Fixture-backed adapter evidence for manual validation, not live daily records yet."
     return "real-source", "good", "Live source records are eligible to reflect daily external ingest activity."
@@ -1470,10 +1476,13 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 )
                 values = signal_filter_values(conn)
                 opportunity_values = opportunity_filter_values(conn)
-                source_payload = source_catalog_payload(self.config)
+                source_payload = source_status_overview(self.config, conn)
                 source_lookup = source_entry_map(source_payload)
                 dashboard_sources = [item["key"] for item in source_payload["sources"]]
-                activity_by_source = {name: source_activity(conn, name) for name in dashboard_sources}
+                activity_by_source = {
+                    item["key"]: item["activity"] if isinstance(item.get("activity"), dict) else source_activity(conn, item["key"])
+                    for item in source_payload["sources"]
+                }
                 scheduled = latest_scheduled_ingest_summary(audit_log_path(self.config))
                 rows = browse_signals(
                     conn,
@@ -1616,10 +1625,13 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                         ("feature gap", feature_request),
                     ]
                 )
-                source_payload = source_catalog_payload(self.config)
+                source_payload = source_status_overview(self.config, conn)
                 source_lookup = source_entry_map(source_payload)
                 search_sources = [item["key"] for item in source_payload["sources"]]
-                activity_by_source = {name: source_activity(conn, name) for name in search_sources}
+                activity_by_source = {
+                    item["key"]: item["activity"] if isinstance(item.get("activity"), dict) else source_activity(conn, item["key"])
+                    for item in source_payload["sources"]
+                }
                 summary = (
                     f'<section class="toolbar"><div><p class="subtle">Search returned {len(rows)} rows with URL-backed filters.</p>'
                     f'{active_filters}</div><div class="toolbar-links">'
@@ -1633,7 +1645,7 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/api/search":
                 filters = api_search_filters(params)
-                source_payload = source_catalog_payload(self.config)
+                source_payload = source_status_overview(self.config, conn)
                 source_lookup = source_entry_map(source_payload)
                 query = str(filters["query"])
                 if (
@@ -1807,8 +1819,8 @@ class WayfinderHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path.startswith("/sources/"):
                 source_name = unquote(parsed.path.removeprefix("/sources/")).strip()
-                payload = source_catalog_payload(self.config, source_name)
-                source_entry = payload["source"]
+                payload = source_status_overview(self.config, conn)
+                source_entry = next((item for item in payload["sources"] if item["key"] == source_name), None)
                 if source_entry is None:
                     self.send_html(
                         "Source Not Found",

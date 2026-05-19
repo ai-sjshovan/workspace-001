@@ -73,6 +73,21 @@ def approved_scheduled_sources(config: dict[str, Any]) -> dict[str, dict[str, An
     return runnable_sources(config, dry_run=False)
 
 
+def source_evidence_mode(cfg: dict[str, Any], activity: dict[str, Any] | None = None) -> str:
+    kind = str(cfg.get("kind") or "").strip().lower()
+    if kind == "static_ledger":
+        return "static-ledger"
+    run = activity or {}
+    if run.get("last_ingest_at") and not run.get("last_run_dry_run"):
+        return "real-source"
+    status = str(cfg.get("status") or "").strip().lower()
+    if status == "enabled":
+        return "real-source"
+    if cfg.get("fixture_path"):
+        return "fixture-backed"
+    return "real-source"
+
+
 def runtime_source_config(cfg: dict[str, Any], *, dry_run: bool) -> dict[str, Any]:
     if dry_run or "fixture_path" not in cfg:
         return cfg
@@ -632,13 +647,8 @@ def cmd_stats(args: argparse.Namespace) -> int:
         real_source_signal_count = 0
         for name, cfg in sorted(sources.items()):
             kind = str(cfg.get("kind") or name)
-            if kind == "static_ledger":
-                evidence_mode = "static-ledger"
-            elif cfg.get("fixture_path"):
-                evidence_mode = "fixture-backed"
-            else:
-                evidence_mode = "real-source"
             activity = activity_by_source[name]
+            evidence_mode = source_evidence_mode(cfg, activity)
             source_rows.append(
                 {
                     "source": name,

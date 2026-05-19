@@ -367,6 +367,11 @@ class WayfinderRouteSmokeTests(unittest.TestCase):
         self.assertIn("Open original record", body)
         self.assertIn("Signal fixture for dashboard browse filters.", body)
 
+        status, body = self.fetch("/sources/github")
+        self.assertEqual(status, 200)
+        self.assertIn("real-source", body)
+        self.assertIn("configured for live ingest", body)
+
         status, body = self.fetch(
             f"/search?source={quote(self.source_name)}&category=market-research&product=Pain%20Radar"
         )
