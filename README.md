@@ -21,14 +21,11 @@ V2 implementation work is not authorized by default. Unless an operator explicit
 From the repository root:
 
 ```bash
-python3 -m wayfinder sources list --health
-python3 -m wayfinder scheduled-ingest
-python3 -m wayfinder search leverage --limit 5
-python3 -m wayfinder products --limit 20
-python3 -m wayfinder opportunities --limit 20
-python3 -m wayfinder score --limit 10
-python3 -m wayfinder export --min-score 40 --source oss-ledger
-python3 -m wayfinder stats
+python3 -m wayfinder sources list --health --no-color
+python3 -m wayfinder scheduled-ingest --no-color
+python3 -m wayfinder search saas --limit 5 --no-color
+python3 -m wayfinder opportunities --limit 20 --no-color
+python3 -m wayfinder stats --no-color
 python3 -m wayfinder serve --port 8766
 ```
 
@@ -70,7 +67,7 @@ The GitHub adapter stays anonymous by default, even if `GITHUB_TOKEN` is present
 
 ## Scheduled Ingest
 
-The production daily runner is `python3 -m wayfinder scheduled-ingest`. In the checked-in v1 config, this command is approved for unattended use because it only runs sources with `status: enabled`, and the default approved set is currently just `oss-ledger`.
+The production daily runner is `python3 -m wayfinder scheduled-ingest --no-color`. In the checked-in v1 config, this command is approved for unattended use because `cron.enabled: true` and it only runs sources with `status: enabled`. The default approved set is currently just `oss-ledger`.
 
 Daily operator workflow:
 
@@ -79,6 +76,13 @@ python3 -m wayfinder sources list --health --no-color
 python3 -m wayfinder scheduled-ingest --no-color
 python3 -m wayfinder stats --no-color
 ```
+
+Expected daily workflow:
+
+- Confirm source policy before running ingest: `sources list --health` should show `oss-ledger` as `status=enabled` with `review=approved unattended=eligible`.
+- Run the unattended ingest path once from the repo root with `scheduled-ingest --no-color`.
+- Verify the run wrote searchable records with `stats`, then a focused `search` or `opportunities` check.
+- Review `logs/wayfinder-audit.log` if counts, skips, or errors need follow-up.
 
 What the scheduled runner does:
 
@@ -91,9 +95,10 @@ What the scheduled runner does:
 How to verify the run was real and stored:
 
 - `python3 -m wayfinder stats --no-color` should show non-zero `signals`, `products`, `opportunities`, and `ingest_runs` after the daily run.
-- `python3 -m wayfinder search leverage --limit 5 --no-color` or `python3 -m wayfinder search pain --limit 5 --no-color` should return stored `oss-ledger` records rather than `No rows found.`.
+- `python3 -m wayfinder search saas --limit 5 --no-color` should return stored `oss-ledger` records rather than `No rows found.`.
 - `python3 -m wayfinder opportunities --limit 5 --no-color` should show scored rows sourced from `oss-ledger`.
-- `tail -n 20 logs/wayfinder-audit.log` should show the scheduled-ingest event history and any blocked/manual-only sources.
+- `tail -n 20 logs/wayfinder-audit.log` should show `wayfinder_scheduled_ingest_started`, source-level activity, and `wayfinder_scheduled_ingest_finished`.
+- If you want a direct storage check, inspect `.ai-state/wayfinder/wayfinder.db` after the run; it is the live SQLite store used by both CLI search and the read-only dashboard.
 
 The default approved run stays token-free and local-first. It does not enable paid sources, credential-required sources, or manual-review sources by default.
 
@@ -130,8 +135,9 @@ WantedBy=timers.target
 Foundry-compatible operator note:
 
 - Keep the schedule pointed at the repo root and use the repo-local CLI entrypoint `python3 -m wayfinder`.
+- The checked-in production path keeps unattended writes limited to `status: enabled` sources, so do not promote `dry-run-only`, `needs-review`, or credential-required sources by schedule alone.
 - If you need to pause daily ingest, set `cron.enabled: false` in `wayfinder.yaml` rather than editing source policy states.
-- If you need to review a candidate source manually, use `python3 -m wayfinder ingest --source <name> --dry-run`; that path is for source review and tests, not the production daily run.
+- Dry-run commands are manual review and test-only surfaces. Use `python3 -m wayfinder ingest --source <name> --dry-run` when evaluating a candidate source, not as a substitute for the production daily run.
 
 ## Source Safety
 
