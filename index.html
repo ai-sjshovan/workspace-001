@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Derpy Owl</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel">
+        <div class="hud">
+          <div class="brand">
+            <span class="brand-mark">Derpy Owl</span>
+            <span class="brand-copy">Flap through the pines. Space, click, or tap to flap.</span>
+          </div>
+          <div class="scoreboard">
+            <span>Score</span>
+            <strong id="score">0</strong>
+          </div>
+        </div>
+        <canvas
+          id="game"
+          width="420"
+          height="680"
+          aria-label="Derpy Owl playable game canvas"
+        ></canvas>
+        <div class="overlay" id="overlay" role="status" aria-live="polite">
+          <div class="card">
+            <p class="eyebrow" id="overlay-eyebrow">Ready</p>
+            <h1 id="overlay-title">Start a run</h1>
+            <p id="overlay-copy">
+              Keep the owl airborne, pass the branches, and survive as long as you can.
+            </p>
+            <button id="start-button" type="button">Play</button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script src="game.js"></script>
+  </body>
+</html>
