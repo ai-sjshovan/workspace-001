@@ -60,6 +60,13 @@ sources:
       - "competitor analysis startup validation"
     per_page: 10
 
+engines:
+  example-pain-engine:
+    module: wayfinder.engines.example
+    object: ExamplePainEngineSensor
+    sensors_only: true
+    notes: Import-only registry stub for external pain engines; engines stay separate from approved ingest sources and do not own core Wayfinder scoring logic.
+
 cron:
   enabled: true
   schedule: daily

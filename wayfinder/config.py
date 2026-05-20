@@ -5,7 +5,7 @@ from typing import Any
 
 import yaml
 
-from .models import SourceReviewPolicy, SourceRiskReview
+from .models import EngineDefinition, SourceReviewPolicy, SourceRiskReview
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -59,6 +59,24 @@ def source_configs(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
     for name, value in sources.items():
         if isinstance(value, dict):
             resolved[str(name)] = {**value, "_config_dir": config_dir}
+    return resolved
+
+
+def engine_configs(config: dict[str, Any]) -> dict[str, EngineDefinition]:
+    engines = config.get("engines")
+    if not isinstance(engines, dict):
+        return {}
+    resolved: dict[str, EngineDefinition] = {}
+    for name, value in engines.items():
+        if not isinstance(value, dict):
+            continue
+        resolved[str(name)] = EngineDefinition(
+            name=str(name),
+            module=str(value.get("module") or "").strip(),
+            object_name=str(value.get("object") or value.get("class") or "").strip(),
+            notes=str(value.get("notes") or "").strip(),
+            sensors_only=bool(value.get("sensors_only", True)),
+        )
     return resolved
 
 
