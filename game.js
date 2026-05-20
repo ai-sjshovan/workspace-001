@@ -1,0 +1,309 @@
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const overlay = document.getElementById("overlay");
+const overlayEyebrow = document.getElementById("overlay-eyebrow");
+const overlayTitle = document.getElementById("overlay-title");
+const overlayCopy = document.getElementById("overlay-copy");
+const startButton = document.getElementById("start-button");
+const scoreNode = document.getElementById("score");
+
+const config = {
+  gravity: 0.36,
+  flapVelocity: -7.2,
+  pipeSpeed: 2.4,
+  pipeWidth: 78,
+  pipeGap: 170,
+  pipeSpacing: 230,
+  floorHeight: 92,
+};
+
+const owl = {
+  x: 126,
+  y: canvas.height / 2,
+  radius: 20,
+  velocity: 0,
+  tilt: 0,
+};
+
+let state = "menu";
+let score = 0;
+let bestScore = 0;
+let runStartedAt = 0;
+let lastTime = 0;
+let deathTimer = null;
+let pipes = [];
+
+function resetRun() {
+  owl.y = canvas.height / 2;
+  owl.velocity = 0;
+  owl.tilt = 0;
+  score = 0;
+  scoreNode.textContent = "0";
+  runStartedAt = performance.now();
+  pipes = [
+    createPipe(canvas.width + 120),
+    createPipe(canvas.width + 120 + config.pipeSpacing),
+    createPipe(canvas.width + 120 + config.pipeSpacing * 2),
+  ];
+}
+
+function createPipe(x) {
+  const minTop = 90;
+  const maxTop = canvas.height - config.floorHeight - config.pipeGap - 90;
+  const topHeight = minTop + Math.random() * (maxTop - minTop);
+
+  return {
+    x,
+    topHeight,
+    passed: false,
+  };
+}
+
+function startRun() {
+  clearTimeout(deathTimer);
+  resetRun();
+  state = "playing";
+  overlay.classList.add("is-hidden");
+}
+
+function showMenu({ eyebrow, title, copy, buttonLabel }) {
+  overlayEyebrow.textContent = eyebrow;
+  overlayTitle.textContent = title;
+  overlayCopy.textContent = copy;
+  startButton.textContent = buttonLabel;
+  overlay.classList.remove("is-hidden");
+}
+
+function endRun() {
+  if (state !== "playing") {
+    return;
+  }
+
+  state = "dead";
+  const finalScore = score;
+  bestScore = Math.max(bestScore, score);
+  overlayEyebrow.textContent = "Ouch";
+  overlayTitle.textContent = "The owl wiped out";
+  overlayCopy.textContent = `Score ${finalScore}. Best ${bestScore}. Resetting to the play screen...`;
+  startButton.textContent = "Play again";
+  overlay.classList.remove("is-hidden");
+
+  deathTimer = window.setTimeout(() => {
+    state = "menu";
+    resetRun();
+    showMenu({
+      eyebrow: "Ready",
+      title: "Start a fresh run",
+      copy: `Last score ${finalScore}. Best ${bestScore}. Space, click, or tap to flap again.`,
+      buttonLabel: "Play",
+    });
+  }, 900);
+}
+
+function flap() {
+  if (state === "menu") {
+    startRun();
+  }
+
+  if (state !== "playing") {
+    return;
+  }
+
+  owl.velocity = config.flapVelocity;
+}
+
+function update(delta) {
+  if (state !== "playing") {
+    return;
+  }
+
+  owl.velocity += config.gravity * delta;
+  owl.y += owl.velocity * delta * 1.8;
+  owl.tilt = Math.max(-0.45, Math.min(0.9, owl.velocity / 10));
+
+  const speedRamp = Math.min(1.7, 1 + (performance.now() - runStartedAt) / 22000);
+  const pipeVelocity = config.pipeSpeed * speedRamp * delta * 1.8;
+
+  for (const pipe of pipes) {
+    pipe.x -= pipeVelocity;
+
+    if (!pipe.passed && pipe.x + config.pipeWidth < owl.x) {
+      pipe.passed = true;
+      score += 1;
+      scoreNode.textContent = String(score);
+    }
+  }
+
+  const lastPipe = pipes[pipes.length - 1];
+  if (lastPipe && lastPipe.x < canvas.width - config.pipeSpacing) {
+    pipes.push(createPipe(lastPipe.x + config.pipeSpacing));
+  }
+
+  pipes = pipes.filter((pipe) => pipe.x + config.pipeWidth > -20);
+
+  if (owl.y + owl.radius >= canvas.height - config.floorHeight || owl.y - owl.radius <= 0) {
+    endRun();
+    return;
+  }
+
+  for (const pipe of pipes) {
+    const hitsX = owl.x + owl.radius > pipe.x && owl.x - owl.radius < pipe.x + config.pipeWidth;
+    const hitsTop = owl.y - owl.radius < pipe.topHeight;
+    const hitsBottom = owl.y + owl.radius > pipe.topHeight + config.pipeGap;
+
+    if (hitsX && (hitsTop || hitsBottom)) {
+      endRun();
+      return;
+    }
+  }
+}
+
+function drawBackground() {
+  ctx.fillStyle = "#97d6ff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "#d7f2ff";
+  for (let i = 0; i < 4; i += 1) {
+    const x = (i * 130 + lastTime * 0.012) % (canvas.width + 180) - 90;
+    ctx.beginPath();
+    ctx.ellipse(x, 120 + (i % 2) * 34, 54, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = "#5d975a";
+  for (let i = 0; i < 7; i += 1) {
+    const x = i * 68 - 24;
+    ctx.beginPath();
+    ctx.moveTo(x, canvas.height - config.floorHeight);
+    ctx.lineTo(x + 22, canvas.height - config.floorHeight - 74);
+    ctx.lineTo(x + 44, canvas.height - config.floorHeight);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.fillStyle = "#ab8f4c";
+  ctx.fillRect(0, canvas.height - config.floorHeight, canvas.width, config.floorHeight);
+}
+
+function drawPipes() {
+  for (const pipe of pipes) {
+    ctx.fillStyle = "#487c42";
+    ctx.fillRect(pipe.x, 0, config.pipeWidth, pipe.topHeight);
+    ctx.fillRect(
+      pipe.x,
+      pipe.topHeight + config.pipeGap,
+      config.pipeWidth,
+      canvas.height - pipe.topHeight - config.pipeGap - config.floorHeight
+    );
+
+    ctx.fillStyle = "#2b5727";
+    ctx.fillRect(pipe.x - 3, pipe.topHeight - 16, config.pipeWidth + 6, 16);
+    ctx.fillRect(pipe.x - 3, pipe.topHeight + config.pipeGap, config.pipeWidth + 6, 16);
+  }
+}
+
+function drawOwl() {
+  ctx.save();
+  ctx.translate(owl.x, owl.y);
+  ctx.rotate(owl.tilt);
+
+  ctx.fillStyle = "#8a5a34";
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 24, 20, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#b97845";
+  ctx.beginPath();
+  ctx.ellipse(-6, 2, 10, 13, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#f6ecd9";
+  ctx.beginPath();
+  ctx.ellipse(2, 6, 11, 9, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(6, -4, 6, 0, Math.PI * 2);
+  ctx.arc(-6, -4, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#23190f";
+  ctx.beginPath();
+  ctx.arc(6, -4, 2.4, 0, Math.PI * 2);
+  ctx.arc(-6, -4, 2.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#d5802c";
+  ctx.beginPath();
+  ctx.moveTo(1, 1);
+  ctx.lineTo(14, 4);
+  ctx.lineTo(1, 8);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "#6a3919";
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-16, 18);
+  ctx.lineTo(-14, 25);
+  ctx.moveTo(-2, 18);
+  ctx.lineTo(-4, 25);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawPrompt() {
+  if (state === "playing") {
+    return;
+  }
+
+  ctx.fillStyle = "rgba(49, 35, 18, 0.08)";
+  ctx.font = "700 18px Trebuchet MS";
+  ctx.textAlign = "center";
+  ctx.fillText("Tap or press space to flap", canvas.width / 2, canvas.height - 130);
+}
+
+function render() {
+  drawBackground();
+  drawPipes();
+  drawOwl();
+  drawPrompt();
+}
+
+function frame(timestamp) {
+  if (!lastTime) {
+    lastTime = timestamp;
+  }
+
+  const delta = Math.min(1.6, (timestamp - lastTime) / 16.6667);
+  lastTime = timestamp;
+
+  update(delta);
+  render();
+  window.requestAnimationFrame(frame);
+}
+
+startButton.addEventListener("click", startRun);
+
+window.addEventListener("keydown", (event) => {
+  if (event.code !== "Space") {
+    return;
+  }
+
+  event.preventDefault();
+  flap();
+});
+
+canvas.addEventListener("pointerdown", flap);
+
+showMenu({
+  eyebrow: "Ready",
+  title: "Start a run",
+  copy: "Keep the owl airborne, pass the branches, and survive as long as you can.",
+  buttonLabel: "Play",
+});
+resetRun();
+window.requestAnimationFrame(frame);
