@@ -9,6 +9,22 @@ This branch replaces the WebView prototype path with a native Android runtime fo
 - Native `View`-driven flap loop with Canvas rendering
 - Native score HUD, milestone tracking, and death/restart overlay
 
+## Gameplay tuning evidence
+
+- Score advances in `DerpyOwlGameView.updateWorld()` by accumulating frame delta and adding exactly `1` point whenever another full second is survived.
+- Difficulty ramps from the opening values toward a hard cap over `40` score seconds, then stops increasing.
+- Opening loop constants are tuned for an MVP-friendly start:
+  - `FLAP_IMPULSE = -460f`
+  - `STARTING_GRAVITY = 780f`
+  - `STARTING_OBSTACLE_SPEED = 235f`
+  - `STARTING_SPAWN_INTERVAL = 2.05f`
+  - `BASE_GAP_HEIGHT_RATIO = 0.35f`
+- Difficulty cap values prevent unfair late spikes:
+  - `MAX_GRAVITY = 920f`
+  - `MAX_OBSTACLE_SPEED = 355f`
+  - `MIN_SPAWN_INTERVAL = 1.5f`
+  - `MIN_GAP_HEIGHT_RATIO = 0.28f`
+
 ## Build and run
 
 From the repo root:
