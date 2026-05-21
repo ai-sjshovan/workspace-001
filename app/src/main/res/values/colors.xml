@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="owl_sky">#CFE8FF</color>
+    <color name="owl_sky_top">#8EC5FF</color>
+    <color name="owl_sky_bottom">#E9F5FF</color>
     <color name="owl_night">#203A57</color>
     <color name="owl_night_soft">#4C6480</color>
     <color name="owl_sun">#FFD788</color>
+    <color name="owl_cloud_shadow">#BCD4E6</color>
+    <color name="owl_mountain">#89A6C1</color>
+    <color name="owl_hill">#6E9F73</color>
     <color name="owl_tree">#4F9F67</color>
+    <color name="owl_tree_dark">#357147</color>
     <color name="owl_trunk">#7C4D2D</color>
     <color name="owl_body">#B8742D</color>
+    <color name="owl_belly">#EBCB9A</color>
     <color name="owl_wing">#8A5424</color>
     <color name="owl_beak">#FFB53C</color>
 </resources>
