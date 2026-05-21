@@ -57,11 +57,7 @@ class DerpyOwlGameView @JvmOverloads constructor(
     var listener: Listener? = null
 
     private val random = Random(SystemClock.elapsedRealtime())
-    private val prefs = context.getSharedPreferences("derpy_owl_state", Context.MODE_PRIVATE)
-    private val milestoneTargets = listOf(10, 25, 50, 100)
-    private val unlockedMilestones = milestoneTargets
-        .filter { prefs.getBoolean("milestone_$it", false) }
-        .toMutableSet()
+    private val unlockedMilestones = mutableSetOf<Int>()
 
     private val skyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = ContextCompat.getColor(context, R.color.owl_sky)
@@ -127,8 +123,10 @@ class DerpyOwlGameView @JvmOverloads constructor(
 
     fun getPlayerName(): String = playerName
 
-    fun startRun() {
+    fun startRun(existingUnlockedMilestones: Collection<Int>) {
         resetWorld()
+        unlockedMilestones.clear()
+        unlockedMilestones.addAll(existingUnlockedMilestones)
         isRunning = true
         lastFrameMillis = SystemClock.elapsedRealtime()
         listener?.onScoreChanged(score)
@@ -246,13 +244,10 @@ class DerpyOwlGameView @JvmOverloads constructor(
     }
 
     private fun unlockMilestones(currentScore: Int) {
-        val newlyUnlocked = mutableListOf<Int>()
-        for (milestone in milestoneTargets) {
-            if (currentScore >= milestone && unlockedMilestones.add(milestone)) {
-                prefs.edit().putBoolean("milestone_$milestone", true).apply()
-                newlyUnlocked += milestone
-                listener?.onMilestoneUnlocked(milestone)
-            }
+        val newlyUnlocked = ScoreAchievements.newlyUnlocked(currentScore, unlockedMilestones)
+        newlyUnlocked.forEach { milestone ->
+            unlockedMilestones += milestone
+            listener?.onMilestoneUnlocked(milestone)
         }
         if (newlyUnlocked.isNotEmpty()) {
             latestRunUnlocked = newlyUnlocked

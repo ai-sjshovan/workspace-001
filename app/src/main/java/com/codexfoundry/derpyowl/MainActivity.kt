@@ -44,11 +44,15 @@ class MainActivity : AppCompatActivity() {
 
             override fun onGameOver(score: Int, unlockedMilestones: List<Int>) {
                 val activePlayer = currentPlayer ?: PlayerIdentity.devFallback()
-                val scoreSummary = sessionStore.saveCompletedRun(activePlayer.id, score)
+                val scoreSummary = sessionStore.saveCompletedRun(activePlayer.id, score, unlockedMilestones)
                 val achievementLine = if (unlockedMilestones.isEmpty()) {
-                    getString(R.string.achievement_progress_hint)
+                    formatAchievementStatus(scoreSummary.unlockedMilestones)
                 } else {
-                    getString(R.string.achievement_summary_format, unlockedMilestones.joinToString())
+                    getString(
+                        R.string.achievement_summary_format,
+                        unlockedMilestones.joinToString(),
+                        formatAchievementStatus(scoreSummary.unlockedMilestones),
+                    )
                 }
                 showOverlay(
                     title = getString(R.string.game_over_title),
@@ -92,15 +96,16 @@ class MainActivity : AppCompatActivity() {
             showStartScreen()
             return
         }
+        val scoreSummary = sessionStore.getScoreSummary(activePlayer.id)
         binding.hudPanel.visibility = android.view.View.VISIBLE
         binding.overlayCard.visibility = android.view.View.GONE
         binding.hintText.visibility = android.view.View.VISIBLE
         binding.googleLoginButton.visibility = android.view.View.GONE
         binding.devLoginButton.visibility = android.view.View.GONE
         binding.scoreText.text = getString(R.string.score_zero)
-        binding.achievementText.text = getString(R.string.achievement_progress_hint)
+        binding.achievementText.text = formatAchievementStatus(scoreSummary.unlockedMilestones)
         binding.gameView.setPlayerName(activePlayer.displayName)
-        binding.gameView.startRun()
+        binding.gameView.startRun(scoreSummary.unlockedMilestones)
     }
 
     private fun showStartScreen() {
@@ -239,11 +244,13 @@ class MainActivity : AppCompatActivity() {
                 summary.runCount,
             )
         }
+        val achievementLine = formatAchievementStatus(summary.unlockedMilestones)
         return getString(
             R.string.start_message_ready_format,
             player.displayName,
             providerLabel(player.provider),
             scoreLine,
+            achievementLine,
             googleStatusLine(),
         )
     }
@@ -273,5 +280,11 @@ class MainActivity : AppCompatActivity() {
     private fun providerLabel(provider: AuthProvider): String = when (provider) {
         AuthProvider.GOOGLE -> getString(R.string.provider_google)
         AuthProvider.DEV_FALLBACK -> getString(R.string.provider_dev_fallback)
+    }
+
+    private fun formatAchievementStatus(unlockedMilestones: List<Int>): String = if (unlockedMilestones.isEmpty()) {
+        getString(R.string.achievement_progress_hint)
+    } else {
+        getString(R.string.achievement_persisted_format, unlockedMilestones.joinToString())
     }
 }
