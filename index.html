@@ -8,7 +8,29 @@
   </head>
   <body>
     <main class="shell">
-      <section class="panel">
+      <section class="panel splash-panel" id="splash-screen" aria-labelledby="splash-title">
+        <div class="splash-art" aria-hidden="true">
+          <div class="splash-orb"></div>
+          <div class="splash-owl">🦉</div>
+        </div>
+        <div class="splash-copy">
+          <p class="eyebrow">Derpy Owl MVP</p>
+          <h1 id="splash-title">Start the forest run</h1>
+          <p class="splash-body">
+            Sign in if you want the MVP login path, or jump straight into the play screen and flap through the pines.
+          </p>
+        </div>
+        <div class="splash-actions">
+          <button id="google-login-button" class="google-login-button" type="button">
+            Continue with Google
+          </button>
+          <button id="enter-play-button" type="button">Open play screen</button>
+        </div>
+        <p id="login-status" class="login-status" role="status" aria-live="polite">
+          Google login is stubbed for the MVP entry flow.
+        </p>
+      </section>
+      <section class="panel game-panel is-hidden" id="play-screen">
         <div class="hud">
           <div class="brand">
             <span class="brand-mark">Derpy Owl</span>
@@ -32,7 +54,7 @@
             <p id="overlay-copy">
               Keep the owl airborne, pass the branches, and survive as long as you can.
             </p>
-            <button id="start-button" type="button">Play</button>
+            <button id="start-button" type="button">Start run</button>
           </div>
         </div>
       </section>
