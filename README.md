@@ -62,8 +62,19 @@ Android Studio path:
 ## Login and score persistence
 
 - Player identity is stored natively in `SharedPreferences` through `PlayerSessionStore`.
-- Completed runs are saved per player with `bestScore`, `lastScore`, and `runCount`.
-- The active player's saved score summary is shown on the start overlay and refreshed after each completed run.
+- Completed runs are saved per player with `bestScore`, `lastScore`, `runCount`, and unlocked score milestones.
+- Score achievements unlock once per player at `10`, `25`, `50`, and `100`, then stay visible on the in-run HUD, the game-over overlay, and the start overlay.
+- The active player's saved score summary and saved achievements are shown on the start overlay and refreshed after each completed run.
+
+## Deterministic milestone validation
+
+From the repo root:
+
+```bash
+cmd.exe /c "set JAVA_HOME=C:\Program Files\Android\Android Studio\jbr&& set ANDROID_HOME=C:\Users\Sjsho\AppData\Local\Android\Sdk&& set ANDROID_SDK_ROOT=C:\Users\Sjsho\AppData\Local\Android\Sdk&& gradlew.bat testDebugUnitTest"
+```
+
+This runs `ScoreAchievementsTest`, which verifies milestone unlocking at `10` and `25` and the persisted merge path used by the native game/session flow.
 
 ## Google login setup
 

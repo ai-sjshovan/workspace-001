@@ -17,14 +17,15 @@
     <string name="action_use_dev_fallback">Use Dev Fallback</string>
     <string name="start_message">Choose a login path to start flying and saving scores.</string>
     <string name="start_message_needs_login">This build runs with a native Android `View` game loop and native local score persistence. Sign in with Google if this build has credentials configured, or use the native dev fallback to keep testing locally.\n\n%1$s</string>
-    <string name="start_message_ready_format">%1$s is ready via %2$s.\n%3$s\n\n%4$s</string>
+    <string name="start_message_ready_format">%1$s is ready via %2$s.\n%3$s\n%4$s\n\n%5$s</string>
     <string name="hint_tap_to_flap">Tap anywhere to flap. Survive for one point per second.</string>
     <string name="score_zero">Score: 0</string>
     <string name="score_format">Score: %1$d</string>
     <string name="achievements_waiting">Achievements idle</string>
     <string name="achievement_progress_hint">Milestones: 10, 25, 50, 100</string>
     <string name="achievement_unlocked_format">Unlocked: %1$d</string>
-    <string name="achievement_summary_format">Unlocked this run: %1$s</string>
+    <string name="achievement_persisted_format">Saved achievements: %1$s</string>
+    <string name="achievement_summary_format">Unlocked this run: %1$s\n%2$s</string>
     <string name="game_over_title">Flight Ended</string>
     <string name="game_over_message_format">%1$s scored %2$d.\nBest score: %3$d. Last score: %4$d. Total runs: %5$d.\n%6$s</string>
     <string name="player_score_empty">No saved runs yet.</string>
