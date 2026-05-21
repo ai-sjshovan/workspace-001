@@ -2,5 +2,11 @@
 <resources>
     <color name="owl_sky">#CFE8FF</color>
     <color name="owl_night">#203A57</color>
+    <color name="owl_night_soft">#4C6480</color>
     <color name="owl_sun">#FFD788</color>
+    <color name="owl_tree">#4F9F67</color>
+    <color name="owl_trunk">#7C4D2D</color>
+    <color name="owl_body">#B8742D</color>
+    <color name="owl_wing">#8A5424</color>
+    <color name="owl_beak">#FFB53C</color>
 </resources>

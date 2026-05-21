@@ -1,15 +1,15 @@
 # Derpy Owl Android MVP
 
-This branch packages the existing Derpy Owl flap loop as an Android app shell instead of a standalone web page.
+This branch replaces the WebView prototype path with a native Android runtime foundation. The checked-in HTML, JS, and CSS files remain only as archived mechanic reference and are no longer launched by the app.
 
-## MVP surfaces
+## Native scaffold surfaces
 
-- Android splash screen via the app theme and splashscreen API
-- Android start/login screen loaded from local app assets
-- Android gameplay screen with the existing owl flap loop
-- Android death/score overlay that returns the player to the play screen
+- Native Android splash and launcher activity
+- Native start screen with a local dev-login fallback
+- Native `View`-driven flap loop with Canvas rendering
+- Native score HUD, milestone tracking, and death/restart overlay
 
-## Emulator and build commands
+## Build and run
 
 From the repo root:
 
@@ -19,8 +19,21 @@ From the repo root:
 adb shell am start -n com.codexfoundry.derpyowl/.MainActivity
 ```
 
-If an emulator is already running, `installDebug` pushes the APK and the `adb` command launches the app directly into the Android shell.
+Android Studio path:
 
-## Local validation note
+1. Open this repo as a Gradle project in Android Studio.
+2. Let the IDE sync the `app` module.
+3. Run the `app` configuration on an AVD or a connected device.
 
-The Android project is checked in with a Gradle wrapper, but this Codex worker environment does not currently provide `java`, `ANDROID_HOME`, or `ANDROID_SDK_ROOT`, so the build command cannot be executed here without adding those dependencies first.
+## Validation blocker path
+
+If the shell environment cannot build, check these prerequisites first:
+
+```bash
+java -version
+echo "$ANDROID_HOME"
+echo "$ANDROID_SDK_ROOT"
+adb devices
+```
+
+Missing Java, missing Android SDK environment variables, or no attached/emulated device are the expected blockers for CLI validation outside Android Studio.

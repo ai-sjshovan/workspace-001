@@ -1,4 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Derpy Owl</string>
+    <string name="title_derpy_owl">Derpy Owl</string>
+    <string name="subtitle_native_scaffold">Native Android canvas scaffold. Web prototype stays archived as reference only.</string>
+    <string name="subtitle_logged_in_format">Pilot ready: %1$s</string>
+    <string name="action_dev_login">Dev Login</string>
+    <string name="action_start_flight">Start Flight</string>
+    <string name="action_practice_reset">Reset Preview</string>
+    <string name="action_restart_flight">Fly Again</string>
+    <string name="action_back_to_roost">Back To Roost</string>
+    <string name="start_message">This build now runs with a native Android entry point and a native custom View game loop. Google sign-in is not wired yet for this issue, so a local pilot fallback lets you launch the scaffold and start flapping immediately.</string>
+    <string name="hint_tap_to_flap">Tap anywhere to flap. Survive for one point per second.</string>
+    <string name="score_zero">Score: 0</string>
+    <string name="score_format">Score: %1$d</string>
+    <string name="achievements_waiting">Achievements idle</string>
+    <string name="achievement_progress_hint">Milestones: 10, 25, 50, 100</string>
+    <string name="achievement_unlocked_format">Unlocked: %1$d</string>
+    <string name="achievement_summary_format">Unlocked this run: %1$s</string>
+    <string name="game_over_title">Flight Ended</string>
+    <string name="game_over_message_format">%1$s scored %2$d. Best score: %3$d.\n%4$s</string>
+    <string name="dev_login_toast">Using the local pilot fallback until Google login is wired.</string>
+    <string name="practice_reset_toast">Preview reset. Start Flight launches the native loop.</string>
 </resources>
