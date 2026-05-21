@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="owl_sky">#CFE8FF</color>
+    <color name="owl_night">#203A57</color>
+    <color name="owl_sun">#FFD788</color>
+</resources>
