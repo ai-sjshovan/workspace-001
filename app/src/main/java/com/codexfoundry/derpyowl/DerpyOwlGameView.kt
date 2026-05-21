@@ -45,7 +45,7 @@ class DerpyOwlGameView @JvmOverloads constructor(
     interface Listener {
         fun onScoreChanged(score: Int)
         fun onMilestoneUnlocked(milestone: Int)
-        fun onGameOver(score: Int, bestScore: Int, unlockedMilestones: List<Int>)
+        fun onGameOver(score: Int, unlockedMilestones: List<Int>)
     }
 
     private data class Obstacle(
@@ -261,9 +261,7 @@ class DerpyOwlGameView @JvmOverloads constructor(
 
     private fun finishRun() {
         isRunning = false
-        val bestScore = max(score, prefs.getInt("best_score", 0))
-        prefs.edit().putInt("best_score", bestScore).apply()
-        listener?.onGameOver(score, bestScore, latestRunUnlocked)
+        listener?.onGameOver(score, latestRunUnlocked)
     }
 
     private fun hitBounds(): Boolean {

@@ -46,12 +46,26 @@
                 android:textSize="14sp" />
         </LinearLayout>
 
-        <Button
-            android:id="@+id/loginButton"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minWidth="0dp"
-            android:text="@string/action_dev_login" />
+            android:orientation="vertical">
+
+            <Button
+                android:id="@+id/googleLoginButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:text="@string/action_google_login" />
+
+            <Button
+                android:id="@+id/devLoginButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:minWidth="0dp"
+                android:text="@string/action_dev_login" />
+        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
