@@ -1,10 +1,15 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const splashScreen = document.getElementById("splash-screen");
+const playScreen = document.getElementById("play-screen");
 const overlay = document.getElementById("overlay");
 const overlayEyebrow = document.getElementById("overlay-eyebrow");
 const overlayTitle = document.getElementById("overlay-title");
 const overlayCopy = document.getElementById("overlay-copy");
 const startButton = document.getElementById("start-button");
+const enterPlayButton = document.getElementById("enter-play-button");
+const googleLoginButton = document.getElementById("google-login-button");
+const loginStatus = document.getElementById("login-status");
 const scoreNode = document.getElementById("score");
 
 const config = {
@@ -32,6 +37,18 @@ let runStartedAt = 0;
 let lastTime = 0;
 let deathTimer = null;
 let pipes = [];
+let hasEnteredPlayScreen = false;
+let signedInProvider = null;
+
+function updateLoginStatus(copy) {
+  loginStatus.textContent = copy;
+}
+
+function showPlayScreen() {
+  hasEnteredPlayScreen = true;
+  splashScreen.classList.add("is-hidden");
+  playScreen.classList.remove("is-hidden");
+}
 
 function resetRun() {
   owl.y = canvas.height / 2;
@@ -61,6 +78,9 @@ function createPipe(x) {
 
 function startRun() {
   clearTimeout(deathTimer);
+  if (!hasEnteredPlayScreen) {
+    showPlayScreen();
+  }
   resetRun();
   state = "playing";
   overlay.classList.add("is-hidden");
@@ -101,6 +121,10 @@ function endRun() {
 }
 
 function flap() {
+  if (!hasEnteredPlayScreen) {
+    return;
+  }
+
   if (state === "menu") {
     startRun();
   }
@@ -256,7 +280,7 @@ function drawOwl() {
 }
 
 function drawPrompt() {
-  if (state === "playing") {
+  if (state === "playing" || !hasEnteredPlayScreen) {
     return;
   }
 
@@ -287,6 +311,22 @@ function frame(timestamp) {
 }
 
 startButton.addEventListener("click", startRun);
+enterPlayButton.addEventListener("click", () => {
+  showPlayScreen();
+  state = "menu";
+  showMenu({
+    eyebrow: signedInProvider ? "Signed in" : "Ready",
+    title: "Start a run",
+    copy: signedInProvider
+      ? `Signed in with ${signedInProvider}. Keep the owl airborne, pass the branches, and survive as long as you can.`
+      : "Keep the owl airborne, pass the branches, and survive as long as you can.",
+    buttonLabel: "Start run",
+  });
+});
+googleLoginButton.addEventListener("click", () => {
+  signedInProvider = "Google";
+  updateLoginStatus("Google sign-in connected for the MVP shell. You can open the play screen now.");
+});
 
 window.addEventListener("keydown", (event) => {
   if (event.code !== "Space") {
@@ -303,7 +343,7 @@ showMenu({
   eyebrow: "Ready",
   title: "Start a run",
   copy: "Keep the owl airborne, pass the branches, and survive as long as you can.",
-  buttonLabel: "Play",
+  buttonLabel: "Start run",
 });
 resetRun();
 window.requestAnimationFrame(frame);
