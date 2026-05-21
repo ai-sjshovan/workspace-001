@@ -5,9 +5,9 @@ This branch replaces the WebView prototype path with a native Android runtime fo
 ## Native scaffold surfaces
 
 - Native Android splash and launcher activity
-- Native start screen with a local dev-login fallback
+- Native start screen with Google login plus a native dev-login fallback
 - Native `View`-driven flap loop with Canvas rendering
-- Native score HUD, milestone tracking, and death/restart overlay
+- Native score HUD, milestone tracking, player-aware score persistence, and death/restart overlay
 
 ## Native visual surfaces
 
@@ -58,6 +58,24 @@ Android Studio path:
 1. Open this repo as a Gradle project in Android Studio.
 2. Let the IDE sync the `app` module.
 3. Run the `app` configuration on an AVD or a connected device.
+
+## Login and score persistence
+
+- Player identity is stored natively in `SharedPreferences` through `PlayerSessionStore`.
+- Completed runs are saved per player with `bestScore`, `lastScore`, and `runCount`.
+- The active player's saved score summary is shown on the start overlay and refreshed after each completed run.
+
+## Google login setup
+
+This build uses Android Credential Manager plus Sign in with Google. Google login only succeeds after the Android OAuth credentials are configured for this app.
+
+1. In Google Auth Platform or Google Cloud Console, create credentials for package `com.codexfoundry.derpyowl`.
+2. Register the SHA-1 and SHA-256 for the signing key you will use from Android Studio or Gradle.
+3. Create or confirm the OAuth web client ID used for Credential Manager Sign in with Google.
+4. Set that client ID in `app/src/main/res/values/strings.xml` as `google_web_client_id`, or place the override in a local untracked Android resource file.
+5. Run on hardware with Google Play services, or on an emulator image that includes Google APIs / Play Store support.
+
+If those credentials are not available, the start screen still provides the native dev fallback path. That fallback is intentionally local-only and does not pretend to be production Google auth.
 
 ## Validation blocker path
 
