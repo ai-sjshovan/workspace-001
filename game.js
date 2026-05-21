@@ -17,9 +17,13 @@ const config = {
   flapVelocity: -7.2,
   pipeSpeed: 2.4,
   pipeWidth: 78,
-  pipeGap: 170,
+  pipeGap: 178,
   pipeSpacing: 230,
   floorHeight: 92,
+  scorePerSecond: 10,
+  difficultyRampMs: 32000,
+  maxDifficultyMultiplier: 1.7,
+  minPipeGap: 132,
 };
 
 const owl = {
@@ -35,6 +39,7 @@ let score = 0;
 let bestScore = 0;
 let runStartedAt = 0;
 let lastTime = 0;
+let scoreAccumulator = 0;
 let deathTimer = null;
 let pipes = [];
 let hasEnteredPlayScreen = false;
@@ -55,6 +60,7 @@ function resetRun() {
   owl.velocity = 0;
   owl.tilt = 0;
   score = 0;
+  scoreAccumulator = 0;
   scoreNode.textContent = "0";
   runStartedAt = performance.now();
   pipes = [
@@ -66,14 +72,29 @@ function resetRun() {
 
 function createPipe(x) {
   const minTop = 90;
-  const maxTop = canvas.height - config.floorHeight - config.pipeGap - 90;
+  const currentGap = getCurrentPipeGap();
+  const maxTop = canvas.height - config.floorHeight - currentGap - 90;
   const topHeight = minTop + Math.random() * (maxTop - minTop);
 
   return {
     x,
     topHeight,
+    gap: currentGap,
     passed: false,
   };
+}
+
+function getDifficultyProgress() {
+  const elapsed = Math.max(0, performance.now() - runStartedAt);
+  return Math.min(1, elapsed / config.difficultyRampMs);
+}
+
+function getDifficultyMultiplier() {
+  return 1 + (config.maxDifficultyMultiplier - 1) * getDifficultyProgress();
+}
+
+function getCurrentPipeGap() {
+  return config.pipeGap - (config.pipeGap - config.minPipeGap) * getDifficultyProgress();
 }
 
 function startRun() {
@@ -145,17 +166,18 @@ function update(delta) {
   owl.y += owl.velocity * delta * 1.8;
   owl.tilt = Math.max(-0.45, Math.min(0.9, owl.velocity / 10));
 
-  const speedRamp = Math.min(1.7, 1 + (performance.now() - runStartedAt) / 22000);
-  const pipeVelocity = config.pipeSpeed * speedRamp * delta * 1.8;
+  scoreAccumulator += (delta * 16.6667 * config.scorePerSecond) / 1000;
+  const nextScore = Math.floor(scoreAccumulator);
+  if (nextScore !== score) {
+    score = nextScore;
+    scoreNode.textContent = String(score);
+  }
+
+  const difficultyMultiplier = getDifficultyMultiplier();
+  const pipeVelocity = config.pipeSpeed * difficultyMultiplier * delta * 1.8;
 
   for (const pipe of pipes) {
     pipe.x -= pipeVelocity;
-
-    if (!pipe.passed && pipe.x + config.pipeWidth < owl.x) {
-      pipe.passed = true;
-      score += 1;
-      scoreNode.textContent = String(score);
-    }
   }
 
   const lastPipe = pipes[pipes.length - 1];
@@ -173,7 +195,7 @@ function update(delta) {
   for (const pipe of pipes) {
     const hitsX = owl.x + owl.radius > pipe.x && owl.x - owl.radius < pipe.x + config.pipeWidth;
     const hitsTop = owl.y - owl.radius < pipe.topHeight;
-    const hitsBottom = owl.y + owl.radius > pipe.topHeight + config.pipeGap;
+    const hitsBottom = owl.y + owl.radius > pipe.topHeight + pipe.gap;
 
     if (hitsX && (hitsTop || hitsBottom)) {
       endRun();
@@ -215,14 +237,14 @@ function drawPipes() {
     ctx.fillRect(pipe.x, 0, config.pipeWidth, pipe.topHeight);
     ctx.fillRect(
       pipe.x,
-      pipe.topHeight + config.pipeGap,
+      pipe.topHeight + pipe.gap,
       config.pipeWidth,
-      canvas.height - pipe.topHeight - config.pipeGap - config.floorHeight
+      canvas.height - pipe.topHeight - pipe.gap - config.floorHeight
     );
 
     ctx.fillStyle = "#2b5727";
     ctx.fillRect(pipe.x - 3, pipe.topHeight - 16, config.pipeWidth + 6, 16);
-    ctx.fillRect(pipe.x - 3, pipe.topHeight + config.pipeGap, config.pipeWidth + 6, 16);
+    ctx.fillRect(pipe.x - 3, pipe.topHeight + pipe.gap, config.pipeWidth + 6, 16);
   }
 }
 
