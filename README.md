@@ -9,6 +9,16 @@ This branch replaces the WebView prototype path with a native Android runtime fo
 - Native `View`-driven flap loop with Canvas rendering
 - Native score HUD, milestone tracking, and death/restart overlay
 
+## Native visual surfaces
+
+- Flying owl canvas art: `app/src/main/java/com/codexfoundry/derpyowl/DerpyOwlGameView.kt`
+- Native palette resources: `app/src/main/res/values/colors.xml`
+- The owl remains collision-fair by keeping collision checks on a smaller body radius while the animated wings render outside that hitbox.
+- Obstacles stay native-rendered:
+  - Top obstacles are storm-cloud canopy shapes drawn on `Canvas`
+  - Bottom obstacles are layered pine silhouettes and trunks drawn on `Canvas`
+- Background stays native-rendered with a shader sky, mountain ridge, rolling hills, and parallax clouds.
+
 ## Gameplay tuning evidence
 
 - Score advances in `DerpyOwlGameView.updateWorld()` by accumulating frame delta and adding exactly `1` point whenever another full second is survived.
@@ -33,6 +43,14 @@ From the repo root:
 ./gradlew assembleDebug
 ./gradlew installDebug
 adb shell am start -n com.codexfoundry.derpyowl/.MainActivity
+```
+
+Windows/WSL fallback used in this workspace:
+
+```bash
+cmd.exe /c "set JAVA_HOME=C:\Program Files\Android\Android Studio\jbr&& set ANDROID_HOME=C:\Users\Sjsho\AppData\Local\Android\Sdk&& set ANDROID_SDK_ROOT=C:\Users\Sjsho\AppData\Local\Android\Sdk&& gradlew.bat assembleDebug"
+"/mnt/c/Users/Sjsho/AppData/Local/Android/Sdk/platform-tools/adb.exe" install -r app/build/outputs/apk/debug/app-debug.apk
+"/mnt/c/Users/Sjsho/AppData/Local/Android/Sdk/platform-tools/adb.exe" shell am start -n com.codexfoundry.derpyowl/.MainActivity
 ```
 
 Android Studio path:
