@@ -19,6 +19,26 @@ class DerpyOwlGameView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : View(context, attrs) {
 
+    private companion object {
+        const val FLAP_IMPULSE = -460f
+        const val STARTING_GRAVITY = 780f
+        const val MAX_GRAVITY = 920f
+        const val STARTING_OBSTACLE_SPEED = 235f
+        const val MAX_OBSTACLE_SPEED = 355f
+        const val STARTING_SPAWN_INTERVAL = 2.05f
+        const val MIN_SPAWN_INTERVAL = 1.5f
+        const val BASE_GAP_HEIGHT_RATIO = 0.35f
+        const val MIN_GAP_HEIGHT_RATIO = 0.28f
+        const val DIFFICULTY_CAP_SECONDS = 40f
+        const val MAX_FRAME_DELTA_SECONDS = 0.032f
+        const val OFFSCREEN_OBSTACLE_THRESHOLD = -200f
+        const val OBSTACLE_SPAWN_PADDING = 140f
+        const val INITIAL_OWL_X_RATIO = 0.28f
+        const val INITIAL_OWL_Y_RATIO = 0.45f
+        const val MIN_INITIAL_OWL_Y = 180f
+        const val INITIAL_OBSTACLE_SPACING_RATIO = 0.68f
+    }
+
     interface Listener {
         fun onScoreChanged(score: Int)
         fun onMilestoneUnlocked(milestone: Int)
@@ -81,8 +101,8 @@ class DerpyOwlGameView @JvmOverloads constructor(
     private var owlY = 0f
     private var owlVelocity = 0f
     private var lastFrameMillis = 0L
-    private var runStartMillis = 0L
     private var obstacleSpawnAccumulator = 0f
+    private var scoreAccumulator = 0f
     private var playerName = "Guest Pilot"
     private var latestRunUnlocked = emptyList<Int>()
 
@@ -95,8 +115,7 @@ class DerpyOwlGameView @JvmOverloads constructor(
     fun startRun() {
         resetWorld()
         isRunning = true
-        runStartMillis = SystemClock.elapsedRealtime()
-        lastFrameMillis = runStartMillis
+        lastFrameMillis = SystemClock.elapsedRealtime()
         listener?.onScoreChanged(score)
         postInvalidateOnAnimation()
     }
@@ -117,7 +136,7 @@ class DerpyOwlGameView @JvmOverloads constructor(
             return false
         }
         if (event.action == MotionEvent.ACTION_DOWN) {
-            owlVelocity = -540f
+            owlVelocity = FLAP_IMPULSE
             return true
         }
         return super.onTouchEvent(event)
@@ -136,10 +155,10 @@ class DerpyOwlGameView @JvmOverloads constructor(
         }
 
         val frameMillis = SystemClock.elapsedRealtime()
-        val deltaSeconds = min((frameMillis - lastFrameMillis) / 1000f, 0.032f)
+        val deltaSeconds = min((frameMillis - lastFrameMillis) / 1000f, MAX_FRAME_DELTA_SECONDS)
         lastFrameMillis = frameMillis
 
-        updateWorld(deltaSeconds, frameMillis)
+        updateWorld(deltaSeconds)
 
         if (isRunning) {
             postInvalidateOnAnimation()
@@ -150,45 +169,47 @@ class DerpyOwlGameView @JvmOverloads constructor(
         score = 0
         latestRunUnlocked = emptyList()
         obstacleSpawnAccumulator = 0f
+        scoreAccumulator = 0f
         obstacles.clear()
-        owlX = width * 0.28f
-        owlY = max(height * 0.45f, 180f)
+        owlX = width * INITIAL_OWL_X_RATIO
+        owlY = max(height * INITIAL_OWL_Y_RATIO, MIN_INITIAL_OWL_Y)
         owlVelocity = 0f
         if (width > 0 && height > 0) {
             repeat(3) { index ->
-                spawnObstacle(width + index * width * 0.55f)
+                spawnObstacle(width + index * width * INITIAL_OBSTACLE_SPACING_RATIO)
             }
         }
     }
 
-    private fun updateWorld(deltaSeconds: Float, frameMillis: Long) {
-        val elapsedSeconds = ((frameMillis - runStartMillis) / 1000L).toInt()
-        val previousScore = score
-        score = elapsedSeconds
-        if (score != previousScore) {
+    private fun updateWorld(deltaSeconds: Float) {
+        scoreAccumulator += deltaSeconds
+        while (scoreAccumulator >= 1f) {
+            scoreAccumulator -= 1f
+            score += 1
             listener?.onScoreChanged(score)
             unlockMilestones(score)
         }
 
-        val difficulty = min(score / 25f, 1f)
-        val gravity = 910f - (difficulty * 120f)
-        val obstacleSpeed = 285f + (difficulty * 140f)
-        val spawnEverySeconds = 1.65f - (difficulty * 0.35f)
+        val difficulty = min(score / DIFFICULTY_CAP_SECONDS, 1f)
+        val gravity = STARTING_GRAVITY + (difficulty * (MAX_GRAVITY - STARTING_GRAVITY))
+        val obstacleSpeed = STARTING_OBSTACLE_SPEED + (difficulty * (MAX_OBSTACLE_SPEED - STARTING_OBSTACLE_SPEED))
+        val spawnEverySeconds =
+            STARTING_SPAWN_INTERVAL - (difficulty * (STARTING_SPAWN_INTERVAL - MIN_SPAWN_INTERVAL))
 
         owlVelocity += gravity * deltaSeconds
         owlY += owlVelocity * deltaSeconds
 
         obstacleSpawnAccumulator += deltaSeconds
-        if (obstacleSpawnAccumulator >= spawnEverySeconds) {
-            obstacleSpawnAccumulator = 0f
-            spawnObstacle(width.toFloat() + 140f)
+        while (obstacleSpawnAccumulator >= spawnEverySeconds) {
+            obstacleSpawnAccumulator -= spawnEverySeconds
+            spawnObstacle(width.toFloat() + OBSTACLE_SPAWN_PADDING, difficulty)
         }
 
         val iterator = obstacles.iterator()
         while (iterator.hasNext()) {
             val obstacle = iterator.next()
             obstacle.x -= obstacleSpeed * deltaSeconds
-            if (obstacle.x < -200f) {
+            if (obstacle.x < OFFSCREEN_OBSTACLE_THRESHOLD) {
                 iterator.remove()
             }
         }
@@ -246,13 +267,15 @@ class DerpyOwlGameView @JvmOverloads constructor(
         return false
     }
 
-    private fun spawnObstacle(initialX: Float) {
+    private fun spawnObstacle(initialX: Float, difficulty: Float = 0f) {
         if (width == 0 || height == 0) {
             return
         }
-        val safeTop = height * 0.25f
-        val safeBottom = height * 0.78f
-        val gapHeight = height * 0.31f
+        val gapRatio = BASE_GAP_HEIGHT_RATIO - (difficulty * (BASE_GAP_HEIGHT_RATIO - MIN_GAP_HEIGHT_RATIO))
+        val gapHeight = height * gapRatio
+        val gapHalf = gapHeight / 2f
+        val safeTop = height * 0.18f + gapHalf
+        val safeBottom = height * 0.82f - gapHalf
         val center = random.nextFloat() * (safeBottom - safeTop) + safeTop
         obstacles += Obstacle(initialX, center, gapHeight)
     }
