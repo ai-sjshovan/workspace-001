@@ -13,17 +13,18 @@ const loginStatus = document.getElementById("login-status");
 const scoreNode = document.getElementById("score");
 
 const config = {
-  gravity: 0.36,
-  flapVelocity: -7.2,
-  pipeSpeed: 2.4,
+  gravity: 0.24,
+  flapVelocity: -6.4,
+  pipeSpeed: 2.0,
   pipeWidth: 78,
-  pipeGap: 178,
-  pipeSpacing: 230,
+  pipeGap: 214,
+  pipeSpacing: 290,
   floorHeight: 92,
-  scorePerSecond: 10,
-  difficultyRampMs: 32000,
-  maxDifficultyMultiplier: 1.7,
-  minPipeGap: 132,
+  scorePerSecond: 1,
+  difficultyRampMs: 55000,
+  maxDifficultyMultiplier: 1.4,
+  minPipeGap: 170,
+  minPipeSpacing: 248,
 };
 
 const owl = {
@@ -39,7 +40,6 @@ let score = 0;
 let bestScore = 0;
 let runStartedAt = 0;
 let lastTime = 0;
-let scoreAccumulator = 0;
 let deathTimer = null;
 let pipes = [];
 let hasEnteredPlayScreen = false;
@@ -67,7 +67,6 @@ function resetRun() {
   owl.velocity = 0;
   owl.tilt = 0;
   score = 0;
-  scoreAccumulator = 0;
   scoreNode.textContent = "0";
   runStartedAt = performance.now();
   pipes = [
@@ -102,6 +101,10 @@ function getDifficultyMultiplier() {
 
 function getCurrentPipeGap() {
   return config.pipeGap - (config.pipeGap - config.minPipeGap) * getDifficultyProgress();
+}
+
+function getCurrentPipeSpacing() {
+  return config.pipeSpacing - (config.pipeSpacing - config.minPipeSpacing) * getDifficultyProgress();
 }
 
 function startRun() {
@@ -173,8 +176,7 @@ function update(delta) {
   owl.y += owl.velocity * delta * 1.8;
   owl.tilt = Math.max(-0.45, Math.min(0.9, owl.velocity / 10));
 
-  scoreAccumulator += (delta * 16.6667 * config.scorePerSecond) / 1000;
-  const nextScore = Math.floor(scoreAccumulator);
+  const nextScore = Math.floor((performance.now() - runStartedAt) / 1000) * config.scorePerSecond;
   if (nextScore !== score) {
     score = nextScore;
     scoreNode.textContent = String(score);
@@ -182,14 +184,15 @@ function update(delta) {
 
   const difficultyMultiplier = getDifficultyMultiplier();
   const pipeVelocity = config.pipeSpeed * difficultyMultiplier * delta * 1.8;
+  const pipeSpacing = getCurrentPipeSpacing();
 
   for (const pipe of pipes) {
     pipe.x -= pipeVelocity;
   }
 
   const lastPipe = pipes[pipes.length - 1];
-  if (lastPipe && lastPipe.x < canvas.width - config.pipeSpacing) {
-    pipes.push(createPipe(lastPipe.x + config.pipeSpacing));
+  if (lastPipe && lastPipe.x < canvas.width - pipeSpacing) {
+    pipes.push(createPipe(lastPipe.x + pipeSpacing));
   }
 
   pipes = pipes.filter((pipe) => pipe.x + config.pipeWidth > -20);
