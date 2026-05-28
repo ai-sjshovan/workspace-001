@@ -504,6 +504,7 @@ private fun WatchStatusScreen(
     onBack: () -> Unit,
 ) {
     val core = state.activeCore
+    val repairReady = repairGate(state, nowEpochMillis).allowed
     val currentRoamStatus = roamStatus(state, nowEpochMillis)
     val roamLabel = when (currentRoamStatus) {
         RoamStatus.Idle -> "Ready"
@@ -558,16 +559,112 @@ private fun WatchStatusScreen(
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        WatchStatusChip(
+                            label = "Charge",
+                            value = "${state.charge}%",
+                            accent = metricAccent(state.charge),
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        WatchStatusChip(
+                            label = "Scrap",
+                            value = state.scrap.toString(),
+                            accent = metricAccent(state.scrap * 10),
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        WatchStatusChip(
+                            label = "Condition",
+                            value = "${state.condition}%",
+                            accent = metricAccent(state.condition),
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        WatchStatusChip(
+                            label = "Mood",
+                            value = core?.mood ?: "Dormant",
+                            accent = when {
+                                state.lowPowerWarningActive -> Color(0xFFFFB347)
+                                state.condition < 45 -> Color(0xFFFF6B6B)
+                                else -> Color(0xFF7EE787)
+                            },
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        WatchStatusChip(
+                            label = "Repair",
+                            value = if (repairReady) "Ready" else "Hold",
+                            accent = if (repairReady) Color(0xFF7EE787) else Color(0xFFFFB347),
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        WatchStatusChip(
+                            label = "Roam",
+                            value = when (currentRoamStatus) {
+                                RoamStatus.Idle -> "Ready"
+                                RoamStatus.Roaming -> "Live"
+                                RoamStatus.ReadyToReturn -> "Return"
+                            },
+                            accent = when (currentRoamStatus) {
+                                RoamStatus.Idle -> Color(0xFF7EE787)
+                                RoamStatus.Roaming -> Color(0xFF7AA2F7)
+                                RoamStatus.ReadyToReturn -> Color(0xFF8BE9FD)
+                            },
+                        )
+                    }
+                }
             }
         }
         Spacer(modifier = Modifier.height(12.dp))
         StatusPanel(
             title = "Use",
-            body = "This native on-watch screen is the MVP glanceable status surface for quick Charge, condition, mood, and roam state checks.",
+            body = "This native on-watch screen is the MVP glanceable status surface for quick Charge, Scrap, condition, mood, and repair or roam readiness checks.",
         )
         Button(modifier = Modifier.fillMaxWidth(), onClick = onBack) {
             Text("Back To Dashboard")
         }
+    }
+}
+
+@Composable
+private fun WatchStatusChip(label: String, value: String, accent: Color) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF0D1624), RoundedCornerShape(16.dp))
+            .border(1.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = label,
+            color = Color(0xFF90A3B8),
+            fontSize = 10.sp,
+        )
+        Text(
+            text = value,
+            color = accent,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
