@@ -39,6 +39,11 @@ class CoreLinkModelTest {
             condition = 89,
             recoveryNotes = "Manual verification note.",
             lastRoamReport = "Roam result persisted.",
+            lastChargeChangeAtEpochMillis = 1_000L,
+            lastConditionChangeAtEpochMillis = 2_000L,
+            lastRoamStartedAtEpochMillis = 3_000L,
+            lastRepairAtEpochMillis = 4_000L,
+            lastStateSyncEpochMillis = 5_000L,
         )
 
         val restored = CoreLinkStateCodec.decode(CoreLinkStateCodec.encode(original))
@@ -102,6 +107,27 @@ class CoreLinkModelTest {
         assertEquals(RoamStatus.Roaming, roamStatus(restored, nowEpochMillis = 20_000L))
         assertEquals(RoamStatus.ReadyToReturn, roamStatus(restored, nowEpochMillis = 80_000L))
         assertEquals(dispatched, restored)
+    }
+
+    @Test
+    fun lowPowerStateActivatesPersistsAndClearsAfterRecharge() {
+        val baseline = starterStateFromAnswers(CalibrationAnswers()).copy(
+            charge = 18,
+            condition = 70,
+            lowPowerWarningActive = false,
+            lowPowerEnteredAtEpochMillis = null,
+        )
+
+        val enteredLowPower = repairBot(baseline, nowEpochMillis = 12_000L)
+        val restoredLowPower = CoreLinkStateCodec.decode(CoreLinkStateCodec.encode(enteredLowPower))
+        val recovered = applySimulatedActivityBurst(restoredLowPower, simulatedSteps = 80)
+
+        assertTrue(enteredLowPower.lowPowerWarningActive)
+        assertEquals(12_000L, enteredLowPower.lowPowerEnteredAtEpochMillis)
+        assertEquals("Low Power", enteredLowPower.activeCore?.mood)
+        assertTrue(roamDispatchGate(restoredLowPower, nowEpochMillis = 12_500L).message.contains("Low Power"))
+        assertFalse(recovered.lowPowerWarningActive)
+        assertNull(recovered.lowPowerEnteredAtEpochMillis)
     }
 
     @Test

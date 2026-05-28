@@ -100,8 +100,9 @@ private fun CoreLinkApp(context: Context) {
     }
 
     fun commit(nextState: CoreLinkState) {
-        state = nextState
-        CoreLinkPrefs.save(context, nextState)
+        val syncedState = synchronizeDerivedState(nextState, nowEpochMillis = System.currentTimeMillis())
+        state = syncedState
+        CoreLinkPrefs.save(context, syncedState)
     }
 
     LaunchedEffect(state.roamEndsAtEpochMillis) {
@@ -289,7 +290,7 @@ private fun DashboardScreen(
     onCollectRoam: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
-    val lowPower = state.charge < 15
+    val lowPower = lowPowerStatus(state)
     val core = state.activeCore
     val repairGate = repairGate(state, nowEpochMillis)
     val roamGate = roamDispatchGate(state, nowEpochMillis)
@@ -310,7 +311,7 @@ private fun DashboardScreen(
             mood = core?.mood ?: "Unlinked",
             condition = state.condition,
             charge = state.charge,
-            lowPower = lowPower,
+            lowPower = lowPower.active,
         )
         TelemetryGrid(
             metrics = listOf(
@@ -318,9 +319,21 @@ private fun DashboardScreen(
                 TelemetryMetric("Scrap", state.scrap.toString(), metricAccent(state.scrap * 10)),
                 TelemetryMetric("Progress", state.progress.toString(), metricAccent(state.progress)),
                 TelemetryMetric("Condition", "${state.condition}%", metricAccent(state.condition)),
-                TelemetryMetric("Power State", if (lowPower) "LOW" else "STABLE", if (lowPower) Color(0xFFFFB347) else Color(0xFF7EE787)),
+                TelemetryMetric("Power State", if (lowPower.active) "LOW" else "STABLE", if (lowPower.active) Color(0xFFFFB347) else Color(0xFF7EE787)),
             ),
         )
+        if (lowPower.active) {
+            DashboardReadout(
+                title = "Low Power",
+                body = buildString {
+                    append("Charge is below $LowPowerChargeThreshold. Roam dispatch is suspended until the capacitor is recharged.")
+                    lowPower.enteredAtEpochMillis?.let {
+                        append("\nEntered low power at epoch $it for future passive-drain tuning.")
+                    }
+                },
+                accent = Color(0xFFFF6B6B),
+            )
+        }
         if (core != null) {
             DashboardReadout(
                 title = "Core Matrix Summary",
@@ -335,7 +348,7 @@ private fun DashboardScreen(
             DashboardReadout(
                 title = "Repair Queue",
                 body = repairSummary(state, core),
-                accent = if (state.condition < 55 || lowPower) Color(0xFFFFB347) else Color(0xFF7EE787),
+                accent = if (state.condition < 55 || lowPower.active) Color(0xFFFFB347) else Color(0xFF7EE787),
             )
             DashboardReadout(
                 title = "Roam Loop",
@@ -435,8 +448,8 @@ private fun matrixSummary(core: StarterCore): String =
 private fun repairSummary(state: CoreLinkState, core: StarterCore): String =
     buildString {
         append("${core.designation} mood ${core.mood}. ")
-        if (state.charge < 15) {
-            append("Low power. Route activity before roam. ")
+        if (state.lowPowerWarningActive) {
+            append("Low power. Repairs still work in MVP, but roaming is paused until recharge. ")
         } else {
             append("Charge reserves ready for field work. ")
         }
@@ -511,7 +524,11 @@ private fun SettingsScreen(state: CoreLinkState, onReset: () -> Unit, onBack: ()
         )
         StatusPanel(
             title = "Persistence",
-            body = "One active core, its 8 matrix metrics, starter stats, Charge, Scrap, progress, condition, mood, last roam report, and the roaming return timer are stored locally with SharedPreferences. Use Reset Demo State to clear them.",
+            body = "One active core, its 8 matrix metrics, starter stats, Charge, Scrap, progress, condition, mood, low-power warning state, roam timer, and tuning timestamps are stored locally with SharedPreferences. Use Reset Demo State to clear them.",
+        )
+        StatusPanel(
+            title = "MVP Deferrals",
+            body = "Deferred beyond MVP: dead-core permanence, battles, capture, store, and a multi-bot squad.",
         )
         Button(modifier = Modifier.fillMaxWidth(), onClick = onReset) {
             Text("Reset Demo State")
