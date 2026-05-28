@@ -9,6 +9,32 @@ import org.junit.Test
 
 class CoreLinkModelTest {
     @Test
+    fun starterCalibrationCreatesOneActiveCore() {
+        val state = starterStateFromAnswers(
+            CalibrationAnswers(
+                instinctIndex = 2,
+                frameIndex = 1,
+                doctrineIndex = 0,
+                adaptationIndex = 2,
+            ),
+        )
+
+        assertTrue(state.calibrated)
+        assertEquals("RE-FOWD", state.activeCore?.designation)
+        assertEquals("Relay Forge", state.activeCore?.frame)
+        assertEquals(
+            CalibrationAnswers(
+                instinctIndex = 2,
+                frameIndex = 1,
+                doctrineIndex = 0,
+                adaptationIndex = 2,
+            ),
+            state.activeCore?.answers,
+        )
+        assertTrue(state.recoveryNotes.contains("deterministic Core Matrix calibration"))
+    }
+
+    @Test
     fun calibrationIsDeterministicForSameAnswers() {
         val answers = CalibrationAnswers(
             instinctIndex = 2,
