@@ -1,9 +1,17 @@
 package com.corelink.wear
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -20,9 +28,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
@@ -77,10 +88,40 @@ private fun CoreLinkApp(context: Context) {
     var state by remember { mutableStateOf(initialState) }
     var screen by remember { mutableStateOf(if (initialState.calibrated) Screen.Dashboard else Screen.Recovery) }
     var answers by remember { mutableStateOf(initialState.activeCore?.answers ?: CalibrationAnswers()) }
+    val sensorManager = remember(context) { context.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
+    val stepCounterSensor = remember(sensorManager) { sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) }
+    var hasActivityPermission by remember(context) { mutableStateOf(hasActivityRecognitionPermission(context)) }
+    val latestState by rememberUpdatedState(state)
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasActivityPermission = granted
+    }
 
     fun commit(nextState: CoreLinkState) {
         state = nextState
         CoreLinkPrefs.save(context, nextState)
+    }
+
+    DisposableEffect(screen, sensorManager, stepCounterSensor, hasActivityPermission) {
+        if (screen != Screen.Dashboard || stepCounterSensor == null || !hasActivityPermission) {
+            onDispose { }
+        } else {
+            val listener = object : SensorEventListener {
+                override fun onSensorChanged(event: SensorEvent) {
+                    val totalSteps = event.values.firstOrNull()?.toInt() ?: return
+                    val nextState = applyWearStepSample(latestState, totalSteps)
+                    if (nextState != latestState) {
+                        commit(nextState)
+                    }
+                }
+
+                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+            }
+
+            sensorManager.registerListener(listener, stepCounterSensor, SensorManager.SENSOR_DELAY_NORMAL)
+            onDispose {
+                sensorManager.unregisterListener(listener)
+            }
+        }
     }
 
     when (screen) {
@@ -101,17 +142,12 @@ private fun CoreLinkApp(context: Context) {
 
         Screen.Dashboard -> DashboardScreen(
             state = state,
-            onSimulateActivity = {
-                val nextCharge = (state.charge + 10).coerceAtMost(100)
-                val nextMood = if (nextCharge >= 60) "Steady" else "Alert"
-                commit(
-                    state.copy(
-                        activeCore = state.activeCore?.copy(mood = nextMood),
-                        charge = nextCharge,
-                        recoveryNotes = "Charge spike captured from simulated activity.",
-                    ),
-                )
+            stepSensorAvailable = stepCounterSensor != null,
+            activityPermissionGranted = hasActivityPermission,
+            onRequestActivityPermission = {
+                permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
             },
+            onSimulateActivity = { commit(applySimulatedActivityBurst(state)) },
             onRepair = {
                 if (state.charge >= 5 && state.scrap >= 3) {
                     commit(
@@ -248,6 +284,9 @@ private fun CalibrationScreen(
 @Composable
 private fun DashboardScreen(
     state: CoreLinkState,
+    stepSensorAvailable: Boolean,
+    activityPermissionGranted: Boolean,
+    onRequestActivityPermission: () -> Unit,
     onSimulateActivity: () -> Unit,
     onRepair: () -> Unit,
     onRoam: () -> Unit,
@@ -301,8 +340,27 @@ private fun DashboardScreen(
             title = "Ops Log",
             body = "${state.recoveryNotes}\n${state.lastRoamReport}",
         )
+        DashboardReadout(
+            title = "Activity Feed",
+            body = buildString {
+                append("Source ${state.lastActivitySource}\n")
+                append(state.lastActivitySummary)
+                if (!stepSensorAvailable) {
+                    append("\nWear OS step sensor unavailable on this device or emulator. Use the simulation fallback for MVP validation.")
+                } else if (!activityPermissionGranted) {
+                    append("\nGrant activity access to convert live Wear OS steps into shared Charge.")
+                }
+            },
+            accent = if (stepSensorAvailable && activityPermissionGranted) Color(0xFF7EE787) else Color(0xFFFFB347),
+        )
+        if (stepSensorAvailable && !activityPermissionGranted) {
+            Button(modifier = Modifier.fillMaxWidth(), onClick = onRequestActivityPermission) {
+                Text("Enable Wear Step Access")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         Button(modifier = Modifier.fillMaxWidth(), onClick = onSimulateActivity) {
-            Text("Simulate Activity +10 Charge")
+            Text("Simulate Activity Burst")
         }
         Spacer(modifier = Modifier.height(8.dp))
         Button(modifier = Modifier.fillMaxWidth(), onClick = onRepair, enabled = state.charge >= 5 && state.scrap >= 3) {
@@ -645,3 +703,6 @@ private fun MeterRow(label: String, value: Int) {
 private fun CoreLinkTheme(content: @Composable () -> Unit) {
     MaterialTheme(content = content)
 }
+
+private fun hasActivityRecognitionPermission(context: Context): Boolean =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
