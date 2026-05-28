@@ -1,8 +1,10 @@
 package com.corelink.wear
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CoreLinkModelTest {
@@ -86,5 +88,57 @@ class CoreLinkModelTest {
         assertEquals(10, reset.lastStepCounterTotal)
         assertEquals(0, reset.activityCarryoverSteps)
         assertEquals("Wear OS step sensor", reset.lastActivitySource)
+    }
+
+    @Test
+    fun roamDispatchConsumesChargeAndPersistsTimerState() {
+        val initial = starterStateFromAnswers(CalibrationAnswers()).copy(charge = 40, condition = 72)
+
+        val dispatched = dispatchRoam(initial, nowEpochMillis = 10_000L)
+        val restored = CoreLinkStateCodec.decode(CoreLinkStateCodec.encode(dispatched))
+
+        assertEquals(40 - RoamChargeCost, dispatched.charge)
+        assertEquals(10_000L + RoamDurationMillis, dispatched.roamEndsAtEpochMillis)
+        assertEquals(RoamStatus.Roaming, roamStatus(restored, nowEpochMillis = 20_000L))
+        assertEquals(RoamStatus.ReadyToReturn, roamStatus(restored, nowEpochMillis = 80_000L))
+        assertEquals(dispatched, restored)
+    }
+
+    @Test
+    fun roamReturnGrantsDeterministicScrapAndProgress() {
+        val initial = starterStateFromAnswers(CalibrationAnswers()).copy(charge = 40, scrap = 7, progress = 3, condition = 75)
+        val dispatched = dispatchRoam(initial, nowEpochMillis = 0L)
+
+        val returned = resolveRoamReturn(dispatched, nowEpochMillis = RoamDurationMillis + 1L)
+
+        assertEquals(12, returned.scrap)
+        assertEquals(10, returned.progress)
+        assertEquals(67, returned.condition)
+        assertNull(returned.roamEndsAtEpochMillis)
+    }
+
+    @Test
+    fun repairConsumesResourcesAndImprovesCondition() {
+        val initial = starterStateFromAnswers(CalibrationAnswers()).copy(charge = 22, scrap = 9, condition = 54)
+
+        val repaired = repairBot(initial, nowEpochMillis = 0L)
+
+        assertEquals(22 - RepairChargeCost, repaired.charge)
+        assertEquals(9 - RepairScrapCost, repaired.scrap)
+        assertEquals(54 + RepairConditionGain, repaired.condition)
+    }
+
+    @Test
+    fun actionsWarnWhenChargeOrConditionIsInsufficient() {
+        val lowCharge = starterStateFromAnswers(CalibrationAnswers()).copy(charge = 2, scrap = 0, condition = 28)
+        val lowCondition = starterStateFromAnswers(CalibrationAnswers()).copy(charge = 40, condition = 24)
+
+        val repairGate = repairGate(lowCharge, nowEpochMillis = 0L)
+        val roamGate = roamDispatchGate(lowCondition, nowEpochMillis = 0L)
+
+        assertFalse(repairGate.allowed)
+        assertTrue(repairGate.message.contains("Charge"))
+        assertFalse(roamGate.allowed)
+        assertTrue(roamGate.message.contains("Condition"))
     }
 }

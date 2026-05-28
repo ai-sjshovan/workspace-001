@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +46,7 @@ import androidx.core.content.ContextCompat
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,6 +90,7 @@ private fun CoreLinkApp(context: Context) {
     var state by remember { mutableStateOf(initialState) }
     var screen by remember { mutableStateOf(if (initialState.calibrated) Screen.Dashboard else Screen.Recovery) }
     var answers by remember { mutableStateOf(initialState.activeCore?.answers ?: CalibrationAnswers()) }
+    var roamClockMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     val sensorManager = remember(context) { context.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
     val stepCounterSensor = remember(sensorManager) { sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) }
     var hasActivityPermission by remember(context) { mutableStateOf(hasActivityRecognitionPermission(context)) }
@@ -99,6 +102,15 @@ private fun CoreLinkApp(context: Context) {
     fun commit(nextState: CoreLinkState) {
         state = nextState
         CoreLinkPrefs.save(context, nextState)
+    }
+
+    LaunchedEffect(state.roamEndsAtEpochMillis) {
+        roamClockMillis = System.currentTimeMillis()
+        while (state.roamEndsAtEpochMillis != null && roamStatus(state, roamClockMillis) == RoamStatus.Roaming) {
+            delay(1_000)
+            roamClockMillis = System.currentTimeMillis()
+        }
+        roamClockMillis = System.currentTimeMillis()
     }
 
     DisposableEffect(screen, sensorManager, stepCounterSensor, hasActivityPermission) {
@@ -142,36 +154,19 @@ private fun CoreLinkApp(context: Context) {
 
         Screen.Dashboard -> DashboardScreen(
             state = state,
+            nowEpochMillis = roamClockMillis,
             stepSensorAvailable = stepCounterSensor != null,
             activityPermissionGranted = hasActivityPermission,
             onRequestActivityPermission = {
                 permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
             },
             onSimulateActivity = { commit(applySimulatedActivityBurst(state)) },
-            onRepair = {
-                if (state.charge >= 5 && state.scrap >= 3) {
-                    commit(
-                        state.copy(
-                            activeCore = state.activeCore?.copy(mood = "Stabilized"),
-                            charge = state.charge - 5,
-                            scrap = state.scrap - 3,
-                            condition = (state.condition + 12).coerceAtMost(100),
-                            recoveryNotes = "${state.activeCore?.designation ?: "Starter bot"} repaired from scavenged scrap.",
-                        ),
-                    )
-                }
-            },
-            onRoam = {
-                if (state.charge >= 12) {
-                    val haul = 2 + (state.condition / 25)
-                    val updated = state.copy(
-                        activeCore = state.activeCore?.copy(mood = "Curious"),
-                        charge = state.charge - 12,
-                        scrap = state.scrap + haul,
-                        lastRoamReport = "${state.activeCore?.designation ?: "Starter bot"} returned with $haul Scrap after scanning the deadband.",
-                        recoveryNotes = "Roam consumed 12 Charge and expanded local salvage stores.",
-                    )
-                    commit(updated)
+            onRepair = { commit(repairBot(state, System.currentTimeMillis())) },
+            onDispatchRoam = { commit(dispatchRoam(state, System.currentTimeMillis())) },
+            onCollectRoam = {
+                val updated = resolveRoamReturn(state, System.currentTimeMillis())
+                commit(updated)
+                if (updated != state) {
                     screen = Screen.RoamReport
                 }
             },
@@ -284,16 +279,22 @@ private fun CalibrationScreen(
 @Composable
 private fun DashboardScreen(
     state: CoreLinkState,
+    nowEpochMillis: Long,
     stepSensorAvailable: Boolean,
     activityPermissionGranted: Boolean,
     onRequestActivityPermission: () -> Unit,
     onSimulateActivity: () -> Unit,
     onRepair: () -> Unit,
-    onRoam: () -> Unit,
+    onDispatchRoam: () -> Unit,
+    onCollectRoam: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val lowPower = state.charge < 15
     val core = state.activeCore
+    val repairGate = repairGate(state, nowEpochMillis)
+    val roamGate = roamDispatchGate(state, nowEpochMillis)
+    val currentRoamStatus = roamStatus(state, nowEpochMillis)
+    val roamCountdown = formatCountdown(remainingRoamMillis(state, nowEpochMillis))
 
     ScreenContainer(title = core?.designation ?: "CoreLink") {
         HeaderCopy(
@@ -315,6 +316,7 @@ private fun DashboardScreen(
             metrics = listOf(
                 TelemetryMetric("Charge", "${state.charge}%", metricAccent(state.charge)),
                 TelemetryMetric("Scrap", state.scrap.toString(), metricAccent(state.scrap * 10)),
+                TelemetryMetric("Progress", state.progress.toString(), metricAccent(state.progress)),
                 TelemetryMetric("Condition", "${state.condition}%", metricAccent(state.condition)),
                 TelemetryMetric("Power State", if (lowPower) "LOW" else "STABLE", if (lowPower) Color(0xFFFFB347) else Color(0xFF7EE787)),
             ),
@@ -334,6 +336,32 @@ private fun DashboardScreen(
                 title = "Repair Queue",
                 body = repairSummary(state, core),
                 accent = if (state.condition < 55 || lowPower) Color(0xFFFFB347) else Color(0xFF7EE787),
+            )
+            DashboardReadout(
+                title = "Roam Loop",
+                body = roamSummary(state, core, currentRoamStatus, roamCountdown),
+                accent = when (currentRoamStatus) {
+                    RoamStatus.Idle -> if (roamGate.allowed) Color(0xFF7EE787) else Color(0xFFFFB347)
+                    RoamStatus.Roaming -> Color(0xFF7AA2F7)
+                    RoamStatus.ReadyToReturn -> Color(0xFF8BE9FD)
+                },
+            )
+            DashboardReadout(
+                title = "Command Warnings",
+                body = buildString {
+                    append("Repair: ${repairGate.message}\n")
+                    append(
+                        when (currentRoamStatus) {
+                            RoamStatus.ReadyToReturn -> "Roam: Recover the haul to grant Scrap and progress."
+                            else -> "Roam: ${roamGate.message}"
+                        },
+                    )
+                },
+                accent = if (!repairGate.allowed || !roamGate.allowed || currentRoamStatus == RoamStatus.ReadyToReturn) {
+                    Color(0xFFFFB347)
+                } else {
+                    Color(0xFF7EE787)
+                },
             )
         }
         DashboardReadout(
@@ -363,12 +391,22 @@ private fun DashboardScreen(
             Text("Simulate Activity Burst")
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Button(modifier = Modifier.fillMaxWidth(), onClick = onRepair, enabled = state.charge >= 5 && state.scrap >= 3) {
-            Text("Repair -5 Charge / -3 Scrap")
+        Button(modifier = Modifier.fillMaxWidth(), onClick = onRepair, enabled = repairGate.allowed) {
+            Text("Repair -$RepairChargeCost Charge / -$RepairScrapCost Scrap")
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Button(modifier = Modifier.fillMaxWidth(), onClick = onRoam, enabled = state.charge >= 12) {
-            Text("Dispatch Roam -12 Charge")
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = if (currentRoamStatus == RoamStatus.ReadyToReturn) onCollectRoam else onDispatchRoam,
+            enabled = currentRoamStatus == RoamStatus.ReadyToReturn || roamGate.allowed,
+        ) {
+            Text(
+                when (currentRoamStatus) {
+                    RoamStatus.Idle -> "Dispatch Roam -$RoamChargeCost Charge"
+                    RoamStatus.Roaming -> "Roaming $roamCountdown"
+                    RoamStatus.ReadyToReturn -> "Recover Roam Haul"
+                },
+            )
         }
         Spacer(modifier = Modifier.height(8.dp))
         Button(modifier = Modifier.fillMaxWidth(), onClick = onOpenSettings) {
@@ -408,6 +446,30 @@ private fun repairSummary(state: CoreLinkState, core: StarterCore): String =
             append("Condition holding. Repair remains optional at 5 Charge and 3 Scrap.")
         }
     }
+
+private fun roamSummary(
+    state: CoreLinkState,
+    core: StarterCore,
+    roamStatus: RoamStatus,
+    roamCountdown: String,
+): String =
+    when (roamStatus) {
+        RoamStatus.Idle -> buildString {
+            append("${core.designation} standing by. ")
+            append("Dispatch costs $RoamChargeCost Charge. ")
+            append("Return rewards follow deterministic Scrap and progress rules.")
+        }
+
+        RoamStatus.Roaming -> "${core.designation} is sweeping the deadband. Return window opens in $roamCountdown."
+        RoamStatus.ReadyToReturn -> "${core.designation} has completed the sweep. Recover the haul for Scrap and progress."
+    }
+
+private fun formatCountdown(remainingMillis: Long): String {
+    val totalSeconds = (remainingMillis.coerceAtLeast(0L) + 999L) / 1000L
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%02d:%02d".format(minutes, seconds)
+}
 
 private fun CoreMatrix.topTraitsSummary(): String =
     listOf(
@@ -449,7 +511,7 @@ private fun SettingsScreen(state: CoreLinkState, onReset: () -> Unit, onBack: ()
         )
         StatusPanel(
             title = "Persistence",
-            body = "One active core, its 8 matrix metrics, starter stats, Charge, Scrap, condition, mood, and the last roam report are stored locally with SharedPreferences. Use Reset Demo State to clear them.",
+            body = "One active core, its 8 matrix metrics, starter stats, Charge, Scrap, progress, condition, mood, last roam report, and the roaming return timer are stored locally with SharedPreferences. Use Reset Demo State to clear them.",
         )
         Button(modifier = Modifier.fillMaxWidth(), onClick = onReset) {
             Text("Reset Demo State")

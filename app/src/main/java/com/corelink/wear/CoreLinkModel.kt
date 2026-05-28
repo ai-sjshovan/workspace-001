@@ -45,6 +45,7 @@ data class CoreLinkState(
     val activeCore: StarterCore? = null,
     val charge: Int = 8,
     val scrap: Int = 4,
+    val progress: Int = 0,
     val condition: Int = 62,
     val recoveryNotes: String = "Signal acquisition pending.",
     val lastRoamReport: String = "No roam runs yet.",
@@ -52,11 +53,30 @@ data class CoreLinkState(
     val lastStepCounterTotal: Int? = null,
     val lastActivitySource: String = "Simulation standby",
     val lastActivitySummary: String = "No activity routed into the CoreLink capacitor yet.",
+    val roamEndsAtEpochMillis: Long? = null,
 )
 
 const val StepsPerChargeUnit = 40
 const val SimulatedActivitySteps = 400
+const val RepairChargeCost = 5
+const val RepairScrapCost = 3
+const val RepairConditionGain = 12
+const val RoamChargeCost = 12
+const val RoamMinimumCondition = 30
+const val RoamConditionWear = 8
+const val RoamDurationMillis = 60_000L
 private const val MaxCharge = 100
+
+enum class RoamStatus {
+    Idle,
+    Roaming,
+    ReadyToReturn,
+}
+
+data class ActionGate(
+    val allowed: Boolean,
+    val message: String,
+)
 
 private val instinctNames = listOf("Aegis", "Pulse", "Relay")
 private val frameNames = listOf("Scout", "Forge", "Bloom")
@@ -147,6 +167,7 @@ fun starterStateFromAnswers(answers: CalibrationAnswers): CoreLinkState {
         activeCore = starterCore,
         charge = 24 + (starterCore.stats.control / 8),
         scrap = 6 + (starterCore.matrix.efficiency / 20),
+        progress = 0,
         condition = 68 + (starterCore.stats.stability / 8),
         recoveryNotes = "Recovered AI core synchronized through deterministic Core Matrix calibration.",
         lastRoamReport = "Starter bot ready for first roam dispatch.",
@@ -201,6 +222,87 @@ fun applyWearStepSample(state: CoreLinkState, totalSteps: Int): CoreLinkState {
     )
 
     return updatedState.copy(lastStepCounterTotal = normalizedTotal)
+}
+
+fun roamStatus(state: CoreLinkState, nowEpochMillis: Long): RoamStatus {
+    val roamEndsAt = state.roamEndsAtEpochMillis ?: return RoamStatus.Idle
+    return if (nowEpochMillis < roamEndsAt) RoamStatus.Roaming else RoamStatus.ReadyToReturn
+}
+
+fun remainingRoamMillis(state: CoreLinkState, nowEpochMillis: Long): Long =
+    (state.roamEndsAtEpochMillis ?: nowEpochMillis) - nowEpochMillis
+
+fun repairGate(state: CoreLinkState, nowEpochMillis: Long): ActionGate =
+    when {
+        state.activeCore == null -> ActionGate(false, "Recover and calibrate one AI core first.")
+        roamStatus(state, nowEpochMillis) == RoamStatus.Roaming -> ActionGate(false, "The bot is roaming. Recover it before field repairs.")
+        state.charge < RepairChargeCost -> ActionGate(false, "Repair requires $RepairChargeCost Charge.")
+        state.scrap < RepairScrapCost -> ActionGate(false, "Repair requires $RepairScrapCost Scrap.")
+        state.condition >= 100 -> ActionGate(false, "Condition is already at peak.")
+        else -> ActionGate(true, "Repair will restore $RepairConditionGain condition for $RepairChargeCost Charge and $RepairScrapCost Scrap.")
+    }
+
+fun roamDispatchGate(state: CoreLinkState, nowEpochMillis: Long): ActionGate =
+    when {
+        state.activeCore == null -> ActionGate(false, "Recover and calibrate one AI core first.")
+        roamStatus(state, nowEpochMillis) == RoamStatus.Roaming -> ActionGate(false, "The bot is already roaming the deadband.")
+        roamStatus(state, nowEpochMillis) == RoamStatus.ReadyToReturn -> ActionGate(false, "Roam haul is ready. Recover it before dispatching again.")
+        state.charge < RoamChargeCost -> ActionGate(false, "Roam dispatch requires $RoamChargeCost Charge.")
+        state.condition < RoamMinimumCondition -> ActionGate(false, "Condition must be at least $RoamMinimumCondition% before a roam dispatch.")
+        else -> ActionGate(true, "Dispatch will consume $RoamChargeCost Charge for a $RoamDurationMillis ms deadband sweep.")
+    }
+
+fun dispatchRoam(state: CoreLinkState, nowEpochMillis: Long): CoreLinkState {
+    val gate = roamDispatchGate(state, nowEpochMillis)
+    if (!gate.allowed) {
+        return state.copy(recoveryNotes = gate.message)
+    }
+
+    val designation = state.activeCore?.designation ?: "Starter bot"
+    return state.copy(
+        activeCore = state.activeCore?.copy(mood = "Roaming"),
+        charge = state.charge - RoamChargeCost,
+        recoveryNotes = "$designation dispatched into the deadband. Return in ${RoamDurationMillis / 1000}s.",
+        lastRoamReport = "$designation is roaming for salvage and calibration traces.",
+        roamEndsAtEpochMillis = nowEpochMillis + RoamDurationMillis,
+    )
+}
+
+fun resolveRoamReturn(state: CoreLinkState, nowEpochMillis: Long): CoreLinkState {
+    if (roamStatus(state, nowEpochMillis) != RoamStatus.ReadyToReturn) {
+        return state.copy(recoveryNotes = "Roam haul is not ready to recover yet.")
+    }
+
+    val designation = state.activeCore?.designation ?: "Starter bot"
+    val scrapReward = 2 + (state.condition / 25) + ((state.activeCore?.stats.control ?: 0) / 50)
+    val progressReward = 4 + ((state.activeCore?.matrix.curiosity ?: 0) / 20) + ((state.activeCore?.stats.speed ?: 0) / 30)
+    val nextCondition = (state.condition - RoamConditionWear).coerceAtLeast(0)
+
+    return state.copy(
+        activeCore = state.activeCore?.copy(mood = if (nextCondition < 45) "Worn" else "Steady"),
+        scrap = state.scrap + scrapReward,
+        progress = state.progress + progressReward,
+        condition = nextCondition,
+        recoveryNotes = "$designation recovered with +$scrapReward Scrap and +$progressReward progress.",
+        lastRoamReport = "$designation returned from the deadband with $scrapReward Scrap and $progressReward progress. Condition wear -$RoamConditionWear%.",
+        roamEndsAtEpochMillis = null,
+    )
+}
+
+fun repairBot(state: CoreLinkState, nowEpochMillis: Long): CoreLinkState {
+    val gate = repairGate(state, nowEpochMillis)
+    if (!gate.allowed) {
+        return state.copy(recoveryNotes = gate.message)
+    }
+
+    val designation = state.activeCore?.designation ?: "Starter bot"
+    return state.copy(
+        activeCore = state.activeCore?.copy(mood = "Stabilized"),
+        charge = state.charge - RepairChargeCost,
+        scrap = state.scrap - RepairScrapCost,
+        condition = (state.condition + RepairConditionGain).coerceAtMost(100),
+        recoveryNotes = "$designation repaired from scavenged scrap and capacitor charge.",
+    )
 }
 
 private fun applyActivityDelta(
@@ -259,6 +361,7 @@ object CoreLinkStateCodec {
             "calibrated" to state.calibrated.toString(),
             "charge" to state.charge.toString(),
             "scrap" to state.scrap.toString(),
+            "progress" to state.progress.toString(),
             "condition" to state.condition.toString(),
             "recoveryNotes" to state.recoveryNotes,
             "lastRoamReport" to state.lastRoamReport,
@@ -266,6 +369,7 @@ object CoreLinkStateCodec {
             "lastStepCounterTotal" to (state.lastStepCounterTotal?.toString() ?: ""),
             "lastActivitySource" to state.lastActivitySource,
             "lastActivitySummary" to state.lastActivitySummary,
+            "roamEndsAtEpochMillis" to (state.roamEndsAtEpochMillis?.toString() ?: ""),
         )
 
         val core = state.activeCore
@@ -346,6 +450,7 @@ object CoreLinkStateCodec {
             },
             charge = values.intValue("charge", 8),
             scrap = values.intValue("scrap", 4),
+            progress = values.intValue("progress", 0),
             condition = values.intValue("condition", 62),
             recoveryNotes = values["recoveryNotes"] ?: "Signal acquisition pending.",
             lastRoamReport = values["lastRoamReport"] ?: "No roam runs yet.",
@@ -353,6 +458,7 @@ object CoreLinkStateCodec {
             lastStepCounterTotal = values["lastStepCounterTotal"]?.toIntOrNull(),
             lastActivitySource = values["lastActivitySource"] ?: "Simulation standby",
             lastActivitySummary = values["lastActivitySummary"] ?: "No activity routed into the CoreLink capacitor yet.",
+            roamEndsAtEpochMillis = values["roamEndsAtEpochMillis"]?.toLongOrNull(),
         )
     }
 
