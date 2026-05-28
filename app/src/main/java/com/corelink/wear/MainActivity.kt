@@ -63,6 +63,7 @@ private enum class Screen {
     Recovery,
     Calibration,
     Dashboard,
+    WatchStatus,
     RoamReport,
     Settings,
 }
@@ -171,7 +172,14 @@ private fun CoreLinkApp(context: Context) {
                     screen = Screen.RoamReport
                 }
             },
+            onOpenWatchStatus = { screen = Screen.WatchStatus },
             onOpenSettings = { screen = Screen.Settings },
+        )
+
+        Screen.WatchStatus -> WatchStatusScreen(
+            state = state,
+            nowEpochMillis = roamClockMillis,
+            onBack = { screen = Screen.Dashboard },
         )
 
         Screen.RoamReport -> RoamReportScreen(
@@ -288,6 +296,7 @@ private fun DashboardScreen(
     onRepair: () -> Unit,
     onDispatchRoam: () -> Unit,
     onCollectRoam: () -> Unit,
+    onOpenWatchStatus: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val lowPower = lowPowerStatus(state)
@@ -422,6 +431,10 @@ private fun DashboardScreen(
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
+        Button(modifier = Modifier.fillMaxWidth(), onClick = onOpenWatchStatus) {
+            Text("Watch Status Surface")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         Button(modifier = Modifier.fillMaxWidth(), onClick = onOpenSettings) {
             Text("Settings / Reset")
         }
@@ -482,6 +495,80 @@ private fun formatCountdown(remainingMillis: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "%02d:%02d".format(minutes, seconds)
+}
+
+@Composable
+private fun WatchStatusScreen(
+    state: CoreLinkState,
+    nowEpochMillis: Long,
+    onBack: () -> Unit,
+) {
+    val core = state.activeCore
+    val currentRoamStatus = roamStatus(state, nowEpochMillis)
+    val roamLabel = when (currentRoamStatus) {
+        RoamStatus.Idle -> "Ready"
+        RoamStatus.Roaming -> "Roaming ${formatCountdown(remainingRoamMillis(state, nowEpochMillis))}"
+        RoamStatus.ReadyToReturn -> "Recover Haul"
+    }
+
+    ScreenContainer(title = "Watch Status") {
+        HeaderCopy(
+            overline = "Glance Surface",
+            headline = "A watch-face-style readout for the active CoreLink bot.",
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF050A14), RoundedCornerShape(28.dp))
+                .border(1.dp, Color(0xFF214B75), RoundedCornerShape(28.dp))
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = core?.designation ?: "NO CORE",
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = if (state.lowPowerWarningActive) "LOW POWER" else "CORELINK STABLE",
+                    color = if (state.lowPowerWarningActive) Color(0xFFFFB347) else Color(0xFF7EE787),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "Mood ${core?.mood ?: "Dormant"}",
+                    color = Color(0xFFB8C5D6),
+                    fontSize = 13.sp,
+                )
+                Text(
+                    text = "Charge ${state.charge}%  Scrap ${state.scrap}",
+                    color = Color(0xFF8BE9FD),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = "Condition ${state.condition}%  Roam $roamLabel",
+                    color = Color(0xFFB8C5D6),
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        StatusPanel(
+            title = "Use",
+            body = "This native on-watch screen is the MVP glanceable status surface for quick Charge, condition, mood, and roam state checks.",
+        )
+        Button(modifier = Modifier.fillMaxWidth(), onClick = onBack) {
+            Text("Back To Dashboard")
+        }
+    }
 }
 
 private fun CoreMatrix.topTraitsSummary(): String =

@@ -6,6 +6,7 @@ CoreLink is a native Wear OS MVP scaffold. This repo now contains a single weara
 - deterministic starter bot creation
 - one recovered AI core with persisted matrix metrics and starter stats
 - dashboard for Charge, Scrap, condition, and mood
+- glanceable watch-status surface for quick command checks
 - shared-capacitor Charge gain from Wear OS step data when available
 - deterministic simulated activity fallback when a watch sensor or emulator support is unavailable
 - repair and roam demo loops
@@ -94,6 +95,17 @@ Final launch path on May 28, 2026:
 
 Current screenshot blocker on May 28, 2026:
 
-- `platform-tools/adb.exe devices` reports no connected devices.
+- `adb.exe devices` reports no connected devices.
 - `emulator.exe -list-avds` reports only `Medium_Phone`.
-- No Wear OS emulator or connected Wear OS device is currently available from this workspace, so watch-sized screenshot evidence could not be captured in this run.
+- No Wear OS emulator or connected Wear OS device is currently available from this workspace, so native watch launch and watch-sized screenshot evidence remain blocked by local tooling inventory rather than app code.
+
+## Acceptance Surface Map
+
+- Recovery opening: `Begin Recovery` on the launch screen
+- Core Matrix calibration: `Calibration` flow with four deterministic answers and `Calibrate Starter Bot`
+- Active bot dashboard: `Dashboard` command surface, telemetry grid, and ops/activity readouts
+- Charge, Scrap, condition panel: dashboard telemetry plus `Watch Status Surface`
+- Repair action: `Repair -5 Charge / -3 Scrap`
+- Roam dispatch and result: `Dispatch Roam -12 Charge`, countdown state, then `Recover Roam Haul`
+- Glanceable watch status surface: `Watch Status Surface`
+- Settings and reset: `Settings / Reset` then `Reset Demo State`
