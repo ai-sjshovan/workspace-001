@@ -48,7 +48,15 @@ data class CoreLinkState(
     val condition: Int = 62,
     val recoveryNotes: String = "Signal acquisition pending.",
     val lastRoamReport: String = "No roam runs yet.",
+    val activityCarryoverSteps: Int = 0,
+    val lastStepCounterTotal: Int? = null,
+    val lastActivitySource: String = "Simulation standby",
+    val lastActivitySummary: String = "No activity routed into the CoreLink capacitor yet.",
 )
+
+const val StepsPerChargeUnit = 40
+const val SimulatedActivitySteps = 400
+private const val MaxCharge = 100
 
 private val instinctNames = listOf("Aegis", "Pulse", "Relay")
 private val frameNames = listOf("Scout", "Forge", "Bloom")
@@ -142,6 +150,106 @@ fun starterStateFromAnswers(answers: CalibrationAnswers): CoreLinkState {
         condition = 68 + (starterCore.stats.stability / 8),
         recoveryNotes = "Recovered AI core synchronized through deterministic Core Matrix calibration.",
         lastRoamReport = "Starter bot ready for first roam dispatch.",
+        lastActivitySummary = "CoreLink capacitor primed. Route steps or use simulation to generate Charge.",
+    )
+}
+
+fun applySimulatedActivityBurst(
+    state: CoreLinkState,
+    simulatedSteps: Int = SimulatedActivitySteps,
+): CoreLinkState =
+    applyActivityDelta(
+        state = state,
+        deltaSteps = simulatedSteps,
+        source = "Simulated activity",
+        intro = "Simulation routed $simulatedSteps activity steps into the shared capacitor.",
+    )
+
+fun applyWearStepSample(state: CoreLinkState, totalSteps: Int): CoreLinkState {
+    val normalizedTotal = totalSteps.coerceAtLeast(0)
+    val previousTotal = state.lastStepCounterTotal
+
+    if (previousTotal == null) {
+        return state.copy(
+            lastStepCounterTotal = normalizedTotal,
+            lastActivitySource = "Wear OS step sensor",
+            lastActivitySummary = "Step counter linked at $normalizedTotal total steps. Walk to route Charge into the shared capacitor.",
+            recoveryNotes = "Wear OS step sensor linked. CoreLink converts every $StepsPerChargeUnit steps into 1 Charge.",
+        )
+    }
+
+    if (normalizedTotal < previousTotal) {
+        return state.copy(
+            lastStepCounterTotal = normalizedTotal,
+            activityCarryoverSteps = 0,
+            lastActivitySource = "Wear OS step sensor",
+            lastActivitySummary = "Step counter reset detected. CoreLink re-linked at $normalizedTotal total steps.",
+            recoveryNotes = "Wear OS step counter reset detected. Charge conversion resumed from the new baseline.",
+        )
+    }
+
+    val deltaSteps = normalizedTotal - previousTotal
+    if (deltaSteps == 0) {
+        return state
+    }
+
+    val updatedState = applyActivityDelta(
+        state = state,
+        deltaSteps = deltaSteps,
+        source = "Wear OS step sensor",
+        intro = "Detected $deltaSteps new step(s) from the watch sensor.",
+    )
+
+    return updatedState.copy(lastStepCounterTotal = normalizedTotal)
+}
+
+private fun applyActivityDelta(
+    state: CoreLinkState,
+    deltaSteps: Int,
+    source: String,
+    intro: String,
+): CoreLinkState {
+    val sanitizedSteps = deltaSteps.coerceAtLeast(0)
+    if (sanitizedSteps == 0) {
+        return state
+    }
+
+    val availableSteps = state.activityCarryoverSteps + sanitizedSteps
+    val rawChargeGain = availableSteps / StepsPerChargeUnit
+    val chargeHeadroom = MaxCharge - state.charge
+    val appliedChargeGain = rawChargeGain.coerceAtMost(chargeHeadroom)
+    val consumedSteps = appliedChargeGain * StepsPerChargeUnit
+    val remainingSteps = if (chargeHeadroom == 0) {
+        0
+    } else {
+        availableSteps - consumedSteps
+    }
+    val nextCharge = state.charge + appliedChargeGain
+    val nextMood = if (nextCharge >= 60) "Steady" else "Alert"
+
+    val summary = if (appliedChargeGain > 0) {
+        "$intro Generated +$appliedChargeGain Charge. $remainingSteps/$StepsPerChargeUnit steps banked toward the next Charge."
+    } else if (chargeHeadroom == 0) {
+        "$intro Capacitor already full at $MaxCharge Charge."
+    } else {
+        "$intro No Charge generated yet. $remainingSteps/$StepsPerChargeUnit steps banked toward the next Charge."
+    }
+
+    val note = if (appliedChargeGain > 0) {
+        "Activity routed through the shared CoreLink capacitor and increased Charge by $appliedChargeGain."
+    } else if (chargeHeadroom == 0) {
+        "Activity registered, but the shared CoreLink capacitor is already full."
+    } else {
+        "Activity registered. CoreLink needs $StepsPerChargeUnit steps for each Charge unit."
+    }
+
+    return state.copy(
+        activeCore = state.activeCore?.copy(mood = nextMood),
+        charge = nextCharge,
+        activityCarryoverSteps = remainingSteps,
+        lastActivitySource = source,
+        lastActivitySummary = summary,
+        recoveryNotes = note,
     )
 }
 
@@ -154,6 +262,10 @@ object CoreLinkStateCodec {
             "condition" to state.condition.toString(),
             "recoveryNotes" to state.recoveryNotes,
             "lastRoamReport" to state.lastRoamReport,
+            "activityCarryoverSteps" to state.activityCarryoverSteps.toString(),
+            "lastStepCounterTotal" to (state.lastStepCounterTotal?.toString() ?: ""),
+            "lastActivitySource" to state.lastActivitySource,
+            "lastActivitySummary" to state.lastActivitySummary,
         )
 
         val core = state.activeCore
@@ -237,6 +349,10 @@ object CoreLinkStateCodec {
             condition = values.intValue("condition", 62),
             recoveryNotes = values["recoveryNotes"] ?: "Signal acquisition pending.",
             lastRoamReport = values["lastRoamReport"] ?: "No roam runs yet.",
+            activityCarryoverSteps = values.intValue("activityCarryoverSteps", 0),
+            lastStepCounterTotal = values["lastStepCounterTotal"]?.toIntOrNull(),
+            lastActivitySource = values["lastActivitySource"] ?: "Simulation standby",
+            lastActivitySummary = values["lastActivitySummary"] ?: "No activity routed into the CoreLink capacitor yet.",
         )
     }
 
