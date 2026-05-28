@@ -61,3 +61,9 @@ $env:ANDROID_SDK_ROOT=$env:ANDROID_HOME
 
 Both commands completed successfully after Gradle installed the required SDK 36
 platform and build tools into the configured Android SDK.
+
+Current screenshot blocker on May 28, 2026:
+
+- `adb devices` reports only `Medium_Phone`.
+- `emulator -list-avds` reports only `Medium_Phone`.
+- No Wear OS emulator or connected Wear OS device is currently available from this workspace, so watch-sized screenshot evidence could not be captured in this run.

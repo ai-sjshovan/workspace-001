@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -258,36 +259,47 @@ private fun DashboardScreen(
     ScreenContainer(title = core?.designation ?: "CoreLink") {
         HeaderCopy(
             overline = core?.frame ?: "Dormant",
-            headline = "Mood ${core?.mood ?: "Unlinked"}  Condition ${state.condition}%",
-        )
-        StatusPanel(
-            title = "Watch Status",
-            body = if (lowPower) {
-                "Low-power warning. Route activity into Charge before the next roam."
+            headline = if (core != null) {
+                "Active bot linked to the wrist rig."
             } else {
-                "Core stable. Dashboard synced to the active watch rig."
+                "No recovered AI core is online."
             },
-            accent = if (lowPower) Color(0xFFFFB347) else Color(0xFF7EE787),
         )
-        MeterRow("Charge", state.charge)
-        MeterRow("Scrap", state.scrap)
-        MeterRow("Condition", state.condition)
+        CommandSurfacePanel(
+            designation = core?.designation ?: "UNLINKED",
+            mood = core?.mood ?: "Unlinked",
+            condition = state.condition,
+            charge = state.charge,
+            lowPower = lowPower,
+        )
+        TelemetryGrid(
+            metrics = listOf(
+                TelemetryMetric("Charge", "${state.charge}%", metricAccent(state.charge)),
+                TelemetryMetric("Scrap", state.scrap.toString(), metricAccent(state.scrap * 10)),
+                TelemetryMetric("Condition", "${state.condition}%", metricAccent(state.condition)),
+                TelemetryMetric("Power State", if (lowPower) "LOW" else "STABLE", if (lowPower) Color(0xFFFFB347) else Color(0xFF7EE787)),
+            ),
+        )
         if (core != null) {
-            MatrixPanel(core.matrix)
-            StatusPanel(
-                title = "Bot Stats",
+            DashboardReadout(
+                title = "Core Matrix Summary",
                 body = buildString {
-                    append("Speed ${core.stats.speed}  Memory ${core.stats.memory}\n")
-                    append("Power ${core.stats.power}  Trust ${core.stats.trust}\n")
-                    append("Weight ${core.stats.weight}  Attack ${core.stats.attack}\n")
-                    append("Defense ${core.stats.defense}  Control ${core.stats.control}\n")
-                    append("Stability ${core.stats.stability}  Temperament ${core.stats.temperament}")
+                    append(matrixSummary(core))
+                    append("\n")
+                    append("Top traits ")
+                    append(core.matrix.topTraitsSummary())
                 },
+                accent = Color(0xFF7AA2F7),
+            )
+            DashboardReadout(
+                title = "Repair Queue",
+                body = repairSummary(state, core),
+                accent = if (state.condition < 55 || lowPower) Color(0xFFFFB347) else Color(0xFF7EE787),
             )
         }
-        StatusPanel(
-            title = "Recovery Log",
-            body = state.recoveryNotes,
+        DashboardReadout(
+            title = "Ops Log",
+            body = "${state.recoveryNotes}\n${state.lastRoamReport}",
         )
         Button(modifier = Modifier.fillMaxWidth(), onClick = onSimulateActivity) {
             Text("Simulate Activity +10 Charge")
@@ -306,6 +318,52 @@ private fun DashboardScreen(
         }
     }
 }
+
+private data class TelemetryMetric(
+    val label: String,
+    val value: String,
+    val accent: Color,
+)
+
+private fun metricAccent(value: Int): Color =
+    when {
+        value < 15 -> Color(0xFFFF6B6B)
+        value < 40 -> Color(0xFFFFB347)
+        else -> Color(0xFF7EE787)
+    }
+
+private fun matrixSummary(core: StarterCore): String =
+    "${core.designation} ${core.stats.temperament} frame ${core.frame}. " +
+        "Control ${core.stats.control}, Stability ${core.stats.stability}, Trust ${core.stats.trust}."
+
+private fun repairSummary(state: CoreLinkState, core: StarterCore): String =
+    buildString {
+        append("${core.designation} mood ${core.mood}. ")
+        if (state.charge < 15) {
+            append("Low power. Route activity before roam. ")
+        } else {
+            append("Charge reserves ready for field work. ")
+        }
+        if (state.condition < 55) {
+            append("Condition degraded. Repair needs 5 Charge and 3 Scrap.")
+        } else {
+            append("Condition holding. Repair remains optional at 5 Charge and 3 Scrap.")
+        }
+    }
+
+private fun CoreMatrix.topTraitsSummary(): String =
+    listOf(
+        "Aggression" to aggression,
+        "Caution" to caution,
+        "Curiosity" to curiosity,
+        "Discipline" to discipline,
+        "Loyalty" to loyalty,
+        "Independence" to independence,
+        "Imagination" to imagination,
+        "Efficiency" to efficiency,
+    ).sortedByDescending { it.second }
+        .take(3)
+        .joinToString("  ") { (label, value) -> "$label $value" }
 
 @Composable
 private fun RoamReportScreen(report: String, onReturn: () -> Unit) {
@@ -356,6 +414,125 @@ private fun MatrixPanel(matrix: CoreMatrix) {
             append("Imagination ${matrix.imagination}  Efficiency ${matrix.efficiency}")
         },
     )
+}
+
+@Composable
+private fun CommandSurfacePanel(
+    designation: String,
+    mood: String,
+    condition: Int,
+    charge: Int,
+    lowPower: Boolean,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Color(0xFF22415F), RoundedCornerShape(22.dp))
+            .background(Color(0xFF08111E), RoundedCornerShape(22.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = "WRIST COMMAND SURFACE",
+            color = Color(0xFF8BE9FD),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = designation,
+            color = Color.White,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = "Mood $mood  Condition $condition%  Charge $charge%",
+            color = Color(0xFFB8C5D6),
+            fontSize = 11.sp,
+        )
+        Text(
+            text = if (lowPower) "STATUS: LOW-POWER / REPAIR WATCH" else "STATUS: CORE MATRIX SYNCED",
+            color = if (lowPower) Color(0xFFFFB347) else Color(0xFF7EE787),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+    Spacer(modifier = Modifier.height(10.dp))
+}
+
+@Composable
+private fun TelemetryGrid(metrics: List<TelemetryMetric>) {
+    metrics.chunked(2).forEach { rowMetrics ->
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            rowMetrics.forEach { metric ->
+                Box(modifier = Modifier.weight(1f)) {
+                    TelemetryCell(metric = metric)
+                }
+            }
+            if (rowMetrics.size == 1) {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun TelemetryCell(metric: TelemetryMetric) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF101826), RoundedCornerShape(18.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = metric.label,
+            color = Color(0xFF90A3B8),
+            fontSize = 10.sp,
+        )
+        Text(
+            text = metric.value,
+            color = metric.accent,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun DashboardReadout(title: String, body: String, accent: Color = Color(0xFF3AAED8)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF101826), RoundedCornerShape(20.dp))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .width(8.dp)
+                    .height(8.dp)
+                    .background(accent, RoundedCornerShape(99.dp)),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title,
+                color = Color(0xFFB8C5D6),
+                fontSize = 11.sp,
+            )
+        }
+        Text(
+            text = body,
+            color = Color.White,
+            textAlign = TextAlign.Start,
+            fontSize = 12.sp,
+        )
+    }
+    Spacer(modifier = Modifier.height(10.dp))
 }
 
 @Composable
