@@ -27,11 +27,11 @@ powershell.exe -NoProfile -Command '& {
 
 Observed result:
 
-- `:app:testDebugUnitTest` passed.
-- `:app:assembleDebug` passed.
+- `:app:testDebugUnitTest` passed and was up to date on the validated run.
+- `:app:assembleDebug` passed and was up to date on the validated run.
 - Debug APK produced at `app/build/outputs/apk/debug/app-debug.apk`.
-- `adb devices` returned no connected devices.
-- `emulator -list-avds` returned only `Medium_Phone`.
+- `adb devices` printed `List of devices attached` with no connected Wear OS target underneath it.
+- `emulator -list-avds` returned only `Medium_Phone`, which is a phone AVD rather than a Wear OS target.
 
 ## Wear OS Proof Surface
 

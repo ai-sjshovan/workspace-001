@@ -75,7 +75,7 @@ The WSL shell does not expose Linux `java`, so the supported local proof path is
 Windows Android tooling: Android Studio's bundled JBR plus the configured
 Windows SDK.
 
-Validated from this workspace on May 28, 2026:
+Validated from this workspace on May 29, 2026:
 
 ```powershell
 powershell.exe -NoProfile -Command '& {
@@ -89,13 +89,13 @@ powershell.exe -NoProfile -Command '& {
 }'
 ```
 
-Observed result on May 28, 2026:
+Observed result on May 29, 2026:
 
-- `:app:testDebugUnitTest` passed.
-- `:app:assembleDebug` passed.
+- `:app:testDebugUnitTest` passed and was up to date on the validated run.
+- `:app:assembleDebug` passed and was up to date on the validated run.
 - Debug artifact is produced at `app/build/outputs/apk/debug/app-debug.apk`.
-- `adb.exe devices` reported no connected devices.
-- `emulator.exe -list-avds` reported only `Medium_Phone`.
+- `adb.exe devices` printed `List of devices attached` with no connected Wear OS target underneath it.
+- `emulator.exe -list-avds` reported only `Medium_Phone`, which is a phone AVD rather than a Wear OS target.
 
 Final launch and smoke path:
 
@@ -103,7 +103,7 @@ Final launch and smoke path:
 2. Start or connect a Wear OS target. A phone-only AVD is not sufficient for this acceptance gate.
 3. Run the `app` configuration, complete recovery and calibration, use `Simulate Activity Burst` or a live step sensor to generate Charge, dispatch and recover a roam, spend Charge and Scrap on repair, then relaunch the app and confirm the persisted state.
 
-Current launch blocker on May 28, 2026:
+Current launch blocker on May 29, 2026:
 
 - The native Wear OS project builds and unit-tests successfully.
 - Watch launch evidence is still blocked by local tooling inventory rather than app code because no Wear OS emulator or connected Wear OS device is currently available from this workspace.
