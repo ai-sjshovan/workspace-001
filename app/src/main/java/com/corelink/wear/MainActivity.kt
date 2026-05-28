@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -54,57 +53,20 @@ private enum class Screen {
     Settings,
 }
 
-private data class CoreLinkState(
-    val calibrated: Boolean = false,
-    val botName: String = "",
-    val botFrame: String = "Dormant",
-    val mood: String = "Unlinked",
-    val charge: Int = 8,
-    val scrap: Int = 4,
-    val condition: Int = 62,
-    val recoveryNotes: String = "Signal acquisition pending.",
-    val lastRoamReport: String = "No roam runs yet.",
-)
-
 private object CoreLinkPrefs {
     private const val Name = "corelink_state"
-    private const val KeyCalibrated = "calibrated"
-    private const val KeyBotName = "bot_name"
-    private const val KeyBotFrame = "bot_frame"
-    private const val KeyMood = "mood"
-    private const val KeyCharge = "charge"
-    private const val KeyScrap = "scrap"
-    private const val KeyCondition = "condition"
-    private const val KeyRecoveryNotes = "recovery_notes"
-    private const val KeyLastRoamReport = "last_roam_report"
 
     fun load(context: Context): CoreLinkState {
         val prefs = context.getSharedPreferences(Name, Context.MODE_PRIVATE)
-        return CoreLinkState(
-            calibrated = prefs.getBoolean(KeyCalibrated, false),
-            botName = prefs.getString(KeyBotName, "") ?: "",
-            botFrame = prefs.getString(KeyBotFrame, "Dormant") ?: "Dormant",
-            mood = prefs.getString(KeyMood, "Unlinked") ?: "Unlinked",
-            charge = prefs.getInt(KeyCharge, 8),
-            scrap = prefs.getInt(KeyScrap, 4),
-            condition = prefs.getInt(KeyCondition, 62),
-            recoveryNotes = prefs.getString(KeyRecoveryNotes, "Signal acquisition pending.") ?: "Signal acquisition pending.",
-            lastRoamReport = prefs.getString(KeyLastRoamReport, "No roam runs yet.") ?: "No roam runs yet.",
-        )
+        val values = prefs.all.mapValues { (_, value) -> value?.toString().orEmpty() }
+        return CoreLinkStateCodec.decode(values)
     }
 
     fun save(context: Context, state: CoreLinkState) {
-        context.getSharedPreferences(Name, Context.MODE_PRIVATE).edit()
-            .putBoolean(KeyCalibrated, state.calibrated)
-            .putString(KeyBotName, state.botName)
-            .putString(KeyBotFrame, state.botFrame)
-            .putString(KeyMood, state.mood)
-            .putInt(KeyCharge, state.charge)
-            .putInt(KeyScrap, state.scrap)
-            .putInt(KeyCondition, state.condition)
-            .putString(KeyRecoveryNotes, state.recoveryNotes)
-            .putString(KeyLastRoamReport, state.lastRoamReport)
-            .apply()
+        val values = CoreLinkStateCodec.encode(state)
+        context.getSharedPreferences(Name, Context.MODE_PRIVATE).edit().clear().apply {
+            values.forEach { (key, value) -> putString(key, value) }
+        }.apply()
     }
 }
 
@@ -113,8 +75,7 @@ private fun CoreLinkApp(context: Context) {
     val initialState = remember(context) { CoreLinkPrefs.load(context) }
     var state by remember { mutableStateOf(initialState) }
     var screen by remember { mutableStateOf(if (initialState.calibrated) Screen.Dashboard else Screen.Recovery) }
-    var temperamentIndex by remember { mutableIntStateOf(0) }
-    var chassisIndex by remember { mutableIntStateOf(0) }
+    var answers by remember { mutableStateOf(initialState.activeCore?.answers ?: CalibrationAnswers()) }
 
     fun commit(nextState: CoreLinkState) {
         state = nextState
@@ -128,12 +89,10 @@ private fun CoreLinkApp(context: Context) {
         )
 
         Screen.Calibration -> CalibrationScreen(
-            temperamentIndex = temperamentIndex,
-            chassisIndex = chassisIndex,
-            onTemperamentChange = { temperamentIndex = it },
-            onChassisChange = { chassisIndex = it },
+            answers = answers,
+            onAnswersChange = { answers = it },
             onCalibrate = {
-                val calibratedState = starterStateFromAnswers(temperamentIndex, chassisIndex)
+                val calibratedState = starterStateFromAnswers(answers)
                 commit(calibratedState)
                 screen = Screen.Dashboard
             },
@@ -146,8 +105,8 @@ private fun CoreLinkApp(context: Context) {
                 val nextMood = if (nextCharge >= 60) "Steady" else "Alert"
                 commit(
                     state.copy(
+                        activeCore = state.activeCore?.copy(mood = nextMood),
                         charge = nextCharge,
-                        mood = nextMood,
                         recoveryNotes = "Charge spike captured from simulated activity.",
                     ),
                 )
@@ -156,11 +115,11 @@ private fun CoreLinkApp(context: Context) {
                 if (state.charge >= 5 && state.scrap >= 3) {
                     commit(
                         state.copy(
+                            activeCore = state.activeCore?.copy(mood = "Stabilized"),
                             charge = state.charge - 5,
                             scrap = state.scrap - 3,
                             condition = (state.condition + 12).coerceAtMost(100),
-                            mood = "Stabilized",
-                            recoveryNotes = "${state.botName} repaired from scavenged scrap.",
+                            recoveryNotes = "${state.activeCore?.designation ?: "Starter bot"} repaired from scavenged scrap.",
                         ),
                     )
                 }
@@ -169,10 +128,10 @@ private fun CoreLinkApp(context: Context) {
                 if (state.charge >= 12) {
                     val haul = 2 + (state.condition / 25)
                     val updated = state.copy(
+                        activeCore = state.activeCore?.copy(mood = "Curious"),
                         charge = state.charge - 12,
                         scrap = state.scrap + haul,
-                        mood = "Curious",
-                        lastRoamReport = "${state.botName} returned with $haul Scrap after scanning the deadband.",
+                        lastRoamReport = "${state.activeCore?.designation ?: "Starter bot"} returned with $haul Scrap after scanning the deadband.",
                         recoveryNotes = "Roam consumed 12 Charge and expanded local salvage stores.",
                     )
                     commit(updated)
@@ -192,36 +151,12 @@ private fun CoreLinkApp(context: Context) {
             onReset = {
                 val resetState = CoreLinkState()
                 commit(resetState)
-                temperamentIndex = 0
-                chassisIndex = 0
+                answers = CalibrationAnswers()
                 screen = Screen.Recovery
             },
             onBack = { screen = Screen.Dashboard },
         )
     }
-}
-
-private fun starterStateFromAnswers(temperamentIndex: Int, chassisIndex: Int): CoreLinkState {
-    val temperaments = listOf("Aegis", "Pulse", "Relay")
-    val chassis = listOf("Scout", "Forge", "Bloom")
-    val names = listOf(
-        listOf("Aegis-S9", "Aegis-F3", "Aegis-L2"),
-        listOf("Pulse-S7", "Pulse-F5", "Pulse-L4"),
-        listOf("Relay-S4", "Relay-F8", "Relay-L6"),
-    )
-    val baseMood = listOf("Guarded", "Restless", "Curious")
-    val frame = "${temperaments[temperamentIndex]} ${chassis[chassisIndex]}"
-    return CoreLinkState(
-        calibrated = true,
-        botName = names[temperamentIndex][chassisIndex],
-        botFrame = frame,
-        mood = baseMood[temperamentIndex],
-        charge = 26 + (temperamentIndex * 6),
-        scrap = 7 + chassisIndex,
-        condition = 70 + (chassisIndex * 4),
-        recoveryNotes = "Recovered AI core synchronized through a deterministic Core Matrix calibration.",
-        lastRoamReport = "Starter bot ready for first roam dispatch.",
-    )
 }
 
 @Composable
@@ -249,31 +184,59 @@ private fun RecoveryScreen(onBegin: () -> Unit, onSkipToDashboard: (() -> Unit)?
 
 @Composable
 private fun CalibrationScreen(
-    temperamentIndex: Int,
-    chassisIndex: Int,
-    onTemperamentChange: (Int) -> Unit,
-    onChassisChange: (Int) -> Unit,
+    answers: CalibrationAnswers,
+    onAnswersChange: (CalibrationAnswers) -> Unit,
     onCalibrate: () -> Unit,
 ) {
-    val temperamentOptions = listOf("Aegis", "Pulse", "Relay")
-    val chassisOptions = listOf("Scout", "Forge", "Bloom")
+    val instinctOptions = listOf("Aegis", "Pulse", "Relay")
+    val frameOptions = listOf("Scout", "Forge", "Bloom")
+    val doctrineOptions = listOf("Ward", "Drive", "Weave")
+    val adaptationOptions = listOf("Anchor", "Surge", "Drift")
+    val previewCore = remember(answers) { calibrateStarterCore(answers) }
 
     ScreenContainer(title = "Calibration") {
         HeaderCopy(
             overline = "Core Matrix",
-            headline = "Answer two prompts to generate a deterministic starter AI core.",
+            headline = "Answer four prompts to generate one deterministic starter AI core.",
         )
         ChoiceGroup(
             label = "Recovery instinct",
-            options = temperamentOptions,
-            selectedIndex = temperamentIndex,
-            onSelect = onTemperamentChange,
+            options = instinctOptions,
+            selectedIndex = answers.instinctIndex,
+            onSelect = { onAnswersChange(answers.copy(instinctIndex = it)) },
         )
         ChoiceGroup(
             label = "Frame bias",
-            options = chassisOptions,
-            selectedIndex = chassisIndex,
-            onSelect = onChassisChange,
+            options = frameOptions,
+            selectedIndex = answers.frameIndex,
+            onSelect = { onAnswersChange(answers.copy(frameIndex = it)) },
+        )
+        ChoiceGroup(
+            label = "Command doctrine",
+            options = doctrineOptions,
+            selectedIndex = answers.doctrineIndex,
+            onSelect = { onAnswersChange(answers.copy(doctrineIndex = it)) },
+        )
+        ChoiceGroup(
+            label = "Adaptation mode",
+            options = adaptationOptions,
+            selectedIndex = answers.adaptationIndex,
+            onSelect = { onAnswersChange(answers.copy(adaptationIndex = it)) },
+        )
+        StatusPanel(
+            title = "Starter Preview",
+            body = "${previewCore.designation}  ${previewCore.frame}\nMood ${previewCore.mood}  Temperament ${previewCore.stats.temperament}",
+        )
+        MatrixPanel(previewCore.matrix)
+        StatusPanel(
+            title = "Initial Stats",
+            body = buildString {
+                append("Speed ${previewCore.stats.speed}  Memory ${previewCore.stats.memory}\n")
+                append("Power ${previewCore.stats.power}  Trust ${previewCore.stats.trust}\n")
+                append("Weight ${previewCore.stats.weight}  Attack ${previewCore.stats.attack}\n")
+                append("Defense ${previewCore.stats.defense}  Control ${previewCore.stats.control}\n")
+                append("Stability ${previewCore.stats.stability}  Temperament ${previewCore.stats.temperament}")
+            },
         )
         Button(modifier = Modifier.fillMaxWidth(), onClick = onCalibrate) {
             Text("Calibrate Starter Bot")
@@ -290,11 +253,12 @@ private fun DashboardScreen(
     onOpenSettings: () -> Unit,
 ) {
     val lowPower = state.charge < 15
+    val core = state.activeCore
 
-    ScreenContainer(title = state.botName.ifBlank { "CoreLink" }) {
+    ScreenContainer(title = core?.designation ?: "CoreLink") {
         HeaderCopy(
-            overline = state.botFrame,
-            headline = "Mood ${state.mood}  Condition ${state.condition}%",
+            overline = core?.frame ?: "Dormant",
+            headline = "Mood ${core?.mood ?: "Unlinked"}  Condition ${state.condition}%",
         )
         StatusPanel(
             title = "Watch Status",
@@ -308,6 +272,19 @@ private fun DashboardScreen(
         MeterRow("Charge", state.charge)
         MeterRow("Scrap", state.scrap)
         MeterRow("Condition", state.condition)
+        if (core != null) {
+            MatrixPanel(core.matrix)
+            StatusPanel(
+                title = "Bot Stats",
+                body = buildString {
+                    append("Speed ${core.stats.speed}  Memory ${core.stats.memory}\n")
+                    append("Power ${core.stats.power}  Trust ${core.stats.trust}\n")
+                    append("Weight ${core.stats.weight}  Attack ${core.stats.attack}\n")
+                    append("Defense ${core.stats.defense}  Control ${core.stats.control}\n")
+                    append("Stability ${core.stats.stability}  Temperament ${core.stats.temperament}")
+                },
+            )
+        }
         StatusPanel(
             title = "Recovery Log",
             body = state.recoveryNotes,
@@ -352,11 +329,11 @@ private fun SettingsScreen(state: CoreLinkState, onReset: () -> Unit, onBack: ()
     ScreenContainer(title = "Settings") {
         HeaderCopy(
             overline = "Demo state",
-            headline = "Current bot ${state.botName.ifBlank { "none" }} stays local to this watch.",
+            headline = "Current bot ${state.activeCore?.designation ?: "none"} stays local to this watch.",
         )
         StatusPanel(
             title = "Persistence",
-            body = "Charge, Scrap, condition, mood, and the last roam report are stored locally with SharedPreferences.",
+            body = "One active core, its 8 matrix metrics, starter stats, Charge, Scrap, condition, mood, and the last roam report are stored locally with SharedPreferences. Use Reset Demo State to clear them.",
         )
         Button(modifier = Modifier.fillMaxWidth(), onClick = onReset) {
             Text("Reset Demo State")
@@ -366,6 +343,19 @@ private fun SettingsScreen(state: CoreLinkState, onReset: () -> Unit, onBack: ()
             Text("Back")
         }
     }
+}
+
+@Composable
+private fun MatrixPanel(matrix: CoreMatrix) {
+    StatusPanel(
+        title = "Core Matrix",
+        body = buildString {
+            append("Aggression ${matrix.aggression}  Caution ${matrix.caution}\n")
+            append("Curiosity ${matrix.curiosity}  Discipline ${matrix.discipline}\n")
+            append("Loyalty ${matrix.loyalty}  Independence ${matrix.independence}\n")
+            append("Imagination ${matrix.imagination}  Efficiency ${matrix.efficiency}")
+        },
+    )
 }
 
 @Composable

@@ -4,6 +4,7 @@ CoreLink is a native Wear OS MVP scaffold. This repo now contains a single weara
 
 - recovery opening and Core Matrix calibration
 - deterministic starter bot creation
+- one recovered AI core with persisted matrix metrics and starter stats
 - dashboard for Charge, Scrap, condition, and mood
 - simulated activity-to-Charge gain
 - repair and roam demo loops
@@ -38,6 +39,10 @@ Useful local checks when Android tooling is present:
 adb devices
 emulator -list-avds
 ```
+
+## Reset Demo State
+
+Open `Settings / Reset` in the watch app, then tap `Reset Demo State`. That clears the locally stored active core, its Core Matrix metrics, starter stats, Charge, Scrap, condition, mood, and the last roam report.
 
 ## Local Validation Status
 
