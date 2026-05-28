@@ -4,6 +4,7 @@ CoreLink is a native Wear OS MVP scaffold. This repo now contains a single weara
 
 - recovery opening and Core Matrix calibration
 - deterministic starter bot creation
+- one recovered AI core with persisted matrix metrics and starter stats
 - dashboard for Charge, Scrap, condition, and mood
 - simulated activity-to-Charge gain
 - repair and roam demo loops
@@ -39,19 +40,24 @@ adb devices
 emulator -list-avds
 ```
 
+## Reset Demo State
+
+Open `Settings / Reset` in the watch app, then tap `Reset Demo State`. That clears the locally stored active core, its Core Matrix metrics, starter stats, Charge, Scrap, condition, mood, and the last roam report.
+
 ## Local Validation Status
 
-Validation in this workspace is currently blocked by missing local Android build prerequisites:
+The WSL shell does not expose Linux `java`, but the project validates through
+Android Studio's bundled Windows JBR and SDK.
 
-- `java -version` failed on May 28, 2026 with `/bin/bash: java: command not found`
-- `gradle -v` failed on May 28, 2026 with `/bin/bash: gradle: command not found`
-- `./gradlew :app:assembleDebug` failed on May 28, 2026 with `JAVA_HOME is not set and no 'java' command could be found in your PATH`
-- `ANDROID_SDK_ROOT` and `ANDROID_HOME` are unset
-- a Windows Android SDK path exists at `/mnt/c/Users/Sjsho/AppData/Local/Android/Sdk`
+Validated on May 28, 2026:
 
-Next unblock step:
+```powershell
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
+$env:ANDROID_HOME="C:\Users\Sjsho\AppData\Local\Android\Sdk"
+$env:ANDROID_SDK_ROOT=$env:ANDROID_HOME
+.\gradlew.bat :app:testDebugUnitTest
+.\gradlew.bat :app:assembleDebug
+```
 
-1. Install or expose a JDK 17 runtime in this shell.
-2. Export `ANDROID_SDK_ROOT=/mnt/c/Users/Sjsho/AppData/Local/Android/Sdk`.
-3. Let Android Studio install the Wear OS SDK platform, build-tools, emulator, and a Wear OS AVD if they are not already present.
-4. Re-run `./gradlew :app:assembleDebug` or launch the `app` run configuration from Android Studio.
+Both commands completed successfully after Gradle installed the required SDK 36
+platform and build tools into the configured Android SDK.
