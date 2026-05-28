@@ -71,33 +71,42 @@ CoreLink stores Charge in the shared capacitor at the app-state level, not on in
 
 ## Local Validation Status
 
-The WSL shell does not expose Linux `java`, but the project validates through
-Android Studio's bundled Windows JBR and SDK.
+The WSL shell does not expose Linux `java`, so the supported local proof path is
+Windows Android tooling: Android Studio's bundled JBR plus the configured
+Windows SDK.
 
-Validated on May 28, 2026:
+Validated from this workspace on May 28, 2026:
 
 ```powershell
-$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
-$env:ANDROID_HOME="C:\Users\Sjsho\AppData\Local\Android\Sdk"
-$env:ANDROID_SDK_ROOT=$env:ANDROID_HOME
-.\gradlew.bat :app:testDebugUnitTest
-.\gradlew.bat :app:assembleDebug
+powershell.exe -NoProfile -Command '& {
+  $ErrorActionPreference = "Stop"
+  $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+  $env:ANDROID_HOME = "C:\Users\Sjsho\AppData\Local\Android\Sdk"
+  $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
+  .\gradlew.bat :app:testDebugUnitTest :app:assembleDebug
+  & "$env:ANDROID_HOME\platform-tools\adb.exe" devices
+  & "$env:ANDROID_HOME\emulator\emulator.exe" -list-avds
+}'
 ```
 
-Both commands completed successfully after Gradle installed the required SDK 36
-platform and build tools into the configured Android SDK.
+Observed result on May 28, 2026:
 
-Final launch path on May 28, 2026:
+- `:app:testDebugUnitTest` passed.
+- `:app:assembleDebug` passed.
+- Debug artifact is produced at `app/build/outputs/apk/debug/app-debug.apk`.
+- `adb.exe devices` reported no connected devices.
+- `emulator.exe -list-avds` reported only `Medium_Phone`.
+
+Final launch and smoke path:
 
 1. Open the repo in Android Studio on Windows so it uses the bundled JBR and configured Android SDK.
-2. Run the `app` configuration on a Wear OS emulator or connected Wear OS device.
-3. Calibrate one starter bot, dispatch/return a roam, trigger Low Power by draining Charge below `15`, close the app, then relaunch and confirm bot, Charge, Scrap, condition, roam state, repair state, and Low Power all persist.
+2. Start or connect a Wear OS target. A phone-only AVD is not sufficient for this acceptance gate.
+3. Run the `app` configuration, complete recovery and calibration, use `Simulate Activity Burst` or a live step sensor to generate Charge, dispatch and recover a roam, spend Charge and Scrap on repair, then relaunch the app and confirm the persisted state.
 
-Current screenshot blocker on May 28, 2026:
+Current launch blocker on May 28, 2026:
 
-- `adb.exe devices` reports no connected devices.
-- `emulator.exe -list-avds` reports only `Medium_Phone`.
-- No Wear OS emulator or connected Wear OS device is currently available from this workspace, so native watch launch and watch-sized screenshot evidence remain blocked by local tooling inventory rather than app code.
+- The native Wear OS project builds and unit-tests successfully.
+- Watch launch evidence is still blocked by local tooling inventory rather than app code because no Wear OS emulator or connected Wear OS device is currently available from this workspace.
 
 ## Acceptance Surface Map
 
