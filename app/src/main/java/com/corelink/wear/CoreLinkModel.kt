@@ -342,6 +342,24 @@ fun repairBot(state: CoreLinkState, nowEpochMillis: Long): CoreLinkState {
     )
 }
 
+fun scanCore(state: CoreLinkState, nowEpochMillis: Long): CoreLinkState {
+    val core = state.activeCore ?: return state.copy(recoveryNotes = "No AI core linked. Recovery calibration required.")
+    val scanSummary = buildString {
+        append("${core.designation} scan complete. ")
+        append("Temperament ${core.stats.temperament}. ")
+        append("Top lattice traits ${core.matrix.topTraitsSummary()}.")
+    }
+
+    return synchronizeDerivedState(
+        state.copy(
+            activeCore = core.copy(mood = "Curious"),
+            recoveryNotes = scanSummary,
+            lastStateSyncEpochMillis = nowEpochMillis,
+        ),
+        nowEpochMillis = nowEpochMillis,
+    )
+}
+
 private fun applyActivityDelta(
     state: CoreLinkState,
     deltaSteps: Int,
@@ -544,3 +562,17 @@ object CoreLinkStateCodec {
     private fun Map<String, String>.intValue(key: String, fallback: Int): Int =
         get(key)?.toIntOrNull() ?: fallback
 }
+
+private fun CoreMatrix.topTraitsSummary(): String =
+    listOf(
+        "Aggression" to aggression,
+        "Caution" to caution,
+        "Curiosity" to curiosity,
+        "Discipline" to discipline,
+        "Loyalty" to loyalty,
+        "Independence" to independence,
+        "Imagination" to imagination,
+        "Efficiency" to efficiency,
+    ).sortedByDescending { it.second }
+        .take(3)
+        .joinToString(", ") { (label, value) -> "$label $value" }

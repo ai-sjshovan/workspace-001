@@ -181,6 +181,18 @@ class CoreLinkModelTest {
     }
 
     @Test
+    fun scanUpdatesRecoveryNotesWithoutBreakingState() {
+        val initial = starterStateFromAnswers(CalibrationAnswers())
+
+        val scanned = scanCore(initial, nowEpochMillis = 2_000L)
+
+        assertEquals(initial.charge, scanned.charge)
+        assertEquals(initial.scrap, scanned.scrap)
+        assertEquals("Curious", scanned.activeCore?.mood)
+        assertTrue(scanned.recoveryNotes.contains("scan complete"))
+    }
+
+    @Test
     fun actionsWarnWhenChargeOrConditionIsInsufficient() {
         val lowCharge = starterStateFromAnswers(CalibrationAnswers()).copy(charge = 2, scrap = 0, condition = 28)
         val lowCondition = starterStateFromAnswers(CalibrationAnswers()).copy(charge = 40, condition = 24)
