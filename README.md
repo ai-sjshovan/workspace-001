@@ -5,11 +5,11 @@ CoreLink is a native Wear OS MVP scaffold. This repo now contains a single weara
 - recovery opening and Core Matrix calibration
 - deterministic starter bot creation
 - one recovered AI core with persisted matrix metrics and starter stats
-- watch-sized game scene with compact Charge, Scrap, condition, and mood HUD
+- watch-sized single-scene command surface with compact Charge, Scrap, condition, and mood HUD
 - glanceable watch-status tile plus in-app status surface for quick command checks
 - shared-capacitor Charge gain from Wear OS step data when available
 - deterministic simulated activity fallback when a watch sensor or emulator support is unavailable
-- repair and roam demo loops
+- repair, scan, and roam demo loops
 - low-power warning state with persisted tuning timestamps
 - local persistence across restart
 - reset-demo-state control
@@ -73,9 +73,9 @@ Core Link now registers a native Wear OS tile surface named `Core Link Status`.
 
 CoreLink stores Charge in the shared capacitor at the app-state level, not on individual bots.
 
-- When a Wear OS step counter is available and `ACTIVITY_RECOGNITION` permission is granted, the dashboard listens for step updates and converts every `40` newly observed steps into `1` Charge.
-- When the step sensor or emulator support is unavailable, use `Simulate Activity Burst` on the dashboard. It deterministically injects `400` simulated activity steps, which produces `+10` Charge through the same conversion rule.
-- The dashboard Activity Feed readout shows whether Charge came from the Wear OS step sensor or the simulation fallback and reports the latest conversion result.
+- When a Wear OS step counter is available and `ACTIVITY_RECOGNITION` permission is granted, the main scene listens for step updates and converts every `40` newly observed steps into `1` Charge.
+- When the step sensor or emulator support is unavailable, use the `Charge` command as the simulation fallback. It deterministically injects `400` simulated activity steps, which produces `+10` Charge through the same conversion rule.
+- The scene console readout shows whether Charge came from the Wear OS step sensor or the simulation fallback and reports the latest conversion result.
 
 ## Local Validation Status
 
@@ -99,29 +99,52 @@ powershell.exe -NoProfile -Command '& {
 
 Observed result on May 29, 2026:
 
-- `:app:testDebugUnitTest` passed and was up to date on the validated run.
-- `:app:assembleDebug` passed and was up to date on the validated run.
+- `:app:testDebugUnitTest` passed.
+- `:app:assembleDebug` passed.
 - Debug artifact is produced at `app/build/outputs/apk/debug/app-debug.apk`.
-- `adb.exe devices` printed `List of devices attached` with no connected Wear OS target underneath it.
+- `adb.exe devices` printed `List of devices attached` with no connected Wear OS target before launch.
 - `emulator.exe -list-avds` reported `Medium_Phone` and `Wear_OS_XL_Round`.
 
-Final launch and smoke path:
+Wear emulator launch path validated on May 29, 2026:
+
+```powershell
+powershell.exe -NoProfile -Command '& {
+  $ErrorActionPreference = "Stop"
+  $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+  $env:ANDROID_HOME = "C:\Users\Sjsho\AppData\Local\Android\Sdk"
+  $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
+  $adb = Join-Path $env:ANDROID_HOME "platform-tools\adb.exe"
+  $emulator = Join-Path $env:ANDROID_HOME "emulator\emulator.exe"
+  Start-Process -FilePath $emulator -ArgumentList "-avd Wear_OS_XL_Round -no-snapshot-load -no-boot-anim" | Out-Null
+  Start-Sleep -Seconds 35
+  & $adb devices
+  .\gradlew.bat :app:installDebug
+  & $adb -s emulator-5554 shell am start -W -n com.corelink.wear/.MainActivity
+  & $adb -s emulator-5554 shell pidof com.corelink.wear
+  & $adb -s emulator-5554 shell getprop ro.build.characteristics
+}'
+```
+
+Observed result on May 29, 2026:
+
+- `adb.exe devices` showed `emulator-5554 device` after the Wear emulator booted.
+- `:app:installDebug` installed successfully on `Wear_OS_XL_Round(AVD)`.
+- `am start -W -n com.corelink.wear/.MainActivity` returned `Status: ok`.
+- `pidof com.corelink.wear` returned a live process id.
+- `getprop ro.build.characteristics` returned `emulator,nosdcard,watch`.
+
+Final smoke path:
 
 1. Open the repo in Android Studio on Windows so it uses the bundled JBR and configured Android SDK.
-2. Start or connect a Wear OS target. `Wear_OS_XL_Round` is present locally, but it still needs to become an `adb`-attached device before app launch proof can complete.
-3. Run the `app` configuration, complete recovery and calibration, use `Simulate Activity Burst` or a live step sensor to generate Charge, dispatch and recover a roam, spend Charge and Scrap on repair, then relaunch the app and confirm the persisted state.
-
-Current launch blocker on May 29, 2026:
-
-- The native Wear OS project builds and unit-tests successfully.
-- A Wear OS AVD exists locally (`Wear_OS_XL_Round`), but the launch attempt in this workspace still left `adb.exe devices` empty after the emulator process started, so watch launch and tile interaction proof remain blocked by target attachment rather than app code.
+2. Start or connect a Wear OS target such as `Wear_OS_XL_Round`.
+3. Run the `app` configuration, complete recovery and calibration, use `Charge` or a live step sensor to generate Charge, dispatch and recover a roam, spend Charge and Scrap on repair, then relaunch the app and confirm the persisted state.
 
 ## Acceptance Surface Map
 
 - Recovery opening: `Begin Recovery` on the launch screen
 - Core Matrix calibration: `Calibration` flow with four deterministic answers and `Calibrate Starter Bot`
-- Active bot dashboard: `Dashboard` command surface, telemetry grid, and ops/activity readouts
-- Charge, Scrap, condition panel: dashboard telemetry plus `Watch Status Surface`
+- Active bot game scene: central pixel Nanobot Core with the bottom command surface and scene console readouts
+- Charge, Scrap, condition panel: compact HUD chips plus `Watch Status Surface`
 - Repair action: `Repair -5 Charge / -3 Scrap`
 - Roam dispatch and result: `Dispatch Roam -12 Charge`, countdown state, then `Recover Roam Haul`
 - Glanceable watch status surface: `Core Link Status` tile plus `Watch Status`
