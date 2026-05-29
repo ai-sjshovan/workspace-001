@@ -87,6 +87,7 @@ private enum class Screen {
     Calibration,
     Scene,
     WatchStatus,
+    Settings,
     RoamReport,
 }
 
@@ -133,23 +134,6 @@ private data class DiagnosticLine(
     val text: String,
     val accent: Color = Color(0xFF89D6FF),
 )
-
-private object CoreLinkPrefs {
-    private const val Name = "corelink_state"
-
-    fun load(context: Context): CoreLinkState {
-        val prefs = context.getSharedPreferences(Name, Context.MODE_PRIVATE)
-        val values = prefs.all.mapValues { (_, value) -> value?.toString().orEmpty() }
-        return CoreLinkStateCodec.decode(values)
-    }
-
-    fun save(context: Context, state: CoreLinkState) {
-        val values = CoreLinkStateCodec.encode(state)
-        context.getSharedPreferences(Name, Context.MODE_PRIVATE).edit().clear().apply {
-            values.forEach { (key, value) -> putString(key, value) }
-        }.apply()
-    }
-}
 
 @Composable
 private fun CoreLinkApp(context: Context) {
@@ -328,9 +312,15 @@ private fun CoreLinkApp(context: Context) {
             state = state,
             nowEpochMillis = roamClockMillis,
             onBack = { screen = Screen.Scene },
+            onOpenSettings = { screen = Screen.Settings },
+        )
+
+        Screen.Settings -> SettingsScreen(
+            state = state,
+            nowEpochMillis = roamClockMillis,
+            onBack = { screen = Screen.WatchStatus },
             onReset = {
-                val resetState = CoreLinkState()
-                commit(resetState)
+                commit(resetDemoState())
                 answers = CalibrationAnswers()
                 feedback.play(CommandTone.Warning)
                 screen = Screen.Recovery
@@ -725,30 +715,20 @@ private fun WatchStatusScreen(
     state: CoreLinkState,
     nowEpochMillis: Long,
     onBack: () -> Unit,
-    onReset: () -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
-    val currentRoamStatus = roamStatus(state, nowEpochMillis)
     ScrollScreenFrame {
         SceneHeader(
             title = "WATCH STATUS",
             badge = "GLANCE",
-            caption = "Compact status surface for the active companion state.",
+            caption = "Compact watch surface for Charge, Scrap, Condition, and current core mood.",
         )
         PromptPanel(
             title = state.activeCore?.designation ?: "NO CORE",
-            body = buildString {
-                append("Charge ${state.charge}  Scrap ${state.scrap}  Condition ${state.condition}\n")
-                append("Mood ${state.activeCore?.mood ?: "Dormant"}  ")
-                append(
-                    when (currentRoamStatus) {
-                        RoamStatus.Idle -> "Roam ready"
-                        RoamStatus.Roaming -> "Roam active"
-                        RoamStatus.ReadyToReturn -> "Roam return ready"
-                    },
-                )
-            },
+            body = watchStatusSummary(state, nowEpochMillis),
         )
         ConsolePanel {
+            ConsoleLine("Tile mirror available from the watch-face carousel.", Color(0xFF85FFB2))
             ConsoleLine(state.lastActivitySummary, Color(0xFF89D6FF))
             ConsoleLine(state.lastRoamReport, Color.White)
         }
@@ -761,10 +741,76 @@ private fun WatchStatusScreen(
         Spacer(modifier = Modifier.height(8.dp))
         SmallUtilityButton(
             modifier = Modifier.fillMaxWidth(),
-            label = "Reset Demo State",
-            icon = PixelIconKind.Back,
-            onClick = onReset,
+            label = "Settings / Reset",
+            icon = PixelIconKind.Status,
+            onClick = onOpenSettings,
         )
+    }
+}
+
+@Composable
+private fun SettingsScreen(
+    state: CoreLinkState,
+    nowEpochMillis: Long,
+    onBack: () -> Unit,
+    onReset: () -> Unit,
+) {
+    var confirmReset by remember { mutableStateOf(false) }
+
+    ScrollScreenFrame {
+        SceneHeader(
+            title = "SETTINGS / RESET",
+            badge = "LOCAL",
+            caption = "Manage the local demo state without replacing the main Core Link scene.",
+        )
+        PromptPanel(
+            title = if (confirmReset) "Confirm demo reset?" else "Current demo state",
+            body = if (confirmReset) {
+                "Reset removes the recovered AI core, cached Charge, Scrap, Condition, roam progress, and local activity state on this watch."
+            } else {
+                watchStatusSummary(state, nowEpochMillis)
+            },
+            accent = if (confirmReset) Color(0xFFFFB36A) else Color(0xFF89D6FF),
+        )
+        ConsolePanel {
+            ConsoleLine(
+                if (confirmReset) {
+                    "Core Link will return to the recovery boot flow after reset."
+                } else {
+                    "Use this only when you need to wipe the local MVP demo progress on-device."
+                },
+                Color.White,
+            )
+        }
+        if (confirmReset) {
+            SmallUtilityButton(
+                modifier = Modifier.fillMaxWidth(),
+                label = "Confirm Reset",
+                icon = PixelIconKind.Recover,
+                onClick = onReset,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            SmallUtilityButton(
+                modifier = Modifier.fillMaxWidth(),
+                label = "Cancel Reset",
+                icon = PixelIconKind.Back,
+                onClick = { confirmReset = false },
+            )
+        } else {
+            SmallUtilityButton(
+                modifier = Modifier.fillMaxWidth(),
+                label = "Reset Demo State",
+                icon = PixelIconKind.Back,
+                onClick = { confirmReset = true },
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            SmallUtilityButton(
+                modifier = Modifier.fillMaxWidth(),
+                label = "Back To Status",
+                icon = PixelIconKind.Status,
+                onClick = onBack,
+            )
+        }
     }
 }
 

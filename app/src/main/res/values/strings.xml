@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">CoreLink</string>
+    <string name="core_link_status_tile">Core Link Status</string>
 </resources>

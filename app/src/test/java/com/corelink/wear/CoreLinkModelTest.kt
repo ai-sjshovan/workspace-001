@@ -87,6 +87,24 @@ class CoreLinkModelTest {
     }
 
     @Test
+    fun resetDemoStateClearsRecoveredCoreAndProgress() {
+        val populated = starterStateFromAnswers(CalibrationAnswers()).copy(
+            charge = 52,
+            scrap = 13,
+            progress = 7,
+            condition = 91,
+            recoveryNotes = "Recovered state.",
+            lastRoamReport = "Roam return ready.",
+        )
+
+        val reset = resetDemoState()
+
+        assertEquals(CoreLinkState(), reset)
+        assertNotNull(populated.activeCore)
+        assertNull(reset.activeCore)
+    }
+
+    @Test
     fun simulatedActivityUsesDeterministicChargeConversion() {
         val initial = starterStateFromAnswers(CalibrationAnswers())
         val updated = applySimulatedActivityBurst(initial)
