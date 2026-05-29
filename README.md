@@ -5,8 +5,8 @@ CoreLink is a native Wear OS MVP scaffold. This repo now contains a single weara
 - recovery opening and Core Matrix calibration
 - deterministic starter bot creation
 - one recovered AI core with persisted matrix metrics and starter stats
-- dashboard for Charge, Scrap, condition, and mood
-- glanceable watch-status surface for quick command checks
+- watch-sized game scene with compact Charge, Scrap, condition, and mood HUD
+- glanceable watch-status tile plus in-app status surface for quick command checks
 - shared-capacitor Charge gain from Wear OS step data when available
 - deterministic simulated activity fallback when a watch sensor or emulator support is unavailable
 - repair and roam demo loops
@@ -44,7 +44,15 @@ emulator -list-avds
 
 ## Reset Demo State
 
-Open `Settings / Reset` in the watch app, then tap `Reset Demo State`. That clears the locally stored active core, its Core Matrix metrics, starter stats, Charge, Scrap, condition, mood, and the last roam report.
+Open `Status`, then `Settings / Reset`, and confirm `Reset Demo State`. That clears the locally stored active core, its Core Matrix metrics, starter stats, Charge, Scrap, condition, mood, and the last roam report.
+
+## Watch Status Tile
+
+Core Link now registers a native Wear OS tile surface named `Core Link Status`.
+
+- Add it from the watch-face tile carousel to glance Charge, Scrap, Condition, active mood, and roam readiness without replacing the main game scene.
+- The tile reads the same persisted local state as the app scene and updates on a 60-second freshness interval.
+- The in-app `WATCH STATUS` screen mirrors the same compact summary and links into `Settings / Reset`.
 
 ## Low Power MVP
 
@@ -95,18 +103,18 @@ Observed result on May 29, 2026:
 - `:app:assembleDebug` passed and was up to date on the validated run.
 - Debug artifact is produced at `app/build/outputs/apk/debug/app-debug.apk`.
 - `adb.exe devices` printed `List of devices attached` with no connected Wear OS target underneath it.
-- `emulator.exe -list-avds` reported only `Medium_Phone`, which is a phone AVD rather than a Wear OS target.
+- `emulator.exe -list-avds` reported `Medium_Phone` and `Wear_OS_XL_Round`.
 
 Final launch and smoke path:
 
 1. Open the repo in Android Studio on Windows so it uses the bundled JBR and configured Android SDK.
-2. Start or connect a Wear OS target. A phone-only AVD is not sufficient for this acceptance gate.
+2. Start or connect a Wear OS target. `Wear_OS_XL_Round` is present locally, but it still needs to become an `adb`-attached device before app launch proof can complete.
 3. Run the `app` configuration, complete recovery and calibration, use `Simulate Activity Burst` or a live step sensor to generate Charge, dispatch and recover a roam, spend Charge and Scrap on repair, then relaunch the app and confirm the persisted state.
 
 Current launch blocker on May 29, 2026:
 
 - The native Wear OS project builds and unit-tests successfully.
-- Watch launch evidence is still blocked by local tooling inventory rather than app code because no Wear OS emulator or connected Wear OS device is currently available from this workspace.
+- A Wear OS AVD exists locally (`Wear_OS_XL_Round`), but the launch attempt in this workspace still left `adb.exe devices` empty after the emulator process started, so watch launch and tile interaction proof remain blocked by target attachment rather than app code.
 
 ## Acceptance Surface Map
 
@@ -116,5 +124,5 @@ Current launch blocker on May 29, 2026:
 - Charge, Scrap, condition panel: dashboard telemetry plus `Watch Status Surface`
 - Repair action: `Repair -5 Charge / -3 Scrap`
 - Roam dispatch and result: `Dispatch Roam -12 Charge`, countdown state, then `Recover Roam Haul`
-- Glanceable watch status surface: `Watch Status Surface`
-- Settings and reset: `Settings / Reset` then `Reset Demo State`
+- Glanceable watch status surface: `Core Link Status` tile plus `Watch Status`
+- Settings and reset: `Watch Status` then `Settings / Reset` then confirm `Reset Demo State`

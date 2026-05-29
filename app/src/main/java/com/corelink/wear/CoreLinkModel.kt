@@ -190,6 +190,21 @@ fun starterStateFromAnswers(answers: CalibrationAnswers): CoreLinkState {
     )
 }
 
+fun resetDemoState(): CoreLinkState = CoreLinkState()
+
+fun watchStatusSummary(state: CoreLinkState, nowEpochMillis: Long): String =
+    buildString {
+        append("Charge ${state.charge}  Scrap ${state.scrap}  Condition ${state.condition}\n")
+        append("Mood ${state.activeCore?.mood ?: "Dormant"}  ")
+        append(
+            when (roamStatus(state, nowEpochMillis)) {
+                RoamStatus.Idle -> "Roam ready"
+                RoamStatus.Roaming -> "Roam active"
+                RoamStatus.ReadyToReturn -> "Roam return ready"
+            },
+        )
+    }
+
 fun applySimulatedActivityBurst(
     state: CoreLinkState,
     simulatedSteps: Int = SimulatedActivitySteps,

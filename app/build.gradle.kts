@@ -53,6 +53,9 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.runtime:runtime-saveable")
     implementation("androidx.wear.compose:compose-material3:1.5.6")
+    implementation("androidx.wear.tiles:tiles:1.5.0")
+    implementation("androidx.wear.protolayout:protolayout:1.3.0")
+    implementation("com.google.guava:guava:33.5.0-android")
     testImplementation("junit:junit:4.13.2")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
