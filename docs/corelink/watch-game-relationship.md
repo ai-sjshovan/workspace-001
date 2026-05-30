@@ -94,6 +94,20 @@ Do not let future sync complexity distort the watch MVP.
 The watch can stand alone. Future sync can be a bonus, not a day-one hard
 dependency.
 
+When sync exists, Charge should be transferable between the wrist Core Link and
+the 2D game profile. Transferring Charge into the game subtracts it from the
+watch reserve, and Charge generated in game can be sent back to the watch. This
+preserves the illusion that Core Link is moving stored energy between connected
+surfaces instead of duplicating resources.
+
+Formal sync protocol term: **BICOL** / **Bi-directional Core-Link**. The name
+also carries a subtle Philippines/Bicol reference while still working as
+in-universe technical language.
+
+Overcharge can represent a temporary second energy reserve above the normal
+capacitor bar. Normal Charge reads yellow/orange; Overcharge reads blue,
+blue-green, or cyan.
+
 If the future 2D game supports importing watch state, the most important data to
 carry forward is:
 
@@ -150,4 +164,3 @@ Examples:
 - watch trade networks map to terminals/vendors later
 - watch contracts can appear as leads or side mission history
 - watch companions can be imported after sync unlock
-

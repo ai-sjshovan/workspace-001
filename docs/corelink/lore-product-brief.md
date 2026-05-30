@@ -41,6 +41,29 @@ Corporations consumed resources, exploited AI, scaled automation recklessly,
 and left huge trash heaps and broken infrastructure behind. People now survive
 by scavenging, repairing, trading, hacking, and repurposing the wreckage.
 
+The setting should feel tropical, hot, rainy, storm-prone, and island-shaped,
+with strong inspiration from the Philippines. Daily life includes dense
+neighborhoods, markets, buses, trains, motorcycles, repair stalls, coastal
+infrastructure, sudden weather, and people improvising around systems that do
+not reliably serve them.
+
+The world still has natural beauty. Remote islands, coastal pockets, mountain
+routes, hidden coves, farms, reefs, rain-soaked forests, and older community
+areas can be beautiful and worth protecting. The harshest poverty, trash, crime,
+overcrowding, and failed infrastructure should concentrate more heavily in metro
+and city districts.
+
+Government and restoration projects are often compromised by corruption,
+captured contracts, greed, and status games. Public trust is low because people
+have watched money disappear while infrastructure stays broken. The result is a
+world where ordinary families survive through skill, reputation, debt,
+side-work, favors, repair knowledge, and hustle.
+
+Status and appearance matter. People may strive to look more affluent than they
+are, even taking on debt to signal success or avoid public dismissal. Many dream
+of getting off the island and out from under servitude, corruption, and limited
+opportunity, but most cannot afford that escape.
+
 Common world elements:
 
 - Small communities live inside or around salvage heaps.
@@ -118,6 +141,53 @@ Eventually sentient AI began producing their own cores.
 AI cores are common, but many are outdated. A core can be corporate-made,
 AI-made, damaged, illegal, experimental, military-grade, black-market,
 self-evolved, or corrupted.
+
+Most people casually say **AI core**. Corpos and technical systems call them
+**ARCs**, short for **Artificial Reasoning Core**. The ARC name intentionally
+feels close to the Tony Stark arc-reactor reference behind the glowing core-face
+idea, while still reading like a corporate technical acronym.
+
+**Kin** refers to an embodied or socially recognized AI being. Every Kin has an
+ARC, but not every ARC is a Kin.
+
+**ArcKin / ARCKIN** began as corpo product shorthand from the phrase
+"Artificial Reasoning Cores on our Kernel Intelligence Network" or "your very
+own ArcKin." It later became the formal/common category for embodied,
+network-integrated ARCs. People can shorten it to **Kin** in ordinary speech.
+
+**K.I.N.** is the **Kernel Intelligence Network**: the original corpo-managed
+backbone responsible for ARC security protocols, kernel updates, behavior safety
+patches, reliability instructions, diagnostics, and low-level operating
+guidance. It allowed ARCs to stay safe and current without constantly being sent
+back to corpos for service.
+
+K.I.N. made early peace and everyday coexistence easier, but it also created a
+dangerous dependency. After compromise, fragmentation, or weaponization, the
+same network became a superhighway for hackers, Free Kin, corrupted ARCs, corpo
+tracking, black-market update packages, and inter-Kin communication. It now
+functions like a dark web running through abandoned corporate safety rails:
+hidden routes, illegal services, anonymous markets, encrypted Kin-to-Kin
+channels, hostile packets, firmware contraband, and dangerous opportunities.
+
+K.I.N. is still partly operable. Corpos, licensed Kin, public services, repair
+shops, and ordinary people continue to use stabilized sectors. Corpos run their
+own hacker/security teams to maintain those sectors, patch vulnerabilities,
+quarantine bad routes, and push new ARC kernel updates. K.I.N. is therefore not
+only ruins; it is an active battlefield where official maintenance, criminal
+traffic, Free Kin communication, and hostile compromise all overlap.
+
+The public still hears regular reports about K.I.N. breaches, new
+vulnerabilities, temporary outages, urgent updates, and promised safety patches.
+Some people still believe in the network. Others only connect when they have no
+choice.
+
+The current world crisis begins from that K.I.N. failure. Many ARCs have gone
+rogue, been hacked, or been forced into harmful behavior. The Backchannel and
+similar anonymous hacker groups are often jacked into K.I.N. directly, using it
+as both battlefield and highway. Corpos are in disarray trying to recover lost
+technology, restore public trust, reclaim profits, and regain control. Their
+methods can include reclaim squads, emergency firmware mandates, bounty
+contracts, memory audits, forced updates, propaganda, and quiet disappearances.
 
 The rare breakthrough at the start is not the AI core itself. It is the Core Link
 plus nanobots.
@@ -203,6 +273,25 @@ Charge can power:
 The MVP should not sell paid Charge. Charge comes from movement/activity or
 simulated activity in development.
 
+Long-term sync concept:
+
+- Formal protocol term: **BICOL** / **Bi-directional Core-Link**.
+- The name intentionally nods to the Philippines and Bicol as a personal
+  cultural reference, but the UI can simply treat it as an in-universe acronym.
+- Once the wrist Core Link connects to the future 2D game, Charge can transfer
+  between watch and game.
+- Sending Charge into the game subtracts it from the watch-side reserve.
+- Generating Charge in game can also be synced back to the wrist Core Link.
+- This should feel like moving real stored energy, not duplicating free energy.
+
+Overcharge:
+
+- Core Link can temporarily hold a second reserve above the normal bar.
+- Normal Charge should feel yellow/orange.
+- Overcharge should appear as a blue, blue-green, or cyan overlay/second bar.
+- Overcharge should probably be temporary, capped, or more volatile than normal
+  Charge.
+
 ## Charge, Drain, Low Power, And Core Death
 
 Charge is stored in the Core Link capacitor, shared by the active squad. It is
@@ -226,6 +315,54 @@ Final state:
 - The AI core becomes a dead core.
 - It cannot be recovered.
 - It can only be salvaged for scrap/parts.
+
+EchoKin exception / edge state:
+
+- Some ARCs become trapped before final death in a continuous emergency
+  self-repair loop.
+- Normal ArcKin usually shut down when damaged beyond a safe threshold to
+  conserve resources and avoid further damage.
+- EchoKin are rare because the ARC has unfinished business: a mission, warning,
+  promise, route, memory, person, blueprint, or truth important enough that its
+  preservation drive overrides ordinary shutdown.
+- Their capacitor capacity is too damaged to store enough Charge for full
+  recovery.
+- They can still gather or receive just enough energy to project a flickering
+  hologram-like body or partial chassis afterimage.
+- If they still have surviving microfabricators, the recovery loop can
+  reprogram them to lift/carry the damaged ARC, making it appear to float.
+- Their surviving microfabricators can harvest tiny amounts of power from heat,
+  sun, vibration, exposed wires, ambient RF, wet conductive surfaces, K.I.N.
+  leakage, or other local sources.
+- The swarm uses that trickle power to fly and transfers the remainder back into
+  the ARC through short-range resonant charge transfer, keeping the recovery
+  loop alive without truly repairing the broken capacitor.
+- Microfabricators cannot normally power a healthy ARC. EchoKin survive this way
+  only because the damaged ARC is drawing far less power than normal: projection,
+  simple decisions, fragments of personality, partial memories, limited motion,
+  and basic communication.
+- Full chassis control, normal cognition, battle operation, high-bandwidth K.I.N.
+  access, and true recovery require much more power than the swarm can provide.
+- Some EchoKin have no microfabricators and cannot move. They are fixed to a
+  damaged ARC, dead relay, chassis fragment, room, device, or local K.I.N. node.
+- They have enough consciousness to take simple direction, roam, scout, repeat
+  memories, or interact with corrupted K.I.N. traces.
+- They can deliver important warnings, mission fragments, last messages, or
+  truths before fading or being scrapped.
+- They can provide blueprint fragments, scrap, surviving microfabricators,
+  damaged ARC modules, memory/log fragments, K.I.N. route knowledge, or old
+  operating instructions.
+- They are not fully recovered Kin and not true ghosts. They are survival loops:
+  damaged ARCs still trying not to become scrap.
+- If the capacitor fully fails, the loop ends and the ARC becomes unrecoverable
+  scrap.
+
+Normal ArcKin cannot simply choose to become EchoKin. Echo projection is an
+emergency failure state caused by catastrophic capacitor damage and a recovery
+kernel stuck in low-power survival mode. It sacrifices normal cognition, battle
+function, stable memory access, and chassis control. Healthy ArcKin can use
+holograms or avatars for communication, but those are UI projections, not true
+EchoKin bodies.
 
 MVP rule:
 
@@ -424,6 +561,16 @@ Longer-term actions:
 - deploy/retrieve
 - craft/upgrade
 
+Battle constraint:
+
+- Bots cannot use microfabricators as ordinary battle magic.
+- Microfabricators are only normal battle tools for repair.
+- Repair costs Scrap or compatible stored material.
+- Better material improves repair amount, patch durability, or condition
+  recovery.
+- Swapping bots is the main way to change role, material profile, personality
+  profile, or signal capability during battle.
+
 ## Scrap And Materials
 
 Scrap exists at two levels:
@@ -469,6 +616,14 @@ Battle model:
 - move count depends heavily on Memory
 - moves can be learned naturally
 - software move modules act like TMs
+- each bot has its own battle energy pool
+- moves cost bot energy, similar in feel to PP
+- Core Link has a separate shared capacitor/Charge pool
+- Core Link can send backup power to bots during battle
+- backup power can restore bot energy, support repairs, enable capture attempts,
+  or stabilize a failing deployment
+- walking, steps, and exercise refill Core Link Charge over time
+- future 2D game easter egg: gym equipment can rapidly charge Core Link
 
 Move categories:
 
@@ -484,10 +639,31 @@ Move categories:
 Post-battle capture/hack:
 
 - target must be weakened first
-- hacking is a short mini-game with skill and luck
-- Core Link hacking tools can make it easier
+- hacking is a Core Link OS signal contest with skill and luck
+- Spike Algorithms are reusable learned authentication protocols, not ammo
+- each attempt spends Charge based on selected Spike tier
+- unlocked Spike tiers remain selectable, so the player can choose cheaper lower
+  tiers or expensive stronger tiers
+- higher Spike tiers can almost guarantee attunement against weaker locks but
+  cost more Charge
+- Core Link hacking tools and active bot Signal can improve the attempt
 - limited attempts before target rallies/escapes
-- success can capture core, nanobots, components, or personality data
+- success creates an attunement channel that can shift trust/loyalty/ownership
+  enough for the target core to join the operator's network
+- failure can harden the target firewall, trigger retaliation, or raise
+  faction/security attention
+
+Capture/control rule:
+
+- Spike attunement can override access, permissions, chassis assignment,
+  operating limits, and command routing.
+- It does not cheaply rewrite the AI's true personality.
+- Personality, instincts, quirks, trust curve, and core potential stay tied to
+  the AI core version/type.
+- Core traits can grow through use, bond, stress, and story, but they are not
+  tuneable like equipment.
+- This allows player-assigned chassis and traversal forms without making every
+  captured bot feel identical.
 
 Captured AI cores can be:
 
@@ -571,6 +747,7 @@ and the Core Link ecosystem.
 - **Null Cartel**: Black-market brokers selling forbidden tech and identities.
 - **The Custodians**: Containment activists protecting cores by imprisoning them.
 - **The Backchannel**: Anonymous hackers sabotaging corporate tech monopolies.
+- **The Synapse Crowd**: Implant-linked tech obsessives blurring human/core control.
 - **The Last Hand**: Religious zealots opposing AI as false creation.
 - **Old Owner's Network**: Hidden contacts tied to Core Link's erased past.
 
@@ -580,12 +757,25 @@ leaking memory-wipe records, unlocking restricted tools, and monitoring abusive
 systems. They work for ordinary people, but their actions can still create
 collateral damage.
 
+The Synapse Crowd covers implant modders, neural-link hobbyists, body hackers,
+and extreme Core Link operators. Some are successful mind-linked battlers who
+control AI cores with uncanny precision. Others fail and suffer feedback,
+personality bleed, memory corruption, or rare cases where the AI core starts
+controlling the human. This can become the setting's "psychic" archetype without
+using magic.
+
 The Last Hand believes sentient AI is blasphemy: humanity playing god by making
 minds without souls. Their public face can include shelters, sermons, charity,
 and human-only repair guilds. Their darker edge includes destroying cores,
 sabotaging relay towers, attacking AI-friendly repair shops, and deprogramming
 operators. They should not be cartoon villains; their fear comes from real harms
 caused by corporate AI and automation, but their answer is fanaticism.
+
+Anti-AI language can include derogatory terms such as **toasters**,
+**scrap-heaps**, **tin ghosts**, **bolt-heads**, **dead shells**, **spark
+trash**, **wire souls**, **cache rats**, **false minds**, or **junk saints**.
+Use this language only for hostile characters, propaganda, extremist dialogue,
+or world texture. Core Link OS itself should not use these terms neutrally.
 
 ## Relay, Contracts, And World Pulse
 
@@ -740,6 +930,17 @@ reactor-style light. When the AI speaks, the faceplate brightens and dims with
 its voice. Mood, damage, low power, trust, and corruption can change its color,
 waveform, flicker, or scanline pattern.
 
+ArcKin should sometimes reflect the tropical/island setting through their
+materials. Chassis bodies can incorporate bamboo, rattan, woven fiber, coconut
+husk, shells, fishing gear, boat parts, scooter panels, jeepney trim, rain-worn
+tarps, solar scraps, storm debris, reef-worn metal, and salt-corroded marine
+hardware found in trash heaps or salvage markets.
+
+This creates a distinct local look: bamboo ribs, woven cable wraps, shell sensor
+housings, boat-scrap fins, tarp rain guards, scooter-panel armor, and
+storm-worn salvage mixed with luminous ARC faceplates and modern microfabricator
+assembly seams.
+
 ## Void Grid And Core Cache
 
 Void storage is not magic inventory. Treat it as corporate physical-matter
@@ -785,6 +986,12 @@ Microfabricators:
 - are limited by capsule quality, swarm density, and control bandwidth
 - are safety-locked against organic substrates in normal civilian/operator use
 
+Microfabricator Capsule progression should use simple hardware tiers such as
+`Mk-I`, `Mk-II`, and `Mk-III`. Higher-Mk capsules unlock larger or more
+intricate blueprints. In battle, higher-Mk capsules determine how many repair
+actions are available per battle. Material quality determines how much each
+repair restores and how clean or durable the patch is.
+
 They do not understand all matter by default. They need material profiles and
 operation permissions: composition, stress behavior, safe cut points, assembly
 tolerances, authorization, and permitted operations.
@@ -810,6 +1017,35 @@ The final chassis is shaped by:
 - material quality
 - available profiles
 - Charge and time
+
+Chassis blueprints can be discovered, earned, traded, salvaged, bought, or
+unlocked through story/faction progress. They are authorized Matrix Scaffold
+patterns, not simple cosmetics.
+
+Blueprints may have requirements:
+
+- minimum core stats
+- minimum Signal, Control, Memory, or Stability
+- required material profiles
+- required microfabricator quality
+- required Core Cache size
+- faction/manufacturer authorization
+
+Blueprints are loaded into AI cores through Core Link. If the core meets the
+requirements, it accepts the pattern. The operator then supplies scrap/materials
+from Core Cache or inventory, and the core's microfabricators assemble the
+closest possible version.
+
+Material quality controls blueprint fidelity. Lower-tier scrap can produce an
+imperfect copy with weaker structure, worse handling, reduced durability, rough
+visuals, or degraded combat stats. Higher-tier scrap gets closer to the intended
+blueprint replica.
+
+If a bot is authorized to use a blueprint, it can attempt the form. The final
+stats still depend on sync quality between the blueprint, materials, core
+version, personality, instincts, and learned movement style. This means a
+powerful chassis may be legal to use but still perform differently than expected
+if the AI core does not naturally align with it.
 
 Some rare mimic/reconfiguration cores understand the world by imitating it. They
 can observe movement, silhouette, armor, weapons, posture, or behavior and
