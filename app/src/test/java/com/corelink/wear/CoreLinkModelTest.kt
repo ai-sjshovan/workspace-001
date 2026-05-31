@@ -203,6 +203,15 @@ class CoreLinkModelTest {
     }
 
     @Test
+    fun lowPowerGapReportsRemainingChargeNeeded() {
+        val lowPower = starterStateFromAnswers(CalibrationAnswers()).copy(charge = 9)
+        val recovered = starterStateFromAnswers(CalibrationAnswers()).copy(charge = 24)
+
+        assertEquals(6, chargeNeededToExitLowPower(lowPower))
+        assertEquals(0, chargeNeededToExitLowPower(recovered))
+    }
+
+    @Test
     fun roamReturnGrantsDeterministicScrapAndProgress() {
         val initial = starterStateFromAnswers(CalibrationAnswers()).copy(charge = 40, scrap = 7, progress = 3, condition = 75)
         val dispatched = dispatchRoam(initial, nowEpochMillis = 0L)

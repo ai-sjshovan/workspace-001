@@ -281,6 +281,9 @@ fun lowPowerStatus(state: CoreLinkState): LowPowerStatus =
         enteredAtEpochMillis = state.lowPowerEnteredAtEpochMillis,
     )
 
+fun chargeNeededToExitLowPower(state: CoreLinkState): Int =
+    (LowPowerChargeThreshold - state.charge).coerceAtLeast(0)
+
 fun repairGate(state: CoreLinkState, nowEpochMillis: Long): ActionGate =
     when {
         state.activeCore == null -> ActionGate(false, "Recover and calibrate one AI core first.")

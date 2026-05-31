@@ -44,7 +44,7 @@ emulator -list-avds
 
 ## Reset Demo State
 
-Open `Status`, then `Settings / Reset`, and confirm `Reset Demo State`. That clears the locally stored active core, its Core Matrix metrics, starter stats, Charge, Scrap, condition, mood, and the last roam report.
+From the main scene, open `Scene Settings / Reset` and confirm `Reset Demo State`. That clears the locally stored active core, its Core Matrix metrics, starter stats, Charge, Scrap, condition, mood, and the last roam report.
 
 ## Watch Status Tile
 
@@ -57,7 +57,8 @@ Core Link now registers a native Wear OS tile surface named `Core Link Status`.
 ## Low Power MVP
 
 - CoreLink enters Low Power whenever Charge drops below `15`.
-- Low Power is visible on the dashboard and pauses roam dispatches until the capacitor is recharged.
+- Low Power is visible directly on the main scene with a dedicated warning strip that shows how much Charge is needed to recover.
+- Low Power pauses roam dispatches until the capacitor is recharged.
 - MVP does not implement permanent dead-core loss when power bottoms out.
 - The app persists low-power state plus timestamp markers for low-power entry, charge changes, condition changes, roam start, repair, and the latest state sync so future passive drain and decay tuning has local data to build on.
 
@@ -148,4 +149,4 @@ Final smoke path:
 - Repair action: `Repair -5 Charge / -3 Scrap`
 - Roam dispatch and result: `Dispatch Roam -12 Charge`, countdown state, then `Recover Roam Haul`
 - Glanceable watch status surface: `Core Link Status` tile plus `Watch Status`
-- Settings and reset: `Watch Status` then `Settings / Reset` then confirm `Reset Demo State`
+- Settings and reset: `Scene Settings / Reset` from the main scene, then confirm `Reset Demo State`
