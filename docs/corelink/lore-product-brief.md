@@ -79,17 +79,43 @@ Working first issue:
 
 **CoreLink: Broken Kernel #1**
 
-The first issue can contain the whole first arc as scenes rather than stretching
-those beats across six issues:
+The first issue should prove the emotional hook before explaining the whole
+universe:
 
-1. Scavenger life in a tropical metro/salvage district.
-2. The protagonist finds a damaged CoreLink in a trash heap.
-3. CoreLink OS boots and discovers a dormant ARC plus strange stored resources.
-4. A local K.I.N. breach creates neighborhood danger or exposes corpo pressure.
-5. The first ArcKin bond forms through recovery, trust, and improvised repair.
-6. An EchoKin encounter reveals an unfinished warning, blueprint, route, or
-   hidden truth.
-7. The protagonist must choose whether to hide, sell, or use the CoreLink.
+1. Agent 410 risks his life inside CoreTech to open a restricted K.I.N. route.
+2. CoreTech catches and kills him while showing him his family under
+   surveillance.
+3. The story cuts to that family dinner, where the sister's white-hot headache
+   silently marks the moment of his death.
+4. CoreTech takes the family for sanitized "interviews," then denies
+   compensation and blames the father.
+5. The protagonist's repair work is kicked into the rain and mud, turning grief
+   into a personal hatred of CoreTech.
+6. His dream of winning ArcKin battles at the Kubo Junction dome becomes the
+   visible hope he clings to before the Core Link changes everything.
+
+Later issues can carry the Core Link discovery, boot ritual, first damaged
+ArcKin, underground battles, The Sentinels, EchoKin, and the father reveal.
+
+## Saga Working Arc
+
+These are working titles and direction anchors:
+
+- **ArcKin Legacy**: the son's story. He discovers Core Link, enters underground
+  ArcKin battles, joins the Sentinel resistance, learns Agent 410 was his
+  father, helps liberate a major CoreTech operation, and stays behind while
+  sending his mother and sister away.
+- **Echoes**: the sister's story. Her resonance with ArcKin and EchoKin becomes
+  the missing bridge CoreTech remnants need to stabilize human consciousness in
+  ARC-like continuity. The heroes defeat the immediate black-box clone threat,
+  but the extracted key is uploaded to an unknown source.
+- **Eternity**: the false-immortality story. Hidden elites commercialize cloned
+  continuity and synthetic bodies, but embedded controls make immortality a new
+  ownership system. The climax forces humanity to reject counterfeit eternity
+  even when it means grieving loved ones again.
+- **New Beginnings / Paradise**: possible closing era. Humans and ArcKin rebuild
+  after the shutdown through ethical hacking, liberated cores, restored
+  networks, and island renewal. Keep this hopeful but not naive.
 
 ## World
 
@@ -120,9 +146,11 @@ The first major setting layer:
 - **Quezar City / QZ**: the protagonist's home district, named after Arturo
   Quezar, a post-crisis civic leader whose legacy was later absorbed into corpo
   recovery-zone branding.
-- **Kubo Junction**: QZ's transit/market hub, where rail platforms, bus
-  terminals, malls, repair stalls, back alleys, overpasses, scavenger routes,
-  black-market parts, and stormwater all collide.
+- **Kubo Junction**: QZ's central transit/market heart. Most movement through
+  this part of the island passes through it: rail platforms, bus terminals,
+  jeepney-style local routes, malls, repair stalls, back alleys, overpasses,
+  scavenger routes, black-market parts, stormwater, fixers, and battle ads all
+  collide. If Sagrada Circle is home, Kubo Junction is where the city opens up.
 
 Travel should use a city-and-route structure adapted to the setting. The main
 connector is **M.U.T.EX**, the **Metropolitan Unified Transit Expressway**: too
@@ -131,9 +159,10 @@ and later personal ArcKin vehicle traversal. The programming meaning of mutex,
 mutual exclusion, gives the road a subtle traffic-lock joke. Early travel is by
 foot, train, and bus. Train is cheapest but risky, with theft, scams, thug
 groups, and money-stakes battles. Bus is more expensive but safer/directer. Kubo
-Junction becomes an early access point for bus travel. Later the player unlocks
-the **M.O.V.E.** app, **MUTEX On-demand Vehicle Escort**, a ride/cab service
-that runs along M.U.T.EX and approved corridors. Eventually the player unlocks a
+Junction should be the early travel hub where the player first feels the island
+opening up through train and bus access. Later the player unlocks the
+**M.O.V.E.** app, **MUTEX On-demand Vehicle Escort**, a ride/cab service that
+runs along M.U.T.EX and approved corridors. Eventually the player unlocks a
 motorcycle chassis blueprint for an ArcKin, enabling personal highway travel.
 
 The world still has natural beauty. Remote islands, coastal pockets, mountain

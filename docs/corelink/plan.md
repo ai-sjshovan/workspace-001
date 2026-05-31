@@ -24,23 +24,52 @@ Working first issue:
 
 **CoreLink: Broken Kernel #1**
 
-Issue #1 should contain the full first arc as scenes/beats, not six separate
-issues:
+Issue #1 should prove the tone, not explain the whole universe. It should feel
+like a dark techno-thriller colliding with a warm family survival story.
 
 1. Cold open: Agent 410 sweats at a CoreTech terminal, using elevated
    privileges and an underground key to access a forbidden K.I.N. route.
-2. Scavenger life in a tropical metro/salvage district.
-3. The protagonist finds a damaged CoreLink in a trash heap.
-4. CoreLink OS boots and discovers a dormant ARC plus strange stored resources.
-5. A local K.I.N. breach causes neighborhood danger or exposes corpo pressure.
-6. The first ArcKin bond forms through recovery, trust, and improvised repair.
-7. An EchoKin encounter reveals an unfinished warning, blueprint, route, or
-   hidden truth that forces the protagonist to choose whether to hide, sell, or
-   use the CoreLink.
+2. He is caught, interrogated, shown his family under surveillance, and killed.
+3. Cut to the city through a news broadcast that is revealed to be playing on
+   the family's TV.
+4. Establish the protagonist repairing tech, the helper ArcKin, the mother, and
+   the little sister around a Filipino family meal and prayer.
+5. During dinner, the sister suffers a white-hot headache at the exact moment
+   her father dies.
+6. CoreTech takes the family for sanitized "interviews," then reports a
+   workplace accident and denies compensation.
+7. Security returns the family home and casually destroys the protagonist's
+   repair work in the rain, making CoreTech's cruelty personal.
+8. The protagonist remembers the last argument with his father and the bot
+   battle poster/chassis project that once looked like a way out.
 
-The comic should prove visual language and emotional stakes first: tropical
-salvage, corpo decay, CoreLink OS boot ritual, ArcKin embodiment, K.I.N. risk,
-EchoKin tragedy, and why this world is worth protecting.
+Later issue/arc beats can introduce the Core Link discovery, the first damaged
+ArcKin, underground battles, The Sentinels, the previous owner, the father
+reveal, EchoKin, and the final cipher. The comic should prove visual language
+and emotional stakes first: tropical salvage, corpo decay, CoreLink OS boot
+ritual, ArcKin embodiment, K.I.N. risk, family grief, and why this world is
+worth protecting.
+
+### Saga Working Arc
+
+Use these as working titles and arc labels, not final trademark-cleared names.
+
+1. **ArcKin Legacy**: the son's story. He discovers Core Link, enters
+   underground ArcKin battles, joins the Sentinel resistance, learns Agent 410
+   was his father, liberates CoreTech, and chooses to stay behind while sending
+   his family away.
+2. **Echoes**: the sister's story. Her resonance with ArcKin and EchoKin makes
+   her the missing bridge CoreTech remnants need for stable consciousness
+   transfer. The heroes defeat the immediate clone/black-box threat, but the
+   extracted key is uploaded to an unknown source.
+3. **Eternity**: the false-immortality story. Hidden elites commercialize
+   cloned continuity, but the system embeds control and ownership. The heroes
+   must shut down the network, forcing society to grieve, accept mortality, and
+   reject a counterfeit eternity.
+4. **New Beginnings / Paradise**: optional closing era. Humans and ArcKin
+   rebuild after the shutdown. Ethical hacking, liberated cores, restored
+   networks, and island renewal create hope without pretending bad actors are
+   gone forever.
 
 ## Watch MVP Sequence
 
