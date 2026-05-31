@@ -10,6 +10,7 @@ Companion briefs:
 - `relay-contracts-and-world-pulse.md`: Relay messages, contracts, news, soft consequences.
 - `watch-game-relationship.md`: watch role, future 2D game relationship, account/sync posture.
 - `watch-ui-and-systems.md`: Wear OS UI and short-session interaction draft.
+- `protagonist-and-family.md`: protagonist, family wound, faith, sister, and scavenger life.
 
 ## Product Thesis
 
@@ -23,6 +24,30 @@ Core promise:
 
 The MVP is not the full RPG. It is the smallest proof that a watch-based AI
 companion can feel alive, personal, and worth checking every day.
+
+## Comic-First Direction
+
+Core Link may benefit from a comic-first lore validation path before the watch
+game or future 2D game becomes the main public artifact. The comic can make the
+world, tone, character stakes, ArcKin rules, K.I.N. crisis, EchoKin tragedy,
+CoreLink OS boot ritual, and tropical/corpo visual identity feel real before
+mechanics have to carry the full burden.
+
+Working first issue:
+
+**CoreLink: Broken Kernel #1**
+
+The first issue can contain the whole first arc as scenes rather than stretching
+those beats across six issues:
+
+1. Scavenger life in a tropical metro/salvage district.
+2. The protagonist finds a damaged CoreLink in a trash heap.
+3. CoreLink OS boots and discovers a dormant ARC plus strange stored resources.
+4. A local K.I.N. breach creates neighborhood danger or exposes corpo pressure.
+5. The first ArcKin bond forms through recovery, trust, and improvised repair.
+6. An EchoKin encounter reveals an unfinished warning, blueprint, route, or
+   hidden truth.
+7. The protagonist must choose whether to hide, sell, or use the CoreLink.
 
 ## World
 
@@ -46,6 +71,28 @@ with strong inspiration from the Philippines. Daily life includes dense
 neighborhoods, markets, buses, trains, motorcycles, repair stalls, coastal
 infrastructure, sudden weather, and people improvising around systems that do
 not reliably serve them.
+
+The first major setting layer:
+
+- **Relay City**: the wider tropical island metro.
+- **Quezar City / QZ**: the protagonist's home district, named after Arturo
+  Quezar, a post-crisis civic leader whose legacy was later absorbed into corpo
+  recovery-zone branding.
+- **Kubo Junction**: QZ's transit/market hub, where rail platforms, bus
+  terminals, malls, repair stalls, back alleys, overpasses, scavenger routes,
+  black-market parts, and stormwater all collide.
+
+Travel should use a city-and-route structure adapted to the setting. The main
+connector is **M.U.T.EX**, the **Metropolitan Unified Transit Expressway**: too
+busy and dangerous to walk, but important for buses, logistics, corpo convoys,
+and later personal ArcKin vehicle traversal. The programming meaning of mutex,
+mutual exclusion, gives the road a subtle traffic-lock joke. Early travel is by
+foot, train, and bus. Train is cheapest but risky, with theft, scams, thug
+groups, and money-stakes battles. Bus is more expensive but safer/directer. Kubo
+Junction becomes an early access point for bus travel. Later the player unlocks
+the **M.O.V.E.** app, **MUTEX On-demand Vehicle Escort**, a ride/cab service
+that runs along M.U.T.EX and approved corridors. Eventually the player unlocks a
+motorcycle chassis blueprint for an ArcKin, enabling personal highway travel.
 
 The world still has natural beauty. Remote islands, coastal pockets, mountain
 routes, hidden coves, farms, reefs, rain-soaked forests, and older community
@@ -77,16 +124,83 @@ Common world elements:
 
 ## Player Origin
 
-The player starts as a scavenger with a talent for fixing tech.
+The player/protagonist starts as an older teen scavenger with a talent for
+fixing tech. See `protagonist-and-family.md` for the fuller character draft.
 
 The player's family runs a small repair service. They scavenge for parts, repair
 old devices, and sell useful components. The family already owns an outdated
 helper bot used for chores and simple shop tasks, so AI cores are familiar but
 not glamorous.
 
+The protagonist is trying to provide for his mother and little sister after his
+father was killed in what was officially reported as a CoreTech workplace
+accident. The corporation avoided compensating the family by blaming the father
+through a loophole. This creates grief, anger, and distrust of corpos without
+making the protagonist cruel.
+
+The deeper truth should be revealed much later: the father was not merely a
+victim of a bad workplace. He had a rare gift for deciphering K.I.N. anomalies,
+security patterns, corrupted packets, ARC behavior, and broken keys. CoreTech
+used him to keep parts of the K.I.N. network secure, but he secretly used his
+access to help underground factions undermine CoreTech from inside. He operated
+under a network codename to be decided later. When CoreTech exposed him, they
+killed him and staged the accident.
+
+His reveal should be morally complicated. He may have started by leaking or
+selling CoreTech secrets for survival money while telling himself CoreTech
+deserved it. Some buyers were resistance; others were brokers or criminals. His
+leaks may have caused unintended harm before he tried to redirect his access
+toward protecting communities, hiding keys, and building proof against CoreTech.
+The protagonist should discover that his father was guilty of something, but not
+what CoreTech accused him of being.
+
+The family is religious, prays to God daily and before meals, and treats faith
+as part of its moral center. The protagonist can struggle with anger and
+exhaustion, but he holds high ethical standards and often helps suffering people
+even when he has little.
+
 The story begins when the player finds a damaged Core Link in a trash heap.
 After hacking it, they discover scrubbed ownership logs, a dormant AI core, and
 nanobots stored in void storage.
+
+The larger story direction is revenge, protection, and escape. The protagonist
+wants to avenge his father, protect his mother and little sister, and eventually
+get them off the island. His father's death should lead him into the deeper
+CoreTech/K.I.N. corruption instead of resolving as a single personal grudge.
+
+Possible first-game end direction: the protagonist helps bring down a major
+CoreTech operation with his ArcKin and faction allies, gains enough leverage to
+send his family away, but chooses to stay behind because the island, ArcKin, and
+ordinary people are not yet free. Before parting, he gives his sister the Core
+Link, a meaningful Core Cache/Void Grid reserve, and the ARC from the family's
+outdated helper bot. He wipes sensitive history first, echoing the mystery of
+the previous owner while leaving enough emergency capability for her future.
+
+The family helper ARC can become important before this ending. A possible
+mid-game beat has the protagonist find his father's old CoreTech locker and an
+immobile lockbox inside it. The lockbox needs a passkey. After realizing the
+family may know the answer, he consults the family helper bot, removes its ARC
+from the helper chassis, and brings the ARC back to decipher or authenticate the
+lockbox. The contents remain open: a birthday gift, personal tool, message,
+proof fragment, blueprint, passkey, or other father-linked inheritance. Once the
+helper ARC joins the protagonist, events can keep it with him until the ending,
+where he sends it with his sister alongside the Core Link.
+
+Possible second-game or bridge-story seed: the mother and sister leave by ship,
+a storm crashes them near another island, and they hide from the storm in a
+small cave or shelter. They cling to each other, build a small fire clumsily,
+and the sister remembers the Core Link. In fear and frustration, she boots it,
+uses her natural technical intuition and bond with Kin to access emergency
+functions, and sends an SOS. The responders are not true rescuers, but
+ex-CoreTech employees, sympathizers, or displaced operators who capture them as
+leverage against the new CoreTech leadership.
+
+Because the sister is only around 5-8 during the first game, she should not
+become the immediate playable action lead unless meaningful time has passed. If
+she becomes a main playable protagonist, the sequel should likely use a time
+skip so she is old enough to carry agency, danger, and responsibility. If the
+ship crash happens immediately after game one, it may function better as a
+bridge comic, prologue, or inciting incident for her later arc.
 
 ## Core Link Device
 
