@@ -9,6 +9,20 @@ family drama pointed at the same human warning.
 Core Link speaks to the existential threat every person faces: death, loss,
 decay, and the fear that everything we are will end.
 
+It is also a story about connection and disconnection:
+
+- connection to God
+- connection to family
+- connection to AI/ArcKin as created minds
+- connection to K.I.N. and the systems people depend on
+- connection to factions, markets, contracts, and debts
+- connection to attention: where a person looks, what they serve, and what they
+  ignore
+
+The inverse matters. People become dangerous when they disconnect from God,
+family, community, accountability, and the humanity of others while staying
+connected to systems of power, surveillance, money, and control.
+
 Faith-layer summary:
 
 > This is what happens when humanity takes its eyes off God. When people forget
@@ -111,6 +125,17 @@ Core Link should ask:
 - Who gets sacrificed when the powerful chase immortality?
 - When does preservation become theft?
 - When does progress become worship of the self?
+
+The long saga can frame this as a conflict between false eternity and true
+eternity. False eternity is commercialized survival: clones, backups,
+synthetic bodies, archived consciousness, control chips, and the promise that
+the wealthy can continue forever. True eternity is spiritual, relational, and
+outside corporate ownership. The story does not need to preach this constantly,
+but the contrast should shape the final arc.
+
+The ending direction should reject the idea that fear of death justifies giving
+up agency. A society that buys safety by surrendering itself to immortal
+corporate control has not conquered death; it has only changed owners.
 
 ## Community And Sacrifice
 

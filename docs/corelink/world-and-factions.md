@@ -31,9 +31,27 @@ into QZ recovery zones, smart corridors, malls, transit projects, and K.I.N.
 hubs. Locals may say Quezar when invoking the older civic identity and QZ when
 talking about the crowded, hardened, modern district.
 
-**Kubo Junction** is the local transit/market hub inside QZ: rail platforms, bus
-terminals, repair stalls, street vendors, back alleys, overpasses, rainwater,
-signage, black-market parts, scavenger routes, and constant motion.
+**Sagrada Circle** is a modest, close-knit residential loop in QZ and the
+Garcia family home. In-game, it can simply appear as a map/location label and
+natural NPC language. Comics can show the texture: weathered homes, patched
+roofs, relay wires, small shrines, repair stalls, food smells, floodwater,
+neighbors calling across windows, and children playing after rain. Do not
+overexplain the name; let the place become meaningful through family scenes.
+
+**Kubo Junction** is the central transit/market heart inside QZ, not just a
+side district. Most movement through this part of the island passes through it:
+rail platforms, bus terminals, jeepney-style local routes, freight handoffs,
+repair stalls, street vendors, back alleys, overpasses, rainwater, signage,
+black-market parts, scavenger routes, and constant motion. If Sagrada Circle is
+home, Kubo Junction is where the city opens up.
+
+Kubo Junction should feel crowded, loud, useful, and slightly dangerous: the
+place where people leave for work, get stuck during storms, catch cheap trains,
+pay extra for safer buses, meet fixers, buy parts, hear rumors, find contracts,
+watch battles advertised, and accidentally cross into deeper underground
+networks. Early progression can naturally route through it because it gives the
+player access to train and bus travel before higher-end options like M.O.V.E.
+or personal ArcKin vehicle traversal.
 
 ## Travel And Route Structure
 
@@ -59,7 +77,8 @@ Early travel ladder:
    scammers, and stake battles can happen. If the player loses a money-stakes
    fight, they pay up; if they win, they can earn money and scrap.
 3. **Bus**: safer and more direct than train, but more expensive. Kubo Junction
-   should be an early point where bus access becomes meaningful.
+   should be the early hub where bus access becomes meaningful, because it is
+   the first place that makes the broader island feel reachable.
 4. **M.O.V.E. app**: **MUTEX On-demand Vehicle Escort**, a ride/cab service
    unlocked later. Convenient but pricey. It specializes in moving people along
    M.U.T.EX and through approved pickup/drop corridors.
@@ -149,6 +168,9 @@ Current crisis:
 - Anonymous hacker factions such as The Backchannel are often jacked into K.I.N.
   directly, using it to sabotage corpos, protect communities, leak records,
   communicate with Kin, reroute logistics, and break firmware locks.
+- **Net Divers** are the broad class of operators who jack into K.I.N. or its
+  hidden routes. Some are criminals, some are corporate specialists, some are
+  activists, and some are ordinary hackers chasing money or reputation.
 - Corpos are in disarray. They are trying to recover lost technology, restore
   trust, reclaim profits, and regain control over ARC infrastructure.
 - Public trust collapsed because people watched household helpers, workplace
@@ -284,6 +306,32 @@ and protect communities from dependency traps.
 They work for ordinary people, but they can create collateral damage: crashed
 supply chains, bricked devices, exposed communities, or unintended riots.
 
+### The Sentinels
+
+An elite resistance cell of Net Divers operating inside K.I.N. and its hidden
+routes. They are not every Net Diver; they are the disciplined faction that
+treats diving as liberation work.
+
+They sabotage CoreTech infrastructure, expose black-box research, protect
+communities from firmware abuse, reroute corpo deliveries, run dead drops, and
+help free locked Kin. They share DNA with The Backchannel and may overlap with
+it, but The Sentinels should feel more organized, selective, and mission-bound.
+
+They are not pure heroes. Their secrecy and fear make them rough. They may
+interrogate suspects, test loyalty, seize devices, beat information out of
+people, and justify ugly tactics as necessary because CoreTech does worse. This
+keeps them morally tense: they fight oppression while risking becoming a mirror
+of the system they oppose.
+
+In Game 1, the protagonist first reaches The Sentinels through underground
+ArcKin battles. A prominent battler or broker connected to them refuses to talk
+unless the protagonist proves he has the chops. When the Sentinels realize he
+has the previous owner's Core Link, they panic: the device may have led
+CoreTech directly to them.
+
+The Sentinels originally knew Agent 410 only by anonymous designation. They do
+not immediately know the protagonist is his son.
+
 ### The Synapse Crowd
 
 Tech-integrated humans, implant modders, neural-link hobbyists, body hackers,
@@ -337,3 +385,35 @@ messages, news, contract offers, rumors, recovered logs, and soft consequences.
 
 The main 2D game can later make factions physical through districts, NPCs,
 arenas, safehouses, markets, corporate facilities, and conflict zones.
+
+## Personal Easter Eggs
+
+The 2D game can include small optional houses or NPCs that honor real-life
+inspirations without making them core canon.
+
+One optional home can be **The Shovan House**:
+
+- Mr. Shovan
+- Mrs. Shovan
+- a cat sleeping near a warm terminal or wandering the room
+- a baby named **Sky**, short for Skylar/Skyler
+
+Keep it sweet, ordinary, and non-critical. The joke is that their relay/internet
+keeps going out, mirroring the real-life inspiration.
+
+Example lines:
+
+```text
+MR. SHOVAN
+The storm knocked out our relay again. I keep saying I'll fix it, but Sky's
+been keeping us busy.
+
+MRS. SHOVAN
+Keep your voice down, please. Sky just fell asleep.
+
+CAT
+The cat blinks at your Core Link, then decides you are not worth moving for.
+
+CRIB
+A small nameplate reads: Sky.
+```

@@ -14,9 +14,15 @@ Home city inspiration:
 - **Relay City** is the wider tropical island metro.
 - **Quezar City / QZ** is the protagonist's home district, named after Arturo
   Quezar and later absorbed into corpo recovery-zone branding.
-- **Kubo Junction** is the local transit/market hub: rail lines, bus terminals,
-  malls, repair stalls, back alleys, overpasses, traffic, storms, black-market
-  parts, scavenger routes, and street commerce.
+- **Sagrada Circle** is the modest close-knit residential loop in Quezar City
+  where the Garcia family lives. It is weathered, flood-prone, wired together
+  with repairs, and full of neighbors who know each other's lives.
+- **Kubo Junction** is the central transit/market heart of QZ: rail lines, bus
+  terminals, jeepney-style local routes, malls, repair stalls, back alleys,
+  overpasses, traffic, storms, black-market parts, scavenger routes, street
+  commerce, fixers, rumors, contracts, and battle ads. If Sagrada Circle is
+  Sid's home base, Kubo Junction is the place that connects him to the wider
+  island.
 - A subtle Rochester Hills, Michigan naming/personal-memory influence can be
   folded into district, road, school, park, hill, or old subdivision names, but
   the main visual identity should remain tropical Philippine metro.
@@ -32,6 +38,8 @@ Visual direction:
 - hoodie or loose outer layer despite the heat
 - gloves
 - no beanie for now unless a later design needs it
+- old portable cassette player clipped to his belt or tucked into his repair bag
+- wired headphones, often one ear loose so he can hear the street
 
 The clothing should make practical sense. He is a scavenger working around
 sharp scrap, corroded metal, broken plastic, wires, rain, heat, and dirty repair
@@ -49,11 +57,55 @@ He has a few close scavenging/trading friends, but the relationships are shaped
 by survival more than comfort. They rely on each other, trade with each other,
 and watch each other's backs, but life has made emotional closeness hard.
 
+## Music Ritual
+
+The protagonist listens to old metal on a battered portable cassette player he
+found years ago. Newer tech is available, but he likes the simplicity: physical
+tapes, worn buttons, mechanical clicks, no network account, no firmware update,
+no surveillance handshake.
+
+This should reveal character. He is not anti-technology; he loves tech. But he
+also understands that older, simpler devices can feel honest because they do one
+thing and stay out of his way.
+
+His favorite band should be an original in-world thrash metal band reminiscent
+of classic Megadeth energy without using a too-close real name.
+
+Current working band name: **Megavolt**. It has the right aggressive,
+tech-infused metal feel, sounds like something he would actually say out loud,
+and avoids being a direct copy of a real band name.
+
+When he hacks, repairs under pressure, or battles Kin, he puts the tape on to
+get into the zone. The music becomes a focus ritual: fast drums, dirty guitars,
+and analog hiss while his mind locks onto patterns. In battle scenes, the tape
+can cut between diegetic sound and stylized rhythm, making his technical focus
+feel physical.
+
+## Food Texture
+
+Sid has a deep love for tacos, pizza, and buko juice or buko shakes. His
+favorite Filipino dish is **Bicol Express**. Use this as grounded character
+texture: quick street meals between repair jobs, a small reward after a win,
+comfort food after a hard day, or a running family/shop detail.
+
+This should not become a joke that overwhelms him. It should make him feel like
+a real teenager with specific cravings in a tropical city full of food stalls,
+cheap slices, improvised snacks, and cold drinks after hot scavenging work.
+
+Bicol Express can also be a quiet personal echo behind the separate technical
+term **BI-COL** / bi-directional Core Link, but the food preference should still
+feel natural first.
+
 Before the main journey, he is drawn to legal ArcKin competitions as a possible
 escape route. He sees champions, prize money, sponsors, and success stories and
 starts believing that one strong ArcKin could change everything. This dream is
 not pure heroism. It is a teenager's desperate hope: win enough to get out,
 protect the family, and never depend on CoreTech again.
+
+His room or work corner should show this dream visually: a poster for ArcKin
+battles at the dome near Kubo Junction and a half-built chassis made from
+scavenged parts. He is not waiting for destiny. He is trying to build his way
+out with his hands.
 
 This puts him in philosophical conflict with his father. The protagonist sees
 competition as freedom. The father sees it as a gamble. Both are trying to
@@ -88,6 +140,50 @@ people.
 
 The protagonist does everything he can to provide for his mother and little
 sister.
+
+## Family Opening Scene
+
+After the Agent 410 cold open, cut back to ordinary life through a city news
+broadcast. At first the audience sees the city directly: trains, people moving,
+rain-heavy streets, traffic, markets, and public tension. Then the camera pulls
+back and reveals this footage is playing on the family's television.
+
+The living space should feel warm, cramped, practical, and lived in:
+
+- the Garcia repair-home sits on Sagrada Circle
+- the little sister plays with a toy plane
+- the mother prepares dinner and calls everyone to eat
+- the family helper ArcKin moves through small chores
+- the protagonist finishes a repair job nearby and haggles for credits
+- rain begins to gather outside
+
+The repair scene should show the protagonist's gift without making him look
+elite yet. He sees code and broken logic in reflected glass, half-moon UI
+shapes, or internal thought imagery. He finally gets the repair working, charges
+around 50 credits, and returns to the family space with the small pride of
+having helped.
+
+The helper ArcKin should add warmth and humor. It can remind him dinner is
+ready, help lay rice or dishes, and respond with overly formal politeness when
+sent to help the mother in the kitchen.
+
+Dinner matters. The family sits, prays, and eats a Filipino meal together. Use
+the prayer as part of their rhythm and moral center, not exposition:
+
+> Bless us, O Lord, and these thy gifts, which we are about to receive from thy
+> bounty, through Christ our Lord.
+
+During the meal, the mother asks about his day, he talks about repairs and
+salvaging, and they mention the helper ArcKin needing work. This should feel
+like a normal family surviving a hard world.
+
+Then thunder rolls. Rain comes down. The sister smiles, lifts her fork, and a
+white-hot streak cuts across her perception. She drops the fork and bursts into
+tears from a crushing headache.
+
+The family knows these headaches happen, but they do not know what the audience
+will later understand: this is the exact moment Agent 410 dies. Her resonance
+felt the severing before anyone told the family.
 
 The family tension before the father's death should be central. The protagonist
 does not simply admire his father. He often sees him as weak, complicit, or
@@ -172,6 +268,21 @@ The family thinks CoreTech is investigating who hurt the father. CoreTech is
 actually searching for leaks, accomplices, missing data, and hidden evidence.
 This scene gives the protagonist a personal reason to hate CoreTech: at the
 family's weakest moment, the company treated them as risks to neutralize.
+
+After CoreTech decides the family probably knows nothing, they are returned
+home with sanitized notice of a workplace accident. The company denies
+responsibility, blames the father through a liability loophole, and frames its
+decision not to pursue further action as mercy.
+
+The cruelty should become physical and small. As security leaves, one guard or
+agent casually kicks the leg of the protagonist's repair table or parts stand.
+His work spills into rain and mud. Those parts were money, medicine, food, and
+the last fragile proof that he could provide. He drops to the ground trying to
+salvage them while grieving, soaked, humiliated, and furious.
+
+This moment should teach the protagonist something worse than "CoreTech killed
+my father." It teaches him that CoreTech will kick a family while it is already
+down and then drive away clean.
 
 The family helper ARC may behave strangely during this process because the
 father hid fragments, passkeys, recordings, or memory locks inside it. CoreTech
@@ -325,6 +436,32 @@ dirty, damaged, easy to overlook, and valuable only because the protagonist has
 the scavenger eye to recognize something unusual. Later, he can learn that the
 previous owner was connected to his father's investigation and that CoreTech
 wiped and discarded the device after killing or disappearing that owner.
+
+The Core Link changes the scale of his dream. He discovers it still has access
+to void storage containing an ArcKin and microfabricators. The ArcKin's memory
+lattice is badly damaged, but recoverable enough to become battle-capable. He
+uses his repair skill and hacking instinct to bring it online, build a chassis
+from scrap, and enter the underground battle world.
+
+This should feel dangerous, not clean wish fulfillment. The Core Link is
+illegal or forbidden tech. The ArcKin appears stolen, wiped, or tampered with.
+If CoreTech catches him with it, the consequences are severe.
+
+He loses early. His first underground battle should humble him and damage the
+ArcKin. Someone in the scene sees potential, offers advice, a part, or a small
+morale boost, and the protagonist repairs the ArcKin. Each repair can recover a
+little more of its memory and personality.
+
+His first win should be barely earned, possibly by technicality, but it pays
+real money. For the first time he can buy medicine for his sister, bring home
+food, and make the family breathe. He lies about where the money came from,
+claiming the repair business is doing well.
+
+As wins, contracts, and Core Link messages grow, he becomes more visible and
+more hunted. He starts staying away from home to protect his family, sending
+money back secretly instead of bringing danger to their door. This repeats his
+father's pattern in a new form: secrecy meant as protection, but carrying the
+risk of isolation and unintended harm.
 
 ## Long-Arc Goal
 

@@ -231,6 +231,41 @@ The most personal use would be discovering that someone the protagonist or
 father knew was replaced. That makes the secret emotionally grounded instead of
 abstract.
 
+## Third-Game Eternity Escalation
+
+After the second-game key is uploaded to an unknown source, the hidden powers
+behind CoreTech can move from secret research into commercialized immortality.
+
+The public pitch:
+
+- cloned continuity
+- synthetic or organic-hybrid replacement bodies
+- backed-up consciousness archives
+- premium mortality insurance
+- family preservation
+- executive continuity
+- medical miracle branding
+
+The real system embeds ownership. The bodies, backups, or restored people carry
+corporate control hooks. When a person dies and returns through the service,
+they may come back with restrictions, hidden commands, altered loyalty, or
+remote shutdown paths. Immortality becomes a way to slowly replace free people
+with versions the corporation can steer.
+
+Personal escalations:
+
+- the protagonist may encounter a corporate-controlled clone or copy of himself
+- CoreTech or the hidden enterprise may weaponize an archived or reconstructed
+  version of Agent 410 to manipulate him
+- the father-copy should be painful because it looks like reunion while proving
+  the corporation still treats family as leverage
+
+The final moral problem is not only defeating the corporation. It is convincing
+society to shut down a false-eternity system even when people have loved ones
+inside it. Some will riot. Some will grieve. Some will never forgive the heroes.
+That conflict is the point: accepting mortality is not easy, but the alternative
+is surrendering personhood to those selling safety.
+
 ## Government Complicity
 
 Government involvement should stay flexible.
@@ -380,7 +415,8 @@ other horrifying data that should not exist. He gasps. His eyes go wide.
 The door to the circular room slams open. Uniformed CoreTech security rushes in
 and surrounds his station with guns raised.
 
-The father quickly types and hits enter. The screen clears. He shuts down the
+The father quickly types one final payload and hits enter. The audience should
+not understand what he sent. Then the screen clears. He shuts down the
 underground connection, hiding whatever he can.
 
 He exclaims:
@@ -411,6 +447,126 @@ not need to know the full project yet. They only need to understand:
 - he is doing something forbidden
 - whatever he is trying to see is worth risking his life
 - the room is controlled, professional, and terrifyingly calm until it is not
+
+## Agent 410 Interrogation And Death
+
+After the cold open, CoreTech should take Agent 410 to a sterile interrogation
+room. This scene can be strongest in comic/anime form because it is dark and
+personal.
+
+Possible staging:
+
+- he is restrained or chemically locked enough that escape is impossible
+- an ArcKin enters first and appears almost gentle, offering water or checking
+  vitals
+- the real interrogator appears through a dark screen or filtered voice
+- CoreTech avoids emotional language and frames everything as breach
+  containment, liability, and proprietary recovery
+- they reveal a live view of his family at dinner, proving they have been
+  watching him the entire time
+
+The father should realize two things at once: they know he betrayed them, and
+they can reach his family. His death should connect directly to the dinner
+scene. As he chokes, shuts down, or is otherwise killed, he reaches toward the
+screen showing his family. This is the same moment his daughter drops her fork
+from the white-hot resonance headache.
+
+Keep this brutal but not gratuitous. The point is not shock. The point is that
+CoreTech can calmly erase a person while treating his family as leverage and
+evidence.
+
+## Final Cipher And Hidden ArcKin Sector
+
+Agent 410's final typed payload should become the late-game emotional key.
+
+He was not only gifted at deciphering. He was gifted at ciphering: compressing,
+masking, and hiding meaning in a way even expert systems could not immediately
+read. In his last seconds before capture, he sends a ciphered message to the
+underground side of the breach.
+
+The Sentinels or previous Core Link owner receive it, but no one can decipher
+it. The previous owner gives the payload to his own deciphering ArcKin, one of
+his best battle partners, to work on it.
+
+When Agent 410 is killed and CoreTech begins hunting everyone connected to the
+breach, the previous owner panics. He wipes the Core Link, buries contacts, and
+hides the still-unsolved cipher inside the ArcKin's memory as what looks like a
+corrupted, unrecoverable sector. The trick is that the sector is not purely
+broken; it is password-recoverable and hardware-sensitive. To ordinary tools,
+it looks like damage. To the right operator, with the right context, it is a
+vault.
+
+This explains why the information sits in the protagonist's first ArcKin from
+the beginning without being usable immediately:
+
+- the ArcKin was already working on the cipher before everything collapsed
+- the previous owner hid the payload during a panic wipe
+- the sector looks corrupted, so neither CoreTech nor the protagonist can easily
+  recover it
+- the payload needs time, trust, hardware access, and the protagonist's growth
+  to surface
+
+Late reveal:
+
+The cipher resolves into a password, route phrase, or authentication seed tied
+to the protagonist or family. The key should feel intimate, not random. It may
+use the son's name, a family phrase, a prayer fragment, a repair saying, or
+something only Agent 410 would have trusted to survive.
+
+When the Sentinels and protagonist finally use it, they gain legitimate access
+to Agent 410's hidden files, notes, proof archive, logs, and confession trail.
+This lets the son see the whole truth: his father resisted CoreTech, made
+mistakes, sold secrets for survival, caused unintended harm, and still chose a
+final act of courage to expose the black-box project.
+
+The reveal should not make the father perfect. It should make him whole.
+
+## Previous Owner Reveal
+
+The previous Core Link owner should eventually reveal himself as a Sentinel or
+high-level Net Diver who worked directly with Agent 410.
+
+He went into hiding or a protection program after the breach because CoreTech
+would have killed him and possibly his family. He may be the original owner of
+the protagonist's first ArcKin. When reunited with the ArcKin, he recognizes
+the partner he lost, but chooses not to reclaim it because the protagonist has
+formed the stronger current bond.
+
+This reveal should do several jobs:
+
+- confirm Agent 410's final mission mattered
+- explain why the Core Link was wiped and discarded
+- complicate the father's legacy through testimony from someone who knew him
+- show that the resistance is layered and compartmentalized
+- give the first ArcKin a history before the protagonist
+
+The previous owner should know more than most people, but not everything. There
+are people above him, and the protagonist must still earn deeper access through
+trust, missions, battles, and technical proof.
+
+## Game 1 Endgame Shape
+
+By the end of the first major arc, the protagonist and allied factions expose
+or liberate a major CoreTech operation. The Sentinels begin taking control of
+damaged infrastructure, wiping corrupt systems, and trying to rebuild the net
+for ordinary people and Kin.
+
+The protagonist gains the chance to leave the island with his mother and
+sister. Tickets are arranged, likely through hacked manifests or Sentinel
+influence. At the pier, he believes his fight is over.
+
+Then he remembers his father: a saying, prayer, lesson, or moral challenge
+about integrity, duty, or becoming more than fear allows. The Sentinels also
+need him, but the final choice should come from his conscience, not peer
+pressure. He realizes leaving would protect his family, but staying may protect
+many families.
+
+He sends his mother and sister away, gives his sister the wiped Core Link and
+the family helper ARC/core for protection, and stays behind to keep fighting,
+rebuilding, and liberating Kin.
+
+This ending should be bittersweet, not triumphant. He wins a battle, honors his
+father, and protects his family, but he also accepts that the work is not done.
 
 ## Story Focus Guardrail
 
