@@ -49,6 +49,17 @@ He has a few close scavenging/trading friends, but the relationships are shaped
 by survival more than comfort. They rely on each other, trade with each other,
 and watch each other's backs, but life has made emotional closeness hard.
 
+Before the main journey, he is drawn to legal ArcKin competitions as a possible
+escape route. He sees champions, prize money, sponsors, and success stories and
+starts believing that one strong ArcKin could change everything. This dream is
+not pure heroism. It is a teenager's desperate hope: win enough to get out,
+protect the family, and never depend on CoreTech again.
+
+This puts him in philosophical conflict with his father. The protagonist sees
+competition as freedom. The father sees it as a gamble. Both are trying to
+protect the family, but one trusts possibility while the other trusts stable
+income.
+
 ## Values
 
 He is on the side of ordinary people against corpos.
@@ -78,6 +89,24 @@ people.
 The protagonist does everything he can to provide for his mother and little
 sister.
 
+The family tension before the father's death should be central. The protagonist
+does not simply admire his father. He often sees him as weak, complicit, or
+foolish for continuing to work for CoreTech. He asks why his father will not
+quit, fight openly, or use his deciphering skill somewhere else. He may even
+argue with his mother for defending him.
+
+The mother tells him to mind his manners and respect his father, not because she
+is blind to CoreTech's corruption, but because she sees the practical math:
+food, rent, contracts, penalties, medical bills, transport, and the sister's
+treatments. She values stability because she knows how close the family is to
+falling apart.
+
+The father cannot explain the truth. He defends his work as helping keep people
+safe, says he is under contract, and repeats that it is only for a few more
+years. The protagonist hears excuses. Later he should realize the father was not
+counting down to comfort; he was buying time, gathering proof, protecting the
+family, and trying to survive long enough to finish something.
+
 ### Father
 
 His father is dead. He was killed in a horrible workplace accident while working
@@ -91,6 +120,13 @@ The father worked for CoreTech despite the suffering the company caused because
 the family needed income and because his work touched something he believed
 could still protect people. CoreTech did not pay him well or treat him well, and
 this created tension: he was employed by the same system hurting his community.
+
+The most painful family argument should expose the protagonist's immaturity
+without making him stupid. He might brag that he earned 50 credits from repair
+or scrap work and argue that the father could quit and work with him. The father
+then asks how many 50-credit jobs it would take to cover the sister's next
+hospital visit. The father is not cruel in this moment; he is exhausted. The son
+sees possibility. The father sees consequences.
 
 His gift was deciphering. He could read patterns, broken keys, corrupted
 packets, strange ARC behavior, and K.I.N. security anomalies in a way few people
@@ -124,6 +160,23 @@ as an accident. The official report blamed him through a liability loophole,
 letting the company avoid compensation while discrediting him as careless or
 responsible for his own death.
 
+Soon after the death, CoreTech forcibly takes the family for corporate
+"interviews." The company uses sanitized terms: escorted, interviewed,
+temporarily held for protection, voluntary verification. In practice, they are
+separated, pressured, and treated like suspects while still grieving. CoreTech
+asks about proprietary systems, unauthorized storage, activist contacts,
+unusual visitors, hidden files, and anything the father may have brought home.
+They may even polygraph the mother, protagonist, sister, and family helper ARC.
+
+The family thinks CoreTech is investigating who hurt the father. CoreTech is
+actually searching for leaks, accomplices, missing data, and hidden evidence.
+This scene gives the protagonist a personal reason to hate CoreTech: at the
+family's weakest moment, the company treated them as risks to neutralize.
+
+The family helper ARC may behave strangely during this process because the
+father hid fragments, passkeys, recordings, or memory locks inside it. CoreTech
+notices enough to become interested, but not enough to recover the truth.
+
 This loss is a core wound:
 
 - grief
@@ -132,10 +185,34 @@ This loss is a core wound:
 - frustration with legal systems that protect money
 - resentment toward public indifference
 - pressure to become the provider too early
+- the permanent pain of unfinished arguments and words that cannot be taken
+  back
 
 The father should not be reduced to a plot device. His death shaped the family,
 but his life should later be remembered through habits, tools, sayings, old
 repair knowledge, faith, and the protagonist's sense of duty.
+
+The father's death should embody the story's finite-life theme. The protagonist
+does not get a clean final conversation, explanation, apology, or chance to
+understand him while he is alive. That is the point: life ends before people are
+ready, and the meaning comes from how the living carry love, regret, truth, and
+responsibility afterward.
+
+The story may open with the father alive inside a large circular CoreTech
+workstation room, wearing a white shirt, blue dress pants, black tie, glasses,
+and CoreTech badge. The first ArcKin the audience sees is stationed in the
+center of the room as the K.I.N. cybersecurity overseer. He starts a privileged
+session and lets the underground hacker faction connect through his security
+clearance. As a CoreTech decipherer, he pretends to fight the intrusion while
+actually stalling to buy the hackers time. When black-box images flood his
+screen, reflected in his glasses, security storms in. He clears the screen,
+shuts down the connection, claims he stopped them, and is taken away at
+gunpoint. This cold open shows his danger and courage before the protagonist
+understands who his father really was.
+
+His CoreTech designation is **Agent 410**. The number should foreshadow his
+death and erasure through HTTP status `410 Gone`: he is not merely missing from
+the system, he is intentionally and permanently removed.
 
 The late-story reveal should reframe him without making him flawless. He was not
 just a victim of CoreTech; he was quietly resisting it. He carried the moral
@@ -171,6 +248,61 @@ name, comfort, and help.
 She can become one of the emotional reasons the protagonist refuses to sell out,
 even when selling rare tech would solve short-term money problems.
 
+The sister has frequent debilitating headaches. At first, the family treats
+them as a medical condition that requires medicine, scans, hospital visits, and
+money they barely have. These costs are one reason the father stays with
+CoreTech and one reason the mother defends stable income.
+
+The deeper truth is that the headaches are early signs of resonance. She is not
+simply sick, and she is not a generic mind-reader. She feels emotional and
+consciousness signals others cannot: family tension, ARC loneliness, EchoKin
+confusion, corrupted Kin distress, and the shape of fear or grief in nearby
+systems.
+
+A key early clue can happen during a family argument. The protagonist and father
+escalate, the mother tries to calm them, and the sister cries out that she can
+feel the tension. The family thinks she is emotionally sensitive. Later, the
+audience realizes she literally felt it.
+
+The father may notice her gift before anyone else fully understands it. He may
+see her reacting to machines, describing feelings from ARCs, sensing lies, or
+mentioning things she should not know. This gives him another reason to keep
+CoreTech close but at a distance: if CoreTech learns what she is, they may take
+her.
+
+Later story pressure: the sister's resonance may eventually be discovered by
+CoreTech remnants, black-box researchers, or people still protecting the old
+system. They believe her ability to understand ArcKin better than ordinary
+humans may expose the missing bridge between human consciousness, ARC
+consciousness, EchoKin remnants, and the failed immortality/replacement work.
+Whether they are correct is still open, but they believe she carries information
+or a biological/neurological pattern they cannot reproduce.
+
+This makes the sister more than a hostage. She becomes a target because powerful
+people think studying her could unlock the missing key to consciousness
+transfer, stable organic-hybrid bodies, or immortality. The exact moment they
+discover her ability should be decided later.
+
+Longer sequel direction: once the sister is discovered, she may be captured and
+subjected to torture, coercive testing, or experimentation by CoreTech remnants
+or black-box researchers. They use her resonance to extract enough of the
+missing consciousness key to successfully clone, continue, or organically
+recreate the major antagonist of that era.
+
+She eventually escapes and later destroys that antagonist with help from her
+brother, allied factions, ArcKin, and Kin harmed by the project. When they try
+to delete the extracted key, they discover it has already been uploaded to an
+unknown and untraceable source. This reveals the rabbit hole goes deeper than
+the antagonist, CoreTech remnants, or even the visible K.I.N. network.
+
+Near the end of the second game, the mother may die as collateral damage. This
+should not be treated as shock value. It should be the cost of the conflict
+finally reaching the last person who held the family together. The exact scene,
+responsible party, and timing remain open, but the emotional effect should be
+clear: the sister loses the person who kept her alive after the first game's
+ending, and the brother has to face the cost of staying behind and sending them
+away.
+
 ## Dream And Pressure
 
 Like many people around him, the protagonist dreams of getting off the islands
@@ -181,6 +313,18 @@ That dream conflicts with his family obligations. Leaving could mean survival,
 but staying means protecting his mother and sister. CoreLink should enter his
 life at exactly this pressure point: a chance to sell something valuable, escape,
 or use it to fight for something bigger.
+
+After CoreTech refuses compensation, the protagonist is forced to become a
+provider early. He scavenges, repairs, bargains, sells parts, works dangerous
+scrap zones, and may skip normal teenage life to keep the family afloat. The
+Core Link discovery should happen during this survival work, not as a clean
+inheritance.
+
+The damaged Core Link is found in discarded wreckage during a scrap run. It is
+dirty, damaged, easy to overlook, and valuable only because the protagonist has
+the scavenger eye to recognize something unusual. Later, he can learn that the
+previous owner was connected to his father's investigation and that CoreTech
+wiped and discarded the device after killing or disappearing that owner.
 
 ## Long-Arc Goal
 

@@ -11,6 +11,8 @@ Companion briefs:
 - `watch-game-relationship.md`: watch role, future 2D game relationship, account/sync posture.
 - `watch-ui-and-systems.md`: Wear OS UI and short-session interaction draft.
 - `protagonist-and-family.md`: protagonist, family wound, faith, sister, and scavenger life.
+- `coretech-and-kin-mystery.md`: CoreTech, K.I.N. surveillance layers, Core Link discovery, and black-box mystery.
+- `themes-and-message.md`: existential threat, greed, self-preservation, technology, sacrifice, and humanity.
 
 ## Product Thesis
 
@@ -25,6 +27,27 @@ Core promise:
 The MVP is not the full RPG. It is the smallest proof that a watch-based AI
 companion can feel alive, personal, and worth checking every day.
 
+## Thematic Thesis
+
+Core Link is ultimately about the existential fear of death, the human hunger to
+continue, and the horrors people justify when greed, self-preservation, ego, and
+unchecked power outrun compassion.
+
+The story should warn that technological progress without humanity becomes
+extraction. It should question what happens when people accomplish everything
+they set out to achieve and still demand more: more control, more wealth, more
+life, more certainty, more ownership over the future.
+
+The counterweight is sacrifice, empathy, faith, family, community, and the hard
+choice to help others when fear says to protect only yourself.
+
+Faith-layer summary: Core Link can be read as a warning about what happens when
+people take their eyes off God. Without trust in God's promise, death looks like
+final defeat, life looks cold and finite, and the powerful try to seize control
+over life itself. That fear becomes the sin that drives exploitation,
+immortality research, and the destruction caused by trying to own what was never
+theirs to own.
+
 ## Comic-First Direction
 
 Core Link may benefit from a comic-first lore validation path before the watch
@@ -32,6 +55,25 @@ game or future 2D game becomes the main public artifact. The comic can make the
 world, tone, character stakes, ArcKin rules, K.I.N. crisis, EchoKin tragedy,
 CoreLink OS boot ritual, and tropical/corpo visual identity feel real before
 mechanics have to carry the full burden.
+
+Transmedia direction: keep the watch and game lighter, more adventure-driven,
+and more open-ended. The playable experience should focus on ArcKin bonding,
+contracts, exploration, battles, repairs, scavenging, travel, and everyday
+adventures, with grounded moments and deeper dialogue appearing as major
+heartbeats. The comics or anime can carry the heavier story material: father
+truth, CoreTech, the hidden enterprise, immortality research, sister captivity,
+faith themes, and the deepest conspiracy layers.
+
+This lets the game keep a Pokemon-like sense of everyday adventure while still
+having a mature canon for players who want the real meat of the story.
+
+Tone target: approachable and understandable for younger players, but not
+shallow. The game/watch should foreground companionship, wonder, contracts,
+exploration, family, humor, and adventure while letting mature themes sit
+underneath. Adults should feel the grief, faith, exploitation, surveillance,
+mortality, and self-preservation themes; younger players should still be able
+to follow the core emotional story without needing to decode every conspiracy
+layer.
 
 Working first issue:
 
@@ -138,6 +180,13 @@ accident. The corporation avoided compensating the family by blaming the father
 through a loophole. This creates grief, anger, and distrust of corpos without
 making the protagonist cruel.
 
+Shortly after the father's death, CoreTech forcibly "escorts" the family into
+corporate interviews. They are separated, pressured, and possibly polygraphed
+under sanitized language: not arrested, but detained for their own protection;
+not interrogated, but interviewed. CoreTech claims it is investigating the
+accident, but its real goal is to learn whether the father leaked secrets,
+passed anything to his family, or had accomplices.
+
 The deeper truth should be revealed much later: the father was not merely a
 victim of a bad workplace. He had a rare gift for deciphering K.I.N. anomalies,
 security patterns, corrupted packets, ARC behavior, and broken keys. CoreTech
@@ -159,9 +208,30 @@ as part of its moral center. The protagonist can struggle with anger and
 exhaustion, but he holds high ethical standards and often helps suffering people
 even when he has little.
 
-The story begins when the player finds a damaged Core Link in a trash heap.
-After hacking it, they discover scrubbed ownership logs, a dormant AI core, and
-nanobots stored in void storage.
+The protagonist begins with flawed but understandable beliefs. He sees CoreTech
+hurting people, watches his father keep wearing the uniform, and starts seeing
+his father as weak, complicit, or trapped by cowardice. The father defends his
+work as keeping people safe but cannot reveal what he is doing inside CoreTech.
+The mother defends stability because she knows the bills, contracts, penalties,
+and sister's medical costs.
+
+The protagonist is drawn to legal ArcKin competitions as a way out. He believes
+that if he can get one strong ArcKin, win prize money, and earn sponsorships, he
+can finally pull the family out of CoreTech's reach and poverty. This makes his
+early dream personal and imperfect: not saving the world, but escaping it.
+
+After the father dies and CoreTech refuses compensation, the protagonist keeps
+the family afloat by scavenging, repairing, bartering, and selling scrap. During
+one dangerous scrap run, he finds the damaged Core Link in discarded wreckage.
+It should not feel like a chosen inheritance. He finds it because he is working
+to survive.
+
+Later, the story can reveal that the Core Link was connected to the father's
+investigation. The previous owner was tied to the father or the same internal
+conspiracy. CoreTech killed or disappeared that owner, wiped the device, marked
+it as scrap, and discarded it to sever evidence. The father knew the device or
+its owner existed but never recovered it. The protagonist accidentally picks up
+a thread from a conspiracy his father never finished.
 
 The larger story direction is revenge, protection, and escape. The protagonist
 wants to avenge his father, protect his mother and little sister, and eventually
@@ -201,6 +271,35 @@ she becomes a main playable protagonist, the sequel should likely use a time
 skip so she is old enough to carry agency, danger, and responsibility. If the
 ship crash happens immediately after game one, it may function better as a
 bridge comic, prologue, or inciting incident for her later arc.
+
+Long-term sister threat: CoreTech remnants or black-box researchers may discover
+her resonance and conclude that she is the missing key to understanding
+consciousness. Because she can feel and interpret ArcKin/EchoKin signals better
+than ordinary humans, they believe she may hold the bridge between human
+consciousness, ARC consciousness, and failed immortality or organic-replacement
+experiments. The exact discovery moment remains open.
+
+Sequel escalation direction: the sister can eventually be captured and
+experimented on so the black-box project can extract the missing consciousness
+key. The extracted key allows the current major antagonist to be successfully
+cloned, continued, or recreated in an organic-hybrid form. The sister later
+escapes and helps destroy the antagonist and the compromised K.I.N. network with
+her brother and allied factions. Near the end of this second-game arc, the
+mother may die as collateral damage, forcing both siblings to face the cost of
+the conflict. When they attempt to erase the key, they find it has already been
+uploaded to an unknown, untraceable source, revealing a deeper power behind the
+visible conflict.
+
+Current deeper mystery direction: CoreTech is likely only the visible front and
+research shell for a hidden enterprise of wealthy elites and private backers
+trying to preserve consciousness through ARCs. Illegal organic microfabricator
+research has made body replication or organic-hybrid construction possible, but
+the unsolved problem is stable human consciousness transfer into an ARC. K.I.N.
+surveillance expanded because the enterprise became paranoid that competitors or
+ordinary people might hold the missing data. A superintelligence processes this
+data but cannot fully solve the problem because it lacks the human relational
+element the sister can feel through resonance: empathy, compassion, attachment,
+grief, trust, and continuity of self.
 
 ## Core Link Device
 
