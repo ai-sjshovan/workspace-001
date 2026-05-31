@@ -7,6 +7,13 @@ data class CalibrationAnswers(
     val adaptationIndex: Int = 0,
 )
 
+enum class RecoveryStage {
+    BootDiagnostics,
+    RecoveryAnalysis,
+    Calibration,
+    Complete,
+}
+
 data class CoreMatrix(
     val aggression: Int,
     val caution: Int,
@@ -61,6 +68,9 @@ data class CoreLinkState(
     val lastRoamStartedAtEpochMillis: Long? = null,
     val lastRepairAtEpochMillis: Long? = null,
     val lastStateSyncEpochMillis: Long? = null,
+    val recoveryStage: RecoveryStage = RecoveryStage.BootDiagnostics,
+    val pendingCalibrationAnswers: CalibrationAnswers = CalibrationAnswers(),
+    val calibrationQuestionIndex: Int = 0,
 )
 
 const val StepsPerChargeUnit = 40
@@ -177,15 +187,18 @@ fun starterStateFromAnswers(answers: CalibrationAnswers): CoreLinkState {
     val starterCore = calibrateStarterCore(answers)
     return synchronizeDerivedState(
         CoreLinkState(
-        calibrated = true,
-        activeCore = starterCore,
-        charge = 24 + (starterCore.stats.control / 8),
-        scrap = 6 + (starterCore.matrix.efficiency / 20),
-        progress = 0,
-        condition = 68 + (starterCore.stats.stability / 8),
-        recoveryNotes = "Recovered AI core synchronized through deterministic Core Matrix calibration.",
-        lastRoamReport = "Starter bot ready for first roam dispatch.",
-        lastActivitySummary = "CoreLink capacitor primed. Route steps or use simulation to generate Charge.",
+            calibrated = true,
+            activeCore = starterCore,
+            charge = 24 + (starterCore.stats.control / 8),
+            scrap = 6 + (starterCore.matrix.efficiency / 20),
+            progress = 0,
+            condition = 68 + (starterCore.stats.stability / 8),
+            recoveryNotes = "Recovered AI core synchronized through deterministic Core Matrix calibration.",
+            lastRoamReport = "Starter bot ready for first roam dispatch.",
+            lastActivitySummary = "CoreLink capacitor primed. Route steps or use simulation to generate Charge.",
+            recoveryStage = RecoveryStage.Complete,
+            pendingCalibrationAnswers = answers,
+            calibrationQuestionIndex = 3,
         ),
     )
 }
@@ -473,6 +486,12 @@ object CoreLinkStateCodec {
             "lastRoamStartedAtEpochMillis" to (state.lastRoamStartedAtEpochMillis?.toString() ?: ""),
             "lastRepairAtEpochMillis" to (state.lastRepairAtEpochMillis?.toString() ?: ""),
             "lastStateSyncEpochMillis" to (state.lastStateSyncEpochMillis?.toString() ?: ""),
+            "recoveryStage" to state.recoveryStage.name,
+            "pendingInstinctIndex" to state.pendingCalibrationAnswers.instinctIndex.toString(),
+            "pendingFrameIndex" to state.pendingCalibrationAnswers.frameIndex.toString(),
+            "pendingDoctrineIndex" to state.pendingCalibrationAnswers.doctrineIndex.toString(),
+            "pendingAdaptationIndex" to state.pendingCalibrationAnswers.adaptationIndex.toString(),
+            "calibrationQuestionIndex" to state.calibrationQuestionIndex.toString(),
         )
 
         val core = state.activeCore
@@ -570,6 +589,20 @@ object CoreLinkStateCodec {
             lastRoamStartedAtEpochMillis = values["lastRoamStartedAtEpochMillis"]?.toLongOrNull(),
             lastRepairAtEpochMillis = values["lastRepairAtEpochMillis"]?.toLongOrNull(),
             lastStateSyncEpochMillis = values["lastStateSyncEpochMillis"]?.toLongOrNull(),
+            recoveryStage = values["recoveryStage"]?.let { stageName ->
+                RecoveryStage.entries.firstOrNull { it.name == stageName }
+            } ?: if (values["calibrated"]?.toBoolean() == true) {
+                RecoveryStage.Complete
+            } else {
+                RecoveryStage.BootDiagnostics
+            },
+            pendingCalibrationAnswers = CalibrationAnswers(
+                instinctIndex = values.intValue("pendingInstinctIndex", values.intValue("instinctIndex", 0)),
+                frameIndex = values.intValue("pendingFrameIndex", values.intValue("frameIndex", 0)),
+                doctrineIndex = values.intValue("pendingDoctrineIndex", values.intValue("doctrineIndex", 0)),
+                adaptationIndex = values.intValue("pendingAdaptationIndex", values.intValue("adaptationIndex", 0)),
+            ),
+            calibrationQuestionIndex = values.intValue("calibrationQuestionIndex", if (values["calibrated"]?.toBoolean() == true) 3 else 0),
             ),
         )
     }
