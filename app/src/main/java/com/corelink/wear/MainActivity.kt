@@ -270,6 +270,7 @@ private fun CoreLinkApp(context: Context) {
             stepSensorAvailable = stepCounterSensor != null,
             activityPermissionGranted = hasActivityPermission,
             onOpenWatchStatus = { screen = Screen.WatchStatus },
+            onOpenSettings = { screen = Screen.Settings },
             onRequestActivityPermission = {
                 permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
             },
@@ -591,6 +592,7 @@ private fun GameSceneScreen(
     stepSensorAvailable: Boolean,
     activityPermissionGranted: Boolean,
     onOpenWatchStatus: () -> Unit,
+    onOpenSettings: () -> Unit,
     onRequestActivityPermission: () -> Unit,
     onCharge: () -> Unit,
     onRepair: () -> Unit,
@@ -619,6 +621,7 @@ private fun GameSceneScreen(
         state.lowPowerWarningActive -> Color(0xFFFFB36A)
         else -> Color(0xFF85FFB2)
     }
+    val lowPowerGap = chargeNeededToExitLowPower(state)
 
     Box(
         modifier = Modifier
@@ -685,6 +688,14 @@ private fun GameSceneScreen(
                 accent = statusAccent,
             )
 
+            if (state.lowPowerWarningActive) {
+                PromptPanel(
+                    title = "LOW POWER ROUTE",
+                    body = "Need +$lowPowerGap Charge to clear the warning. Roam is locked until the capacitor recovers.",
+                    accent = Color(0xFFFFB36A),
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -721,6 +732,13 @@ private fun GameSceneScreen(
                     onClick = onRequestActivityPermission,
                 )
             }
+
+            SmallUtilityButton(
+                modifier = Modifier.fillMaxWidth(),
+                label = "Scene Settings / Reset",
+                icon = PixelIconKind.Back,
+                onClick = onOpenSettings,
+            )
 
             CommandRow(
                 commands = listOf(
