@@ -22,6 +22,7 @@ class CoreLinkModelTest {
         assertTrue(state.calibrated)
         assertEquals("RE-FOWD", state.activeCore?.designation)
         assertEquals("Relay Forge", state.activeCore?.frame)
+        assertEquals(RecoveryStage.Complete, state.recoveryStage)
         assertEquals(
             CalibrationAnswers(
                 instinctIndex = 2,
@@ -48,6 +49,7 @@ class CoreLinkModelTest {
 
         assertEquals(first, second)
         assertEquals("RE-FOWD", first.activeCore?.designation)
+        assertEquals(first.pendingCalibrationAnswers, second.pendingCalibrationAnswers)
     }
 
     @Test
@@ -70,6 +72,9 @@ class CoreLinkModelTest {
             lastRoamStartedAtEpochMillis = 3_000L,
             lastRepairAtEpochMillis = 4_000L,
             lastStateSyncEpochMillis = 5_000L,
+            recoveryStage = RecoveryStage.Complete,
+            pendingCalibrationAnswers = CalibrationAnswers(1, 2, 1, 0),
+            calibrationQuestionIndex = 3,
         )
 
         val restored = CoreLinkStateCodec.decode(CoreLinkStateCodec.encode(original))
@@ -102,6 +107,29 @@ class CoreLinkModelTest {
         assertEquals(CoreLinkState(), reset)
         assertNotNull(populated.activeCore)
         assertNull(reset.activeCore)
+    }
+
+    @Test
+    fun onboardingProgressRoundTripsBeforeCalibrationCompletes() {
+        val original = CoreLinkState(
+            recoveryStage = RecoveryStage.Calibration,
+            pendingCalibrationAnswers = CalibrationAnswers(
+                instinctIndex = 1,
+                frameIndex = 2,
+                doctrineIndex = 0,
+                adaptationIndex = 1,
+            ),
+            calibrationQuestionIndex = 2,
+            recoveryNotes = "Core Matrix calibration required before deployment.",
+        )
+
+        val restored = CoreLinkStateCodec.decode(CoreLinkStateCodec.encode(original))
+
+        assertEquals(RecoveryStage.Calibration, restored.recoveryStage)
+        assertEquals(original.pendingCalibrationAnswers, restored.pendingCalibrationAnswers)
+        assertEquals(2, restored.calibrationQuestionIndex)
+        assertFalse(restored.calibrated)
+        assertNull(restored.activeCore)
     }
 
     @Test

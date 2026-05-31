@@ -139,8 +139,15 @@ private data class DiagnosticLine(
 private fun CoreLinkApp(context: Context) {
     val initialState = remember(context) { CoreLinkPrefs.load(context) }
     var state by remember { mutableStateOf(initialState) }
-    var screen by remember { mutableStateOf(if (initialState.calibrated) Screen.Scene else Screen.Recovery) }
-    var answers by remember { mutableStateOf(initialState.activeCore?.answers ?: CalibrationAnswers()) }
+    var screen by remember {
+        mutableStateOf(
+            when {
+                initialState.calibrated -> Screen.Scene
+                initialState.recoveryStage == RecoveryStage.Calibration -> Screen.Calibration
+                else -> Screen.Recovery
+            },
+        )
+    }
     var roamClockMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     var sceneVisualState by remember { mutableStateOf(if (initialState.calibrated) BotVisualState.Recovered else BotVisualState.Idle) }
     val sensorManager = remember(context) { context.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
@@ -222,7 +229,13 @@ private fun CoreLinkApp(context: Context) {
 
     when (screen) {
         Screen.Recovery -> RecoveryScreen(
+            stage = state.recoveryStage,
             onRecover = {
+                commit(state.copy(recoveryStage = RecoveryStage.RecoveryAnalysis))
+                feedback.play(CommandTone.Success)
+            },
+            onBeginCalibration = {
+                commit(state.copy(recoveryStage = RecoveryStage.Calibration))
                 feedback.play(CommandTone.Success)
                 screen = Screen.Calibration
             },
@@ -231,10 +244,16 @@ private fun CoreLinkApp(context: Context) {
         )
 
         Screen.Calibration -> CalibrationScreen(
-            answers = answers,
-            onAnswersChange = { answers = it },
+            answers = state.pendingCalibrationAnswers,
+            questionIndex = state.calibrationQuestionIndex,
+            onAnswersChange = { nextAnswers ->
+                commit(state.copy(pendingCalibrationAnswers = nextAnswers))
+            },
+            onQuestionIndexChange = { nextIndex ->
+                commit(state.copy(calibrationQuestionIndex = nextIndex.coerceIn(0, 3)))
+            },
             onRecovered = {
-                val calibratedState = starterStateFromAnswers(answers).copy(
+                val calibratedState = starterStateFromAnswers(state.pendingCalibrationAnswers).copy(
                     recoveryNotes = "Core Link OS recovered the AI core and mapped the starter lattice.",
                 )
                 commit(calibratedState)
@@ -321,7 +340,6 @@ private fun CoreLinkApp(context: Context) {
             onBack = { screen = Screen.WatchStatus },
             onReset = {
                 commit(resetDemoState())
-                answers = CalibrationAnswers()
                 feedback.play(CommandTone.Warning)
                 screen = Screen.Recovery
             },
@@ -336,7 +354,9 @@ private fun CoreLinkApp(context: Context) {
 
 @Composable
 private fun RecoveryScreen(
+    stage: RecoveryStage,
     onRecover: () -> Unit,
+    onBeginCalibration: () -> Unit,
     onSkipToScene: (() -> Unit)?,
     onBlocked: () -> Unit,
 ) {
@@ -359,24 +379,35 @@ private fun RecoveryScreen(
             DiagnosticLine("[A-13] Core Matrix calibration required before deployment.", Color(0xFFB7F6FF)),
         )
     }
-    var visibleBootLines by remember { mutableIntStateOf(1) }
-    var recoveryAccepted by remember { mutableStateOf(false) }
-    var visibleAnalysisLines by remember { mutableIntStateOf(0) }
+    var visibleBootLines by remember(stage) {
+        mutableIntStateOf(if (stage == RecoveryStage.BootDiagnostics) 1 else bootLines.size)
+    }
+    var visibleAnalysisLines by remember(stage) {
+        mutableIntStateOf(if (stage == RecoveryStage.RecoveryAnalysis) 0 else analysisLines.size)
+    }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(stage) {
+        if (stage != RecoveryStage.BootDiagnostics) {
+            visibleBootLines = bootLines.size
+            return@LaunchedEffect
+        }
         while (visibleBootLines < bootLines.size) {
             delay(260)
             visibleBootLines += 1
         }
     }
 
-    LaunchedEffect(recoveryAccepted) {
-        if (recoveryAccepted) {
+    LaunchedEffect(stage) {
+        if (stage == RecoveryStage.RecoveryAnalysis) {
+            visibleBootLines = bootLines.size
             visibleAnalysisLines = 0
             while (visibleAnalysisLines < analysisLines.size) {
                 delay(280)
                 visibleAnalysisLines += 1
             }
+        } else if (stage == RecoveryStage.Calibration || stage == RecoveryStage.Complete) {
+            visibleBootLines = bootLines.size
+            visibleAnalysisLines = analysisLines.size
         }
     }
 
@@ -390,30 +421,30 @@ private fun RecoveryScreen(
             bootLines.take(visibleBootLines).forEach { line ->
                 ConsoleLine(line.text, line.accent)
             }
-            if (recoveryAccepted) {
+            if (stage != RecoveryStage.BootDiagnostics) {
                 analysisLines.take(visibleAnalysisLines).forEach { line ->
                     ConsoleLine(line.text, line.accent)
                 }
             }
         }
-        if (visibleBootLines == bootLines.size && !recoveryAccepted) {
+        if (visibleBootLines == bootLines.size && stage == RecoveryStage.BootDiagnostics) {
             PromptPanel(
                 title = "Recover available items?",
                 body = "Core Link OS detected one unstable AI core and one full nanobot container.",
             )
             CommandRow(
                 commands = listOf(
-                    CommandSpec(PixelIconKind.Recover, "Recover", "ITEMS") { recoveryAccepted = true },
+                    CommandSpec(PixelIconKind.Recover, "Recover", "ITEMS") { onRecover() },
                     CommandSpec(PixelIconKind.Back, "Defer", "LOCK") { onBlocked() },
                 ),
             )
         }
-        if (recoveryAccepted && visibleAnalysisLines == analysisLines.size) {
+        if (stage != RecoveryStage.BootDiagnostics && visibleAnalysisLines == analysisLines.size) {
             PromptPanel(
                 title = "AI core ready for calibration.",
                 body = "Proceed one question at a time to reconstruct the starter lattice.",
             )
-            Button(modifier = Modifier.fillMaxWidth(), onClick = onRecover) {
+            Button(modifier = Modifier.fillMaxWidth(), onClick = onBeginCalibration) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -440,7 +471,9 @@ private fun RecoveryScreen(
 @Composable
 private fun CalibrationScreen(
     answers: CalibrationAnswers,
+    questionIndex: Int,
     onAnswersChange: (CalibrationAnswers) -> Unit,
+    onQuestionIndexChange: (Int) -> Unit,
     onRecovered: () -> Unit,
 ) {
     val prompts = remember {
@@ -467,7 +500,6 @@ private fun CalibrationScreen(
             ),
         )
     }
-    var questionIndex by remember { mutableIntStateOf(0) }
     val previewCore = remember(answers) { calibrateStarterCore(answers) }
     val currentPrompt = prompts[questionIndex]
 
@@ -526,7 +558,7 @@ private fun CalibrationScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = "Previous",
                         icon = PixelIconKind.Back,
-                        onClick = { questionIndex -= 1 },
+                        onClick = { onQuestionIndexChange(questionIndex - 1) },
                     )
                 }
             }
@@ -536,7 +568,7 @@ private fun CalibrationScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = "Next",
                         icon = PixelIconKind.Continue,
-                        onClick = { questionIndex += 1 },
+                        onClick = { onQuestionIndexChange(questionIndex + 1) },
                     )
                 } else {
                     SmallUtilityButton(
