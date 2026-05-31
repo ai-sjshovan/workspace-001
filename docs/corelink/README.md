@@ -11,6 +11,7 @@ Start here:
 - `relay-contracts-and-world-pulse.md` - Relay messages, contracts, news, soft consequences
 - `watch-game-relationship.md` - watch role, future 2D game relationship, account/sync posture
 - `watch-ui-and-systems.md` - Wear OS UI and short-session interaction draft
+- `protagonist-and-family.md` - protagonist, family wound, father reveal, and sequel seed
 
 Update these docs when Core Link lore, systems, or product direction changes.
 Implementation tasks should read the relevant docs before changing gameplay,

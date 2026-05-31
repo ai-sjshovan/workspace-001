@@ -19,6 +19,61 @@ markets, buses, trains, motorcycles, improvised transport, repair stalls,
 coastal infrastructure, and communities that keep functioning even when official
 systems fail.
 
+The first major city should be **Relay City**, a tropical island metro inspired
+by Philippine transit density, markets, repair districts, storms, status
+pressure, and improvised survival.
+
+The protagonist's home district is **Quezar City**, commonly shortened to
+**QZ**. Quezar is named after **Arturo Quezar**, a post-crisis civic leader who
+promised island infrastructure, local ownership, and public transit that would
+not kneel to foreign corpos. Later, corpos absorbed and rebranded his legacy
+into QZ recovery zones, smart corridors, malls, transit projects, and K.I.N.
+hubs. Locals may say Quezar when invoking the older civic identity and QZ when
+talking about the crowded, hardened, modern district.
+
+**Kubo Junction** is the local transit/market hub inside QZ: rail platforms, bus
+terminals, repair stalls, street vendors, back alleys, overpasses, rainwater,
+signage, black-market parts, scavenger routes, and constant motion.
+
+## Travel And Route Structure
+
+Core Link's larger 2D game can use a clear town/city-and-route structure, but
+the routes should fit the setting instead of copying forest paths.
+
+The main connector is **M.U.T.EX**, the **Metropolitan Unified Transit
+Expressway**: busy, loud, dangerous, polluted, and always moving. It connects
+major districts and cities across the tropical island metro. Early players
+cannot simply walk on it. It is for vehicles, buses, logistics, corpo convoys,
+emergency lanes, and later personal ArcKin traversal.
+
+The real-world programming meaning of mutex, mutual exclusion, gives the road a
+subtle joke: everyone is trying to access the same shared route, so the city
+locks up in traffic. Local slang can include "the Mutex" or "MUTEX lock" for
+gridlock.
+
+Early travel ladder:
+
+1. **Foot**: local movement through alleys, markets, salvage zones, footbridges,
+   back streets, and station approaches.
+2. **Train**: cheapest city-to-city travel, but risky. Thug groups, pickpockets,
+   scammers, and stake battles can happen. If the player loses a money-stakes
+   fight, they pay up; if they win, they can earn money and scrap.
+3. **Bus**: safer and more direct than train, but more expensive. Kubo Junction
+   should be an early point where bus access becomes meaningful.
+4. **M.O.V.E. app**: **MUTEX On-demand Vehicle Escort**, a ride/cab service
+   unlocked later. Convenient but pricey. It specializes in moving people along
+   M.U.T.EX and through approved pickup/drop corridors.
+5. **Personal ArcKin vehicle**: unlocked when the player gets a motorcycle
+   chassis blueprint for an ArcKin. This finally allows direct highway travel.
+
+The player should be able to skip directly between known cities/towns when
+appropriate, but optional route travel should remain available for risk, reward,
+training, scavenging, money, scrap, encounters, and story flavor.
+
+A subtle personal naming echo from Rochester Hills, Michigan can appear later
+in a road, hill district, old subdivision, park, or school name, but the primary
+visual model remains tropical Philippine metro.
+
 Do not make the whole world ugly. Remote islands, coastal pockets, mountain
 routes, hidden coves, farms, reefs, rain-soaked forests, and old community areas
 can still be naturally beautiful. That beauty should contrast with metro and
