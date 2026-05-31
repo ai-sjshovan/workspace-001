@@ -12,6 +12,11 @@ Start here:
 - `watch-game-relationship.md` - watch role, future 2D game relationship, account/sync posture
 - `watch-ui-and-systems.md` - Wear OS UI and short-session interaction draft
 - `protagonist-and-family.md` - protagonist, family wound, father reveal, and sequel seed
+- `coretech-and-kin-mystery.md` - CoreTech, K.I.N. surveillance, immortality research, and opening-scene mystery
+- `themes-and-message.md` - faith, mortality, hubris, compassion, and tone boundaries
+- `plan.md` - current design-doc and story-development plan
+- `scope.md` - current project scope
+- `decisions.md` - durable design decisions
 
 Update these docs when Core Link lore, systems, or product direction changes.
 Implementation tasks should read the relevant docs before changing gameplay,
