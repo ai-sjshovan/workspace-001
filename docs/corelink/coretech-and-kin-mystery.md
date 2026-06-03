@@ -353,6 +353,13 @@ Visual framing:
 - an overseer stationed in the center of the room
 - the center overseer is the first ArcKin the audience sees
 - its function is to supervise the K.I.N. cybersecurity team
+- the overseer has the standard ArcKin visual pattern: a front-facing hexagon
+  blue ARC screen set into its face/body, able to show text, symbols, or emojis
+  and brighten when it speaks
+- the center console screens should face the ArcKin overseer, not point away
+  from it; composition can still angle them enough for the audience to read the
+  power relationship
+- Agent 410 should be staged on the left side of the circular room
 - alert lights built into the top of each console section
 - code and access logs streaming across the screen
 - repeated access denied messages
@@ -371,28 +378,55 @@ Father visual:
 - black tie
 - CoreTech badge
 - work glasses that can reflect terminal images during the reveal
+- straight-on close-up framing when used as the opening image, with the circular
+  room behind him rather than generic graphics or helper-card UI
 
 Action:
 
-The father starts a privileged user session at his station and uses his security
-clearance to let the underground hacker network connect through him. He is a
+The father starts a privileged user session at his station and uses his current
+Level 3 sandbox environment to prepare a narrow bridge into K.I.N. He is a
 CoreTech decipherer: someone whose job is to read hostile encryption patterns,
 decode intrusion behavior, and help secure K.I.N. sectors.
 
-The underground faction uses his access and the provided route/key to brute-force
-a particular K.I.N. sector. They believe hidden files there contain information
-about the secret CoreTech project connected to K.I.N., consciousness
-preservation, surveillance, and black-box research.
+A few months earlier, Miguel was temporarily assigned to a Level 5 breach-review
+project. A hacker had almost penetrated K.I.N., and Miguel quickly discovered
+that the attacker's payload contained an exposed encryption-key fragment. He
+requested authorization to rotate the compromised material and was granted a
+brief Level 5 workflow window. During that window, he saw related key material
+he was never supposed to retain.
+
+Miguel memorized one Level 5 key fragment by building a mnemonic in his head.
+For months, he has repeated that mnemonic under his breath so he would not lose
+it. The key fragment is not a master key and cannot open K.I.N. by itself. Its
+value is that CoreTech believes it was rotated out of reach, while Miguel still
+carries a usable piece of it in his memory.
+
+In the opening scene, Miguel mutters the mnemonic while typing. He combines the
+memorized Level 5 key fragment with his current Level 3 sandbox privileges and a
+carefully prepared bridge session. This gives the Net Divers a narrow trust path
+into a protected K.I.N. sector, where they can begin brute-forcing encrypted
+folder structures.
+
+The Net Divers believe this sector holds hidden data about a secret CoreTech
+black-box project. They do not know the full truth yet; they have a codename,
+rumors, and enough leaked intelligence to believe the files connect K.I.N.,
+consciousness preservation, surveillance, and black-box research.
 
 He is frightened because he knows the intrusion may be detected. His cover story
 is that he set the wrong target for an authorized penetration test, but he knows
-that excuse may not hold if the system flags the underground key, restricted
-project route, or unauthorized query pattern.
+that excuse may not hold if the system flags the Level 5 fragment, restricted
+project route, bridged sandbox behavior, or unauthorized query pattern.
 
 The father's CoreTech designation is **Agent 410**. This should read as a
 normal corporate employee/terminal number at first, but it secretly foreshadows
 his fate through HTTP status `410 Gone`: not missing, but permanently and
 intentionally removed.
+
+Before executing the bridge, Miguel pauses. He closes his eyes and says:
+
+> Thy will be done.
+
+Then he presses Enter.
 
 After several failed access attempts, an alarm triggers above his terminal. The
 room reacts. The ArcKin overseer in the center calls him out by workstation or
@@ -450,30 +484,297 @@ not need to know the full project yet. They only need to understand:
 
 ## Agent 410 Interrogation And Death
 
-After the cold open, CoreTech should take Agent 410 to a sterile interrogation
-room. This scene can be strongest in comic/anime form because it is dark and
-personal.
+This is the current canon working draft for the sequence from Miguel entering
+the interrogation room through the start of his death demonstration. Preserve
+the awkward waiting-room discomfort, the procedural female overseer voice, and
+the hidden Presence escalating from family surveillance into black-box exposure.
 
-Possible staging:
+### Scene: Interrogation Room
 
-- he is restrained or chemically locked enough that escape is impossible
-- an ArcKin enters first and appears almost gentle, offering water or checking
-  vitals
-- the real interrogator appears through a dark screen or filtered voice
-- CoreTech avoids emotional language and frames everything as breach
-  containment, liability, and proprietary recovery
-- they reveal a live view of his family at dinner, proving they have been
-  watching him the entire time
+Image:
 
-The father should realize two things at once: they know he betrayed them, and
-they can reach his family. His death should connect directly to the dinner
-scene. As he chokes, shuts down, or is otherwise killed, he reaches toward the
-screen showing his family. This is the same moment his daughter drops her fork
-from the white-hot resonance headache.
+Miguel is led into a sterile white room. No visible guards inside. A small TV
+screen above the door is visible, and a small fake plant sits in the corner.
 
-Keep this brutal but not gratuitous. The point is not shock. The point is that
-CoreTech can calmly erase a person while treating his family as leverage and
-evidence.
+No answer. The door shuts.
+
+A moment of silence.
+
+Overseer at the door:
+
+> Please take your seat, the evaluation will commence momentarily.
+
+Time passes. Miguel is sitting there. He takes a sip of water that's on the
+table and looks at the clock.
+
+More time passes. Silence. He is in his head now, going through the
+possibilities.
+
+He stares at the overseer in the corner. The overseer stands there, lifeless.
+
+A camera in the room pans.
+
+The clock is getting louder.
+
+Suddenly the screen comes on with the CoreTech logo.
+
+A robotic voice emanates from the screen across the room.
+
+Female Overseer voice:
+
+> Miguel Garcia.
+> K.I.N. Cybersecurity Division.
+> Eleven years, eight months with CoreTech.
+> Current designation: Agent 410.
+> Current clearance: Level 3.
+
+Miguel:
+
+> I want my supervisor.
+
+Female Overseer:
+
+> This review has supervisor authorization.
+
+### Scene: The Review
+
+Image:
+
+His employee file appears. Photo. Commendations. Performance blocks. Everything
+clean and corporate.
+
+Female Overseer:
+
+> Your record is exceptional.
+> Pattern recognition above division standard.
+> Breach response above division standard.
+> Containment judgment repeatedly commended.
+
+Miguel:
+
+> Th--thank you?
+
+Female Overseer voice:
+
+Silence.
+
+A second file appears. Redacted. Marked Level 5 review.
+
+Female Overseer voice:
+
+> Four months ago, you were selected for temporary Level 5 breach review.
+> You identified a hostile pattern before automated containment did.
+> You recommended rotation of exposed authorization material.
+
+Miguel:
+
+> That incident was sealed.
+
+Female Overseer:
+
+> Yes.
+
+Beat.
+
+Female Overseer:
+
+> However, tonight, a related pattern entered your sandbox.
+> You did not isolate it.
+> You did not mirror it.
+> The route remained open until power was cut.
+
+Miguel:
+
+> It was moving through live traffic. Killing the route would have lost the trace.
+
+Female Overseer:
+
+> You delayed mirror sync.
+
+Miguel:
+
+> A mirror would have collapsed containment.
+
+Female Overseer:
+
+> You allowed external packets to remain attached to your session.
+
+Miguel:
+
+> For source confirmation.
+
+Silence.
+
+Long enough that Miguel's answer starts to sound weak.
+
+Female Overseer:
+
+> Who are you working for?
+
+Miguel:
+
+> Wha-
+
+Female Overseer, sharper:
+
+> Who are you working for?
+
+Miguel:
+
+> What is this?
+
+### Scene: Family Feed
+
+Image:
+
+The TV screen becomes a live feed of the Garcia home. Grace is in the kitchen.
+Warm light. Rain outside. Dinner preparations. Normal life.
+
+Miguel:
+
+> Grace...?
+
+His eyes go wide.
+
+Miguel:
+
+> What is this? Why are you watching my family?
+
+Female Overseer:
+
+> Subject has acknowledged collateral exposure.
+
+Presence:
+
+> Enough.
+
+Then a new voice.
+
+Presence:
+
+> I think now is the time we speak plainly.
+
+Miguel:
+
+> Who the fuck are you?
+
+Presence:
+
+> I'm the one who decides if you see them again.
+
+Miguel:
+
+> You sick son of a bitch. If you lay one finger on my fami-
+
+Presence:
+
+> NOW.....
+
+Calm. Cutting.
+
+Presence:
+
+> Did you really believe we had no idea what you have been up to?
+> That your little late-night rendezvous in the park would go... unnoticed?
+> Tell me.
+> What does corporate espionage pay these days?
+
+Miguel:
+
+> Go to hell.
+
+Presence:
+
+> Enough to <insert here>?
+
+Silence.
+
+Presence:
+
+> Or how about enough to keep a sweet little girl smiling...
+
+Small pause. The feed briefly catches a hospital bill, medicine, or Olivia's
+things in the home.
+
+Presence:
+
+> ...while her father FORGETS WHO FEEDS THE HOUSE?
+
+Yelling echoes.
+
+Miguel:
+
+> Don't talk about my daughter.
+
+Presence:
+
+> Answer the question.
+
+Calm.
+
+Miguel says nothing.
+
+Presence:
+
+> Who are you working for?
+
+Miguel:
+
+> I told you. There was no one.
+
+Presence:
+
+> No.
+> You told the overseer a story.
+
+Beat.
+
+Presence:
+
+> Now tell me who was it waiting on the other side?
+> What did they see?
+
+Miguel:
+
+> I don't know.
+
+Presence:
+
+> We know what YOU saw.
+
+A pause.
+
+Presence:
+
+> And we know what you didn't.
+
+Miguel:
+
+> What are you talking about?
+
+Presence:
+
+> Allow me to enlighten you.
+
+The door behind Miguel unlocks.
+
+### Scene: The Overseer Begins To Move
+
+Image:
+
+The overseer begins to move. It kneels down.
+
+Miguel looks nervous.
+
+The overseer's face pops out a bit and expels gas, startling Miguel. Then the
+face flips up, revealing the machinery underneath.
+
+Miguel:
+
+> What is this?
+
+The exact microfabricator demonstration, Miguel's death, cleanup order, and
+"keep watching the boy" beat remain to be finished in the next pass.
 
 ## Final Cipher And Hidden ArcKin Sector
 
