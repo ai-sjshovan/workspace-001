@@ -9,13 +9,6 @@ last_updated: 2026-06-04
 ## Purpose
 
 Show Miguel choosing to cross the line. This is the moral beat before he executes the bridge attempt.
-
-## Image Brief
-
-Miguel freezes at the terminal. The room noise falls away. He inhales, closes his eyes, and makes the choice.
-
-## Final Art Links
-
 ## Panels
 
 ### Panel 001

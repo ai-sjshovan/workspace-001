@@ -9,13 +9,6 @@ last_updated: 2026-06-04
 ## Purpose
 
 Use the female overseer voice to make the interrogation feel like an evaluation before it turns accusatory.
-
-## Image Brief
-
-The TV screen turns on with the CoreTech logo. Miguel's employee record appears, then a redacted Level 5 review file. The female overseer praises his credentials before presenting the discrepancy.
-
-## Final Art Links
-
 ## Panels
 
 ### Panel 001

@@ -9,13 +9,6 @@ last_updated: 2026-06-04
 ## Purpose
 
 Reveal that CoreTech has been watching Miguel's family and shift the scene from review to personal leverage.
-
-## Image Brief
-
-The TV screen becomes a live feed of the Garcia home. Grace is in the kitchen under warm light. Rain falls outside. Dinner preparations continue.
-
-## Final Art Links
-
 ## Panels
 
 ### Panel 001

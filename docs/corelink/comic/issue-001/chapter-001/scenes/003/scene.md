@@ -9,13 +9,6 @@ last_updated: 2026-06-04
 ## Purpose
 
 Break up Miguel's typing and remind the reader that the room itself is watching him.
-
-## Image Brief
-
-Cut away from Miguel to the central ArcKin overseer and the quiet room. The overseer scans the agents without alarm. Its stillness creates pressure.
-
-## Final Art Links
-
 ## Panels
 
 ### Panel 001

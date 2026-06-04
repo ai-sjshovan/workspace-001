@@ -9,13 +9,6 @@ last_updated: 2026-06-04
 ## Purpose
 
 Introduce the hidden Presence as the real authority and weaponize CoreTech's surveillance of Miguel's family.
-
-## Image Brief
-
-The Presence speaks without fully appearing. The screen shifts between live family feed and surveillance photos showing how closely CoreTech has watched Miguel.
-
-## Final Art Links
-
 ## Panels
 
 ### Panel 001

@@ -9,13 +9,6 @@ last_updated: 2026-06-04
 ## Purpose
 
 Turn the lifeless corner overseer into the instrument of the demonstration.
-
-## Image Brief
-
-The overseer moves for the first time, kneels near Miguel, opens its face, and removes the baseball-sized A.R.C. from the head harness. The A.R.C. has a smaller hexagon screen mirroring the larger face screen.
-
-## Final Art Links
-
 ## Panels
 
 ### Panel 001

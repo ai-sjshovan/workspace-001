@@ -9,13 +9,6 @@ last_updated: 2026-06-04
 ## Purpose
 
 Show the nanofabricator demonstration and Miguel's death while keeping the exact organic/neural mechanism unclear to readers.
-
-## Image Brief
-
-The A.R.C. opens and releases an almost invisible nanofabricator cloud. The Presence explains only enough to imply that CoreTech has pushed A.R.C.-directed fabricators beyond machines. Miguel dies in visible agony.
-
-## Final Art Links
-
 ## Panels
 
 ### Panel 001

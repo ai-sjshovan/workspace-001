@@ -9,13 +9,6 @@ last_updated: 2026-06-04
 ## Purpose
 
 Introduce Miguel Garcia / Agent 410 and show that he is rebuilding something from memory while hiding inside normal work.
-
-## Image Brief
-
-Miguel sits at a terminal on the left side of the circular room. He wears a white shirt, blue dress pants, black tie, glasses, and a CoreTech badge marked `410`. Sweat beads on his forehead. His hands are controlled but tense.
-
-## Final Art Links
-
 ## Panels
 
 ### Panel 001

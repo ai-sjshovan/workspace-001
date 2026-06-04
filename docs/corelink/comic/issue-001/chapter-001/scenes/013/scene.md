@@ -9,13 +9,6 @@ last_updated: 2026-06-04
 ## Purpose
 
 End Chapter 001 with CoreTech erasing visible evidence and leaving Miguel dead in a dark, sterile room.
-
-## Image Brief
-
-The Presence orders cleanup. The ArcKin replaces the A.R.C., exits, and the nanofabricators erase Miguel's scratches before the lights go out.
-
-## Final Art Links
-
 ## Panels
 
 ### Panel 001

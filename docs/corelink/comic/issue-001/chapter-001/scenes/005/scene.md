@@ -9,13 +9,6 @@ last_updated: 2026-06-04
 ## Purpose
 
 Show the attempt failing at first and build suspense without explaining the system.
-
-## Image Brief
-
-`ACCESS DENIED` reflects in Miguel's glasses. He keeps trying, getting more tense, until something changes enough for the room to notice.
-
-## Final Art Links
-
 ## Panels
 
 ### Panel 001

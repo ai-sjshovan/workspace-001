@@ -9,13 +9,6 @@ last_updated: 2026-06-04
 ## Purpose
 
 Move Miguel from hidden action to containment without using guns or old placeholder beats.
-
-## Image Brief
-
-The overseer addresses Miguel. He lies and tries to frame the event as containment work. CoreTech containment happens procedurally: terminal lock, badge freeze, controlled escort.
-
-## Final Art Links
-
 ## Panels
 
 ### Panel 001

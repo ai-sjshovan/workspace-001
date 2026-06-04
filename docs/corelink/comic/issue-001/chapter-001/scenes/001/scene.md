@@ -10,19 +10,6 @@ last_updated: 2026-06-04
 
 Establish CoreTech as quiet, competent, and frightening. Introduce the K.I.N. cybersecurity room and the ArcKin overseer before focusing on Miguel.
 
-## Image Brief
-
-Wide establishing shot of a large circular CoreTech cybersecurity room. Agents sit around a continuous ring of terminals. In the center stands a sleek white ArcKin overseer with a glowing blue hexagon face screen. Rain streaks down tall reinforced windows. The room feels controlled, sterile, and professional.
-
-## Final Art Links
-
-- [Panel 001: K.I.N. Room Wide](images/panel-001-kin-room-wide.png)
-- [Panel 002: Overseer Center](images/panel-002-overseer-center.png)
-
-## Image Prompts
-
-- [Panel 001: K.I.N. Room Wide](prompts/panel-001-kin-room-wide.md)
-
 ## Panels
 
 ### Panel 001
@@ -30,6 +17,14 @@ Wide establishing shot of a large circular CoreTech cybersecurity room. Agents s
 **Image:**
 
 Wide shot of the circular K.I.N. cybersecurity room. The ArcKin overseer stands in the center. Agents work quietly around the ring.
+
+**Image Assets:**
+
+1. [K.I.N. Room Wide](images/panel-001-kin-room-wide.png)
+
+**Prompt Assets:**
+
+1. [K.I.N. Room Wide Prompt](prompts/panel-001-kin-room-wide.md)
 
 **Text:**
 
@@ -50,6 +45,10 @@ rain on glass
 **Image:**
 
 Closer angle on the center ArcKin overseer. Its blue hexagon face screen glows softly. It is still enough to feel lifeless.
+
+**Image Assets:**
+
+1. [Overseer Center](images/panel-002-overseer-center.png)
 
 **Text:**
 

@@ -9,13 +9,6 @@ last_updated: 2026-06-04
 ## Purpose
 
 Shift from cybersecurity-room tension into sterile waiting-room dread.
-
-## Image Brief
-
-Miguel is placed in a sterile white room with a small TV screen above the door and a fake plant in the corner. Time passes. The lifeless overseer and panning camera make the room feel hostile.
-
-## Final Art Links
-
 ## Panels
 
 ### Panel 001
