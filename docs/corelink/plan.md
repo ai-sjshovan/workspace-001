@@ -27,8 +27,10 @@ Working first issue:
 Issue #1 should prove the tone, not explain the whole universe. It should feel
 like a dark techno-thriller colliding with a warm family survival story.
 
-1. Cold open: Agent 410 sweats at a CoreTech terminal, using elevated
-   privileges and an underground key to access a forbidden K.I.N. route.
+1. Cold open: Agent 410 sweats at a CoreTech terminal, muttering the mnemonic
+   for a memorized Level 5 encryption-key fragment while using his current
+   Level 3 sandbox privileges to open a narrow K.I.N. bridge for the Net
+   Divers.
 2. He is caught, interrogated, shown his family under surveillance, and killed.
 3. Cut to the city through a news broadcast that is revealed to be playing on
    the family's TV.

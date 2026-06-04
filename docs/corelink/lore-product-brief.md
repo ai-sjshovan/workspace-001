@@ -82,7 +82,9 @@ Working first issue:
 The first issue should prove the emotional hook before explaining the whole
 universe:
 
-1. Agent 410 risks his life inside CoreTech to open a restricted K.I.N. route.
+1. Agent 410 risks his life inside CoreTech by using a memorized Level 5
+   encryption-key fragment and his current Level 3 sandbox privileges to open a
+   narrow K.I.N. bridge for the Net Divers.
 2. CoreTech catches and kills him while showing him his family under
    surveillance.
 3. The story cuts to that family dinner, where the sister's white-hot headache
@@ -1167,10 +1169,12 @@ lands, the microfabricators can unfold and assemble the chassis around it if
 Charge, material, and profile requirements are met.
 
 The core should remain visibly present after assembly. Its luminous faceplate or
-Core Aperture remains exposed somewhere on the chassis, often like a flat
-reactor-style light. When the AI speaks, the faceplate brightens and dims with
-its voice. Mood, damage, low power, trust, and corruption can change its color,
-waveform, flicker, or scanline pattern.
+Core Aperture remains exposed somewhere front-facing on the chassis, often like
+a flat reactor-style light. The standard visual pattern is a **hexagon blue ARC
+screen**: the top face of the slotted ARC visible through the body. It can show
+text, symbols, status color, or emojis. When the AI speaks, the faceplate
+brightens and dims with its voice. Mood, damage, low power, trust, and
+corruption can change its color, waveform, flicker, or scanline pattern.
 
 ArcKin should sometimes reflect the tropical/island setting through their
 materials. Chassis bodies can incorporate bamboo, rattan, woven fiber, coconut

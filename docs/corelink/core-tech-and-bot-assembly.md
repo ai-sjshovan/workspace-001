@@ -34,7 +34,7 @@ AI cores are faceted geometric artifacts with an equator seam.
 Important traits:
 
 - hard outer shell
-- flat luminous core faceplate
+- front-facing hexagon luminous core faceplate
 - visible equator seam
 - shell splits open during deployment
 - inner perforated fabricator tube
@@ -43,8 +43,88 @@ Important traits:
 - display/status band or faceplate
 
 When assembled into a bot, the core remains visibly present. Its faceplate should
-be exposed somewhere on the chassis: chest, head, mask, shoulder, abdomen, or
-central body. The light brightens/dims with voice and changes by mood/status.
+be exposed somewhere on the front of the chassis: chest, head, mask, shoulder,
+abdomen, or central body. The standard visible pattern is a **hexagon screen**:
+the top face of the slotted ARC, similar in placement logic to an arc reactor
+set into a body. It can display text, symbols, status color, or emojis, and the
+light brightens/dims with voice and changes by mood/status.
+
+This hexagon is not merely decoration. It is the audience-facing sign that the
+ARC is present and active. Even strange chassis designs should preserve some
+front-facing hexagon ARC screen unless the story is deliberately hiding or
+damaging the core.
+
+## CoreTech Human Badge System
+
+CoreTech has two human badge modes.
+
+Normal corporate employees wear identity badges with:
+
+- CoreTech logo
+- small photo
+- name
+- department or role
+- small permanent employee ID
+- subtle access stripe or corner tab
+
+K.I.N. cybersecurity agents use anonymous shift badges inside secure rooms.
+Those badges hide name/photo and display a rotating daily agent code. Miguel's
+opening-scene code is `410`, which intentionally echoes HTTP `410 Gone`.
+
+Do not use `L0`-`L5` labels or clearance-color stripe systems on ordinary human
+badges. Those belong to ArcKin/security units. Human K.I.N. agent codes are
+operational handles, not full employee IDs.
+
+## CoreTech Overseer ArcKin Visual System
+
+CoreTech overseer ArcKin should look like corporate equipment with hierarchy,
+not generic robots. The face hexagon is the ARC/status screen. The chest
+hexagon is the CoreTech brand mark.
+
+CoreTech logo direction: use the mark from Miguel Garcia / Agent 410's badge.
+It is a clean hexagon ring with negative-space seams cutting through the ring at
+the six corners. Do not draw a center dot, inner hub, or spokes radiating from
+the center. The seams are cuts through the ring itself, not internal divider
+lines. It should read like sharp corporate geometry, not like a decorative
+fantasy emblem.
+
+Default overseer design:
+
+- sleek white corporate shell
+- front-facing hexagon ARC screen in the face/head area
+- CoreTech hexagon brand mark on the chest
+- legible unit identifier below the CoreTech chest mark
+- clearance level on the shoulder, such as `L3`
+- two offset parallelogram shoulder stripes, one above the level and one below
+- shoulder stripe color matches the clearance level
+
+Clearance colors:
+
+- `L0` grey: public/basic service
+- `L1` green: low internal / maintenance
+- `L2` yellow: operations / monitored security
+- `L3` blue: cybersecurity overseer / serious internal authority
+- `L4` orange: executive/security command
+- `L5` red: black-box / highest containment authority
+
+Opening-scene K.I.N. cybersecurity overseer:
+
+```text
+CoreTech
+OSR-L3-072
+shoulder: L3
+stripe color: blue
+```
+
+Identifier scheme:
+
+- `OSR`: Overseer
+- `L3`: clearance level
+- `072`: unit identifier
+
+The identifier should look like corporate inventory/control language rather
+than a personal name. The ArcKin can still have personality through its ARC face
+screen, posture, timing, and speech.
 
 Faceplate states:
 

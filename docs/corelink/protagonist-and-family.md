@@ -29,17 +29,97 @@ Home city inspiration:
 
 Visual direction:
 
-- dark hair
-- slightly longer, practical hair
-- possible short goatee or early facial hair
-- almost steampunk-like repair goggles
-- baggy pants
-- sturdy shoes
-- hoodie or loose outer layer despite the heat
-- gloves
+- black hair, chin-length or a little longer, with a cool messy shape rather
+  than straight flat hair
+- black eyes, except for the green special contact lens in his right eye
+- should resemble his father Miguel Garcia / Agent 410 enough that the family
+  connection is visible without making him look like a copy
+- no goatee, no full beard, and no moustache; use only light patchy teen
+  stubble or faint chin hair because he is about 17-18
+- no tattoos or piercings
+- almost steampunk-like magnifying repair goggles pushed up on top of his head
+- green special contact lens in the right eye only, used to inspect tiny parts
+- jeans
+- black sturdy boots
+- zip-up hooded coat with patches all over it
+- thin fitted mechanic-style gloves, tight enough for repair work and used to
+  reduce electrostatic shock
+- utility belt with screwdrivers, flash drives, tiny repair tech, and scavenged
+  tools
+- Core Link OS watch on his left wrist, like a hacked digital watch with code,
+  exposed traces, and a few visible wires
 - no beanie for now unless a later design needs it
-- old portable cassette player clipped to his belt or tucked into his repair bag
+- old portable CD player clipped to his belt or tucked into his repair bag
 - wired headphones, often one ear loose so he can hear the street
+
+Current locked visual reference:
+
+- `assets/images/references/sid-garcia-protagonist/sid-garcia-reference-v2.png`
+  is the current canonical Sid reference direction.
+
+## Garcia Family Visual References
+
+### Miguel Garcia / Agent 410
+
+Miguel is Sid and Olivia's father and CoreTech's Agent 410. He is Filipino,
+late 30s to early 40s, with black hair, black eyes, rectangular glasses, and a
+serious, exhausted work-worn face. His CoreTech look is white shirt, blue dress
+slacks, black tie, and a CoreTech badge that may show `410`. He should visually
+connect to Sid through eyes, brow, hair, and face structure, while looking older,
+more restrained, and corporate-worn.
+
+### Grace Garcia
+
+Grace is Sid and Olivia's mother. She is American-looking, close to Miguel's age
+or slightly older, with brunette/brown hair and brown eyes. She usually keeps
+her hair in a practical bun. She does not wear glasses. She dresses very simply
+and casually in a Filipino household style: breathable, practical clothes for a
+hot home, chores, cooking, cleaning, and caring for family.
+
+Grace should be beautiful in an unpolished, natural way. She does not rely on
+makeup, necklaces, jewelry, or styling. She is often a little sweaty,
+disheveled, and tired from household work, but still warm, dignified, and
+steady. She is a simple God-fearing woman; her faith should show through
+posture, tenderness, and household rhythm rather than obvious costume.
+
+### Olivia Garcia
+
+Olivia is Sid's little sister, roughly 5-8. She resembles Grace more strongly:
+brown hair, brown eyes, softer features, and a gentle expressive face. She has a
+natural curiosity for tech and treats AI cores/Kin like friends. She can be
+shown with a toy plane, small repaired gadget, or helper ArcKin nearby, but her
+first reference should stay simple and grounded.
+
+## Garcia Home
+
+The Garcia family lives in a humble bungalow-style home on Sagrada Circle, off a
+dirt road in a modest hillside neighborhood. The house is weathered but clean:
+patched walls, practical roofing, rain wear, repaired wiring, and a feeling that
+the family maintains dignity even when money is tight.
+
+The front of the home doubles as a small sari-sari-like repair shop. It is open
+to the street and has tech scraps, salvaged parts, old devices, wires, small
+tools, and a laptop around Sid's workspace. This is where Sid sells parts,
+repairs broken devices, and slowly builds his reputation.
+
+The house is not tiny, but every room is modest and functional. It has:
+
+- a kitchen with a long wooden dining table where the whole family can eat
+  together
+- one wash room
+- three small bedrooms: Miguel and Grace's room, Sid's room, and Olivia's room
+- a small open front shop/workspace
+- a small backyard
+
+The home sits near the edge of a hill. Behind the house, the flat dirt falls
+away into lush green growth. In the distance, the bustling city rises: messy,
+bright, dense, cyberpunk-meets-steampunk-meets-Philippines. The neighborhood
+around the home is humble, with other small homes nearby. Trash heaps and scrap
+heaps should be visible away from the house, not because the family is dirty,
+but because the wider slum/city edge has been left messy by years of neglect,
+poverty, consumption, and tech-company waste.
+
+There are no pets in the Garcia home.
 
 The clothing should make practical sense. He is a scavenger working around
 sharp scrap, corroded metal, broken plastic, wires, rain, heat, and dirty repair
@@ -59,9 +139,9 @@ and watch each other's backs, but life has made emotional closeness hard.
 
 ## Music Ritual
 
-The protagonist listens to old metal on a battered portable cassette player he
-found years ago. Newer tech is available, but he likes the simplicity: physical
-tapes, worn buttons, mechanical clicks, no network account, no firmware update,
+The protagonist listens to old metal on a battered portable CD player he found
+years ago. Newer tech is available, but he likes the simplicity: physical
+discs, worn buttons, mechanical clicks, no network account, no firmware update,
 no surveillance handshake.
 
 This should reveal character. He is not anti-technology; he loves tech. But he
@@ -75,11 +155,11 @@ Current working band name: **Megavolt**. It has the right aggressive,
 tech-infused metal feel, sounds like something he would actually say out loud,
 and avoids being a direct copy of a real band name.
 
-When he hacks, repairs under pressure, or battles Kin, he puts the tape on to
-get into the zone. The music becomes a focus ritual: fast drums, dirty guitars,
-and analog hiss while his mind locks onto patterns. In battle scenes, the tape
-can cut between diegetic sound and stylized rhythm, making his technical focus
-feel physical.
+When he hacks, repairs under pressure, or battles Kin, he puts a CD on to get
+into the zone. The music becomes a focus ritual: fast drums, dirty guitars, and
+the faint mechanical spin/skip of the disc while his mind locks onto patterns.
+In battle scenes, the CD player can cut between diegetic sound and stylized
+rhythm, making his technical focus feel physical.
 
 ## Food Texture
 
@@ -312,9 +392,13 @@ responsibility afterward.
 The story may open with the father alive inside a large circular CoreTech
 workstation room, wearing a white shirt, blue dress pants, black tie, glasses,
 and CoreTech badge. The first ArcKin the audience sees is stationed in the
-center of the room as the K.I.N. cybersecurity overseer. He starts a privileged
-session and lets the underground hacker faction connect through his security
-clearance. As a CoreTech decipherer, he pretends to fight the intrusion while
+center of the room as the K.I.N. cybersecurity overseer. Months earlier, Miguel
+worked a Level 5 breach-review case and memorized an encryption-key fragment
+during the rotation workflow by turning it into a mnemonic. In the cold open, he
+mutters that mnemonic under his breath, combines the Level 5 fragment with his
+current Level 3 sandbox privileges, and opens a narrow bridge so the Net Divers
+can brute-force a protected K.I.N. sector tied to a rumored black-box project
+codename. As a CoreTech decipherer, he pretends to fight the intrusion while
 actually stalling to buy the hackers time. When black-box images flood his
 screen, reflected in his glasses, security storms in. He clears the screen,
 shuts down the connection, claims he stopped them, and is taken away at
