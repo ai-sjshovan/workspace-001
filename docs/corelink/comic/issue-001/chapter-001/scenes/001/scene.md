@@ -30,6 +30,10 @@ Wide shot of the circular K.I.N. cybersecurity room. The ArcKin overseer stands 
 
 CoreTech K.I.N. Cybersecurity Division
 
+Relay City Operations District
+
+16:03
+
 **Dialogue:**
 
 None.
