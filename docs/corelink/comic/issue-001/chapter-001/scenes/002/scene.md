@@ -9,6 +9,7 @@ last_updated: 2026-06-04
 ## Purpose
 
 Introduce Miguel Garcia / Agent 410 and show that he is rebuilding something from memory while hiding inside normal work.
+
 ## Panels
 
 ### Panel 001
@@ -25,7 +26,7 @@ None.
 
 **Miguel, under breath:**
 
-> [Mnemonic line still to finalize]
+> Seven after nineteen... fox zero...
 
 **SFX:**
 
@@ -45,7 +46,7 @@ None.
 
 **Miguel, under breath:**
 
-> No... again.
+> No. Carbon four... pocket eights...
 
 **SFX:**
 
@@ -56,7 +57,6 @@ soft key taps
 - Do not show obvious console labels for the remembered fragment.
 - The audience should understand that Miguel is remembering/reconstructing something, not storing a file.
 - Keep his action visually subtle.
-
-## Open Questions
-
-- Final mnemonic wording is not locked.
+- Full key fragment for writer reference: `7A-19-F0-C4-88-2D-BE-03`.
+- Miguel should not recite the whole key fragment on-page.
+- Mnemonic mapping: `7A` = seven after, `19` = nineteen, `F0` = fox zero, `C4` = carbon four, `88` = pocket eights, `2D` = two down, `BE` = black echo, `03` = zero three.
